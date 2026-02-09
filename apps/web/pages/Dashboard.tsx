@@ -339,7 +339,16 @@ export const Dashboard: React.FC = () => {
         setHeadcountData(generatedData);
       }
 
-      setUpcomingEvents(events);
+      // Filter events to only show today and future events
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset to start of day
+      const futureEvents = events.filter(event => {
+        const eventDate = new Date(event.date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= today;
+      });
+
+      setUpcomingEvents(futureEvents);
       setAnnouncements(announcements);
 
     } catch (error) {
@@ -1029,7 +1038,7 @@ export const Dashboard: React.FC = () => {
             </div>
             <button className="text-text-muted-light hover:text-primary hidden md:block"><MoreHorizontal size={20} /></button>
           </div>
-          <div className="h-[200px] md:h-[250px] w-full flex-grow" style={{ minHeight: 200, minWidth: 300 }}>
+          <div className="flex-grow w-full min-h-[200px]" style={{ minWidth: 300 }}>
             {headcountData && headcountData.length > 0 && !isLoading ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={headcountData}>
@@ -1059,14 +1068,14 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Upcoming Birthdays / Events */}
-        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
+        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm h-fit">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
             <div className="flex items-center gap-2 md:gap-3">
               <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Events</h2>
             </div>
             <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">View All</button>
           </div>
-          <div className="p-3 md:p-4 flex-grow">
+          <div className="p-3 md:p-4">
             {upcomingEvents.length > 0 ? (
               <ul className="space-y-4">
                 {upcomingEvents.slice(0, 3).map(event => (
@@ -1099,14 +1108,14 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Onboarding Progress Widget */}
-        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
+        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm h-fit">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
             <div className="flex items-center gap-2 md:gap-3">
               <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Onboarding</h2>
             </div>
             <button onClick={() => navigate('/onboarding')} className="text-xs text-primary font-medium hover:underline">View All</button>
           </div>
-          <div className="p-3 md:p-4 flex-grow">
+          <div className="p-3 md:p-4 max-h-[400px] overflow-y-auto">
             <ul className="space-y-5">
               {onboardingSummary.map(item => (
                 <li key={item.id}>

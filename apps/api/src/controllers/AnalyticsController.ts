@@ -20,25 +20,28 @@ class AnalyticsController {
 
       const headcountData: { name: string; value: number }[] = [];
 
-      // Generate data for last 6 months
+      // Generate data for last 6 months - showing NEW HIRES per month
       for (let i = 5; i >= 0; i--) {
         // Calculate the target month
         const targetDate = new Date(currentYear, currentMonth - i, 1);
         const targetMonth = targetDate.getMonth();
         const targetYear = targetDate.getFullYear();
-        // End of target month
-        const thisMonthEnd = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
 
-        // Count employees who joined on or before end of target month and are not terminated
-        const employeesUpToThisMonth = employees.filter((e: { effective_date: string; status: string }) => {
+        // Start and end of target month
+        const monthStart = new Date(targetYear, targetMonth, 1, 0, 0, 0, 0);
+        const monthEnd = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+
+        // Count NEW employees who joined IN this specific month (not cumulative)
+        const newHiresThisMonth = employees.filter((e: { effective_date: string; status: string }) => {
           const joinDate = new Date(e.effective_date);
           if (isNaN(joinDate.getTime())) return false;
-          return joinDate <= thisMonthEnd && e.status !== 'Terminated';
+          // Check if joined within this month's range
+          return joinDate >= monthStart && joinDate <= monthEnd;
         }).length;
 
         headcountData.push({
           name: monthNames[targetMonth],
-          value: employeesUpToThisMonth
+          value: newHiresThisMonth
         });
       }
 
