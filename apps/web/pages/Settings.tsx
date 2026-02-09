@@ -205,7 +205,7 @@ export const Settings: React.FC = () => {
         email: profile.email,
         phone: fullPhoneNumber,
         bio: profile.bio,
-        avatar: avatarPreview,
+        avatar: avatarPreview.startsWith('blob:') ? undefined : avatarPreview,
       });
 
       // Update AuthContext with new user data
@@ -214,7 +214,7 @@ export const Settings: React.FC = () => {
         email: profile.email,
         phone: fullPhoneNumber,
         bio: profile.bio,
-        avatar: avatarPreview,
+        avatar: avatarPreview.startsWith('blob:') ? undefined : avatarPreview,
       });
 
       showToast('Profile saved successfully!', 'success');

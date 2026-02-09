@@ -163,7 +163,7 @@ export class EmployeeService {
             updates.push(`phone = $${paramIndex++}`);
             values.push(data.phone);
         }
-        if (data.avatar) {
+        if (data.avatar && !data.avatar.startsWith('blob:')) {
             updates.push(`avatar = $${paramIndex++}`);
             values.push(data.avatar);
         }

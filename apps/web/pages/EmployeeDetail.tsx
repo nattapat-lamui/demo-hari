@@ -159,7 +159,7 @@ export const EmployeeDetail: React.FC = () => {
                 phone: editForm.phone,
                 slack: editForm.slack,
                 emergencyContact: editForm.emergencyContact,
-                avatar: avatar
+                avatar: avatar.startsWith('blob:') ? undefined : avatar
             });
 
             setEmployee(updatedEmployee);

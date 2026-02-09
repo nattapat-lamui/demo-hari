@@ -14,7 +14,7 @@ export const API_HOST = import.meta.env.VITE_API_URL
 
 // Helper to resolve avatar URLs - converts relative paths to absolute
 export const resolveAvatarUrl = (avatar: string | null | undefined, fallbackName?: string): string => {
-  if (!avatar) return `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName || 'User')}`;
+  if (!avatar || avatar.startsWith('blob:')) return `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName || 'User')}`;
   if (avatar.startsWith('/')) return `${API_HOST}${avatar}`;
   return avatar;
 };

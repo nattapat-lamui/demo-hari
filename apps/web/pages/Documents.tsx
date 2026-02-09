@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BASE_URL } from '../lib/api';
+import { Dropdown } from '../components/Dropdown';
 import { useDocumentList, useDocumentTrash, useDocumentStorage, useDeleteDocument, useRestoreDocument, usePermanentDeleteDocument } from '../hooks/queries';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryKeys';
@@ -866,17 +867,20 @@ export const Documents: React.FC = () => {
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                   Category
                 </label>
-                <select
+                <Dropdown
+                  id="upload-category"
+                  name="category"
                   value={uploadCategory}
-                  onChange={(e) => setUploadCategory(e.target.value)}
-                  className="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
-                >
-                  <option value="HR">HR</option>
-                  <option value="Contracts">Contracts</option>
-                  <option value="Policies">Policies</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Personal">Personal</option>
-                </select>
+                  onChange={(value) => setUploadCategory(value)}
+                  options={[
+                    { value: 'HR', label: 'HR' },
+                    { value: 'Contracts', label: 'Contracts' },
+                    { value: 'Policies', label: 'Policies' },
+                    { value: 'Finance', label: 'Finance' },
+                    { value: 'Personal', label: 'Personal' },
+                  ]}
+                  placeholder="Select category"
+                />
               </div>
             </div>
             <div className="flex justify-end gap-3 p-4 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50">

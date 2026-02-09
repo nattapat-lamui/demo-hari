@@ -61,7 +61,7 @@ const AvatarWithFallback: React.FC<{
 
   const ringClasses = isRoot ? 'ring-primary/30' : 'ring-gray-100 dark:ring-gray-700';
 
-  if (hasError || !src) {
+  if (hasError || !src || src.startsWith('blob:')) {
     return (
       <div
         className={`${sizeClasses[size]} ${getColorFromName(name)} rounded-full flex items-center justify-center text-white font-semibold ring-2 ${ringClasses}`}
