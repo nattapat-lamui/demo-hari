@@ -217,7 +217,11 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     <input
                                         type="tel"
                                         value={editForm.phone || ''}
-                                        onChange={(e) => onProfileChange('phone', e.target.value)}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^\d+\-\s]/g, '');
+                                            if (val.length <= 16) onProfileChange('phone', val);
+                                        }}
+                                        maxLength={16}
                                         className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                                         placeholder="+66812345678"
                                     />

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Dropdown } from '../components/Dropdown';
 import {
   User,
   Bell,
@@ -104,8 +105,8 @@ export const Settings: React.FC = () => {
   };
 
   // Handle language change
-  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newLanguage = e.target.value as 'en' | 'th';
+  const handleLanguageChange = (value: string) => {
+    const newLanguage = value as 'en' | 'th';
     setLanguage(newLanguage);
     localStorage.setItem('language', newLanguage);
     const languageNames = { en: 'English', th: 'ไทย' };
@@ -531,12 +532,11 @@ export const Settings: React.FC = () => {
                       name="phone"
                       type="tel"
                       value={profile.phone}
-                      onChange={(e) =>
-                        setProfile((prev) => ({
-                          ...prev,
-                          phone: e.target.value.replace(/\D/g, ''),
-                        }))
-                      }
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val.length <= 12) setProfile((prev) => ({ ...prev, phone: val }));
+                      }}
+                      maxLength={12}
                       placeholder="812345678"
                       className="flex-1 px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                     />
@@ -695,22 +695,16 @@ export const Settings: React.FC = () => {
 
               <div>
                 <label htmlFor="language" className="font-medium text-text-light dark:text-text-dark mb-4 block">Language</label>
-                <div className="relative">
-                  <Globe
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light"
-                    size={18}
-                  />
-                  <select
-                    id="language"
-                    name="language"
-                    value={language}
-                    onChange={handleLanguageChange}
-                    className="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark cursor-pointer"
-                  >
-                    <option value="en">English</option>
-                    <option value="th">ไทย (Thai)</option>
-                  </select>
-                </div>
+                <Dropdown
+                  id="language"
+                  name="language"
+                  value={language}
+                  onChange={handleLanguageChange}
+                  options={[
+                    { value: 'en', label: 'English' },
+                    { value: 'th', label: 'ไทย (Thai)' },
+                  ]}
+                />
               </div>
             </div>
           )}
