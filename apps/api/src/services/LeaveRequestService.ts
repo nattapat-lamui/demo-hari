@@ -222,9 +222,9 @@ export class LeaveRequestService {
 
         return leaveQuotas.map(({ type, total }) => ({
             type,
-            total: total === -1 ? Infinity : total, // -1 in DB means unlimited
+            total,  // -1 means unlimited (JSON-safe, unlike Infinity)
             used: usedDays[type] || 0,
-            remaining: total === -1 ? Infinity : total - (usedDays[type] || 0),
+            remaining: total === -1 ? -1 : Math.max(0, total - (usedDays[type] || 0)),
         }));
     }
 

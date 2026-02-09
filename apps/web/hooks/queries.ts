@@ -387,7 +387,7 @@ export const useJobHistory = (id: string | undefined) => {
 export const usePerformanceReviews = (id: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.performanceReviews.byEmployee(id!),
-    queryFn: () => api.get<PerformanceReview[]>(`/employees/${id}/performance-reviews`),
+    queryFn: () => api.get<PerformanceReview[]>(`/performance/reviews?employeeId=${id}`),
     enabled: !!id,
   });
 };

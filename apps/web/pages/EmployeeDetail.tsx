@@ -102,7 +102,7 @@ export const EmployeeDetail: React.FC = () => {
                 const [employeeData, history, reviews, training, docs, managerData, directReportsData] = await Promise.all([
                     api.get<Employee>(`/employees/${id}`),
                     api.get<any[]>(`/job-history?employeeId=${id}`),
-                    api.get<PerformanceReview[]>(`/performance-reviews?employeeId=${id}`),
+                    api.get<PerformanceReview[]>(`/performance/reviews?employeeId=${id}`),
                     api.get<any[]>(`/employee-training/${id}`),
                     api.get<DocumentItem[]>('/documents'),
                     api.get<Employee>(`/employees/${id}/manager`).catch(() => null),
