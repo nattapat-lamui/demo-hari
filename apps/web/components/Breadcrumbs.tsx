@@ -54,19 +54,20 @@ const formatPathSegment = (text: string): string => {
  * @param pathSegment - The URL segment to convert
  * @param segmentIndex - The position of this segment in the path array
  * @param allPathSegments - All path segments in the current URL
+ * @param employeeName - Fetched employee name if available
  * @returns A formatted, human-readable name for the breadcrumb
  */
 const getBreadcrumbDisplayName = (
   pathSegment: string,
   segmentIndex: number,
-  allPathSegments: string[]
+  allPathSegments: string[],
+  employeeName?: string
 ): string => {
   const previousSegment = segmentIndex > 0 ? allPathSegments[segmentIndex - 1] : undefined;
 
   // Handle special case: employee detail pages
   if (isEmployeeDetailPage(previousSegment)) {
-    // TODO: In production, fetch actual employee name from API or Context
-    return 'Employee Details';
+    return employeeName || 'Employee Details';
   }
 
   // Use mapped name if available, otherwise format the segment

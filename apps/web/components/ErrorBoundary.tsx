@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import errorLogging from '../services/errorLogging';
 
 interface Props {
   children: ReactNode;
@@ -37,8 +38,11 @@ class ErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
-    // TODO: Send error to logging service (e.g., Sentry)
-    // logErrorToService(error, errorInfo);
+    // Log error to logging service
+    errorLogging.logError(error, {
+      componentStack: errorInfo.componentStack,
+      page: window.location.pathname,
+    });
   }
 
   handleReset = () => {
