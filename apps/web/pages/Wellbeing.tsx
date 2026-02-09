@@ -351,24 +351,24 @@ export const Wellbeing: React.FC = () => {
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 text-center text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-2">
-              <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+            <div className="grid grid-cols-7 text-center text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-3">
+              <span className="py-2">Su</span><span className="py-2">Mo</span><span className="py-2">Tu</span><span className="py-2">We</span><span className="py-2">Th</span><span className="py-2">Fr</span><span className="py-2">Sa</span>
             </div>
-            <div className="grid grid-cols-7 text-center text-sm gap-y-3">
+            <div className="grid grid-cols-7 text-center text-sm gap-y-4 flex-grow">
               {calendarDays.map((dayInfo, index) => (
                 <div
                   key={index}
-                  className={`relative ${!dayInfo.isCurrentMonth ? 'text-text-muted-light opacity-50' : 'text-text-light dark:text-text-dark'}`}
+                  className={`relative flex items-center justify-center min-h-[40px] ${!dayInfo.isCurrentMonth ? 'text-text-muted-light opacity-50' : 'text-text-light dark:text-text-dark'}`}
                 >
                   {dayInfo.isToday ? (
-                    <span className="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full font-bold shadow-md mx-auto">
+                    <span className="w-9 h-9 flex items-center justify-center bg-primary text-white rounded-full font-bold shadow-md">
                       {dayInfo.day}
                     </span>
                   ) : (
                     <>
                       {dayInfo.day}
                       {dayInfo.hasEvent && dayInfo.isCurrentMonth && (
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-accent-teal rounded-full"></div>
+                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-accent-teal rounded-full"></div>
                       )}
                     </>
                   )}
