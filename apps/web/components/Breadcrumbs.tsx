@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
-import { api } from '../lib/api';
+import { useEmployeeDetail } from '../hooks/queries';
 
 /**
  * Route name mapping configuration
@@ -47,31 +47,6 @@ const isEmployeeDetailPage = (
  */
 const formatPathSegment = (text: string): string => {
   return text.charAt(0).toUpperCase() + text.slice(1).replace(/-/g, ' ');
-};
-
-/**
- * Generates a human-readable breadcrumb name from a URL path segment
- * @param pathSegment - The URL segment to convert
- * @param segmentIndex - The position of this segment in the path array
- * @param allPathSegments - All path segments in the current URL
- * @param employeeName - Fetched employee name if available
- * @returns A formatted, human-readable name for the breadcrumb
- */
-const getBreadcrumbDisplayName = (
-  pathSegment: string,
-  segmentIndex: number,
-  allPathSegments: string[],
-  employeeName?: string
-): string => {
-  const previousSegment = segmentIndex > 0 ? allPathSegments[segmentIndex - 1] : undefined;
-
-  // Handle special case: employee detail pages
-  if (isEmployeeDetailPage(previousSegment)) {
-    return employeeName || 'Employee Details';
-  }
-
-  // Use mapped name if available, otherwise format the segment
-  return ROUTE_NAME_MAP[pathSegment] || formatPathSegment(pathSegment);
 };
 
 /**
@@ -141,7 +116,6 @@ const BreadcrumbItem: React.FC<BreadcrumbItemProps> = ({
  */
 export const Breadcrumbs: React.FC = () => {
   const location = useLocation();
-  const [employeeName, setEmployeeName] = useState<string | null>(null);
 
   // Parse URL pathname into individual segments, filtering out empty strings
   const pathSegments = location.pathname
@@ -150,26 +124,10 @@ export const Breadcrumbs: React.FC = () => {
 
   const isOnHomePage = pathSegments.length === 0;
 
-  // Detect employee detail page and fetch name
+  // Detect employee detail page and fetch name via React Query
   const employeeId = pathSegments[0] === 'employees' && pathSegments[1] ? pathSegments[1] : null;
-
-  useEffect(() => {
-    if (!employeeId) {
-      setEmployeeName(null);
-      return;
-    }
-
-    let cancelled = false;
-    api.get<{ name: string }>(`/employees/${employeeId}`)
-      .then((data) => {
-        if (!cancelled) setEmployeeName(data.name);
-      })
-      .catch(() => {
-        if (!cancelled) setEmployeeName(null);
-      });
-
-    return () => { cancelled = true; };
-  }, [employeeId]);
+  const { data: employeeData } = useEmployeeDetail(employeeId ?? undefined);
+  const employeeName = employeeId ? (employeeData?.name ?? null) : null;
 
   const getDisplayName = (pathSegment: string, segmentIndex: number) => {
     const previousSegment = segmentIndex > 0 ? pathSegments[segmentIndex - 1] : undefined;

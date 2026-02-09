@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Search, MoreHorizontal, Mail, MapPin, Eye, ChevronDown, User, Briefcase, Users, Calendar, Check, Circle, CheckCircle2, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, MoreHorizontal, Mail, MapPin, Eye, User, Briefcase, Users, Calendar, Check, Circle, CheckCircle2, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Employee, PaginatedResponse } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { api, API_HOST } from '../lib/api';
+import { useEmployeeList, useAddEmployee } from '../hooks/queries';
 import { Toast } from '../components/Toast';
 import { Modal } from '../components/Modal';
 import { Dropdown, DropdownOption } from '../components/Dropdown';
@@ -22,9 +21,6 @@ export const Employees: React.FC = () => {
     setToast({ show: true, message, type });
   };
 
-  // Initialize state with mock data
-  const [employeesList, setEmployeesList] = useState<Employee[]>([]);
-
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -33,8 +29,20 @@ export const Employees: React.FC = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
-  const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+
+  // React Query
+  const { data: employeesResponse } = useEmployeeList({
+    page: currentPage,
+    limit: itemsPerPage,
+    department: departmentFilter,
+    status: statusFilter,
+    search: searchTerm,
+  });
+  const addEmployeeMutation = useAddEmployee();
+
+  const employeesList = employeesResponse?.data ?? [];
+  const totalItems = employeesResponse?.total ?? 0;
+  const totalPages = employeesResponse?.totalPages ?? 1;
 
   // Add Employee Form State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -82,60 +90,6 @@ export const Employees: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Fetch employees from API - refetch when filters or pagination changes
-  useEffect(() => {
-    fetchEmployees();
-  }, [currentPage, departmentFilter, statusFilter, searchTerm]);
-
-  const fetchEmployees = async () => {
-    try {
-      // Build query params
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: itemsPerPage.toString(),
-      });
-
-      if (departmentFilter !== 'All') {
-        params.append('department', departmentFilter);
-      }
-      if (statusFilter !== 'All') {
-        params.append('status', statusFilter);
-      }
-      if (searchTerm) {
-        params.append('search', searchTerm);
-      }
-
-      const response = await api.get<PaginatedResponse<Employee>>(`/employees?${params.toString()}`);
-
-      // Handle paginated response
-      if ('data' in response && 'pagination' in response) {
-        const employeesWithFullAvatars = response.data.map(emp => ({
-          ...emp,
-          avatar: emp.avatar && emp.avatar.startsWith('/')
-            ? `${API_HOST}${emp.avatar}`
-            : emp.avatar
-        }));
-        setEmployeesList(employeesWithFullAvatars);
-        setTotalItems(response.total);
-        setTotalPages(response.totalPages);
-      } else {
-        // Fallback for non-paginated response
-        const data = response as unknown as Employee[];
-        const employeesWithFullAvatars = data.map(emp => ({
-          ...emp,
-          avatar: emp.avatar && emp.avatar.startsWith('/')
-            ? `${API_HOST}${emp.avatar}`
-            : emp.avatar
-        }));
-        setEmployeesList(employeesWithFullAvatars);
-        setTotalItems(data.length);
-        setTotalPages(1);
-      }
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-    }
-  };
-
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmployee.name || !newEmployee.role || !newEmployee.department || !newEmployee.email || !newEmployee.joinDate) {
@@ -144,18 +98,15 @@ export const Employees: React.FC = () => {
     }
 
     try {
-      const payload = {
+      await addEmployeeMutation.mutateAsync({
         name: newEmployee.name,
         role: newEmployee.role,
         department: newEmployee.department,
         email: newEmployee.email,
         joinDate: newEmployee.joinDate,
-        managerId: null
-      };
+        managerId: null,
+      });
 
-      await api.post('/employees', payload);
-
-      fetchEmployees(); // Re-fetch
       setIsAddModalOpen(false);
       setNewEmployee({ name: '', role: '', department: '', email: '', joinDate: '' });
       showToast(`${newEmployee.name} has been added successfully!`, 'success');

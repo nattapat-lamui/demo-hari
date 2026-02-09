@@ -26,13 +26,16 @@ import {
     ThumbsDown,
     MessageSquare,
 } from 'lucide-react';
-import { OnboardingTask, KeyContact, Employee, OnboardingDocument } from '../types';
+import { useQueryClient } from '@tanstack/react-query';
+import { OnboardingTask, Employee, OnboardingDocument } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useOrg } from '../contexts/OrgContext';
 import { Toast } from '../components/Toast';
 import { Modal } from '../components/Modal';
 import { DatePicker } from '../components/DatePicker';
 import { api, BASE_URL } from '../lib/api';
+import { queryKeys } from '../lib/queryKeys';
+import { useOnboardingTasks, useOnboardingContacts, useOnboardingDocuments, useAllEmployees } from '../hooks/queries';
 import { Dropdown } from '../components/Dropdown';
 import { Avatar } from '../components/Avatar';
 
@@ -349,6 +352,7 @@ const OnboardingFlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) =
 export const Onboarding: React.FC = () => {
     const { user } = useAuth();
     const { addNode } = useOrg();
+    const qc = useQueryClient();
 
     // Toast state
     const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
@@ -361,12 +365,12 @@ export const Onboarding: React.FC = () => {
     // Tab state
     const [activeTab, setActiveTab] = useState<'checklist' | 'flow'>('checklist');
 
-    // State
-    const [tasks, setTasks] = useState<OnboardingTask[]>([]);
-    const [keyContacts, setKeyContacts] = useState<KeyContact[]>([]);
+    // React Query hooks for data fetching
+    const { data: tasks = [] } = useOnboardingTasks();
+    const { data: keyContacts = [] } = useOnboardingContacts();
 
-    // Document Checklist state
-    const [onboardingDocs, setOnboardingDocs] = useState<OnboardingDocument[]>([]);
+    // Document Checklist state (from React Query)
+    const { data: onboardingDocs = [] } = useOnboardingDocuments();
     const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
     const [reviewNoteDocId, setReviewNoteDocId] = useState<string | null>(null);
     const [reviewNote, setReviewNote] = useState('');
@@ -388,60 +392,13 @@ export const Onboarding: React.FC = () => {
     });
     const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
 
-    // Autocomplete state
-    const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+    // Autocomplete state (employees from React Query)
+    const { data: allEmployees = [] } = useAllEmployees();
     const [emailSuggestions, setEmailSuggestions] = useState<Employee[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
     const emailInputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
-
-    // Fetch Data
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // Fetch employees for autocomplete functionality
-                try {
-                    const employeesData = await api.get<Employee[]>('/employees');
-                    setAllEmployees(employeesData);
-                    console.log('✅ Loaded employees for autocomplete:', employeesData.length);
-                } catch (empError) {
-                    console.log('⚠️ Could not fetch employees for autocomplete');
-                    setAllEmployees([]);
-                }
-
-                // Fetch onboarding tasks (may auto-seed for employees)
-                try {
-                    const tasksData = await api.get<OnboardingTask[]>('/onboarding/tasks');
-                    setTasks(tasksData);
-                } catch (taskError) {
-                    console.log('⚠️ Could not fetch onboarding tasks');
-                    setTasks([]);
-                }
-
-                // Fetch key contacts
-                try {
-                    const contactsData = await api.get<KeyContact[]>('/onboarding/contacts');
-                    setKeyContacts(contactsData);
-                } catch (contactError) {
-                    console.log('⚠️ Could not fetch key contacts');
-                    setKeyContacts([]);
-                }
-
-                // Fetch onboarding documents (after tasks, since auto-seed creates both)
-                try {
-                    const docsData = await api.get<OnboardingDocument[]>('/onboarding/documents');
-                    setOnboardingDocs(docsData);
-                } catch (docError) {
-                    console.log('⚠️ Could not fetch onboarding documents');
-                    setOnboardingDocs([]);
-                }
-            } catch (error) {
-                console.log('⚠️ Error initializing onboarding page:', error);
-            }
-        };
-        fetchData();
-    }, []);
 
     // Handle click outside to close suggestions
     useEffect(() => {
@@ -529,12 +486,16 @@ export const Onboarding: React.FC = () => {
         if (!task) return;
         const newCompleted = !task.completed;
         // Optimistic update
-        setTasks(tasks.map(t => t.id === id ? { ...t, completed: newCompleted } : t));
+        qc.setQueryData<OnboardingTask[]>(queryKeys.onboarding.tasks(), old =>
+            (old || []).map(t => t.id === id ? { ...t, completed: newCompleted } : t)
+        );
         try {
             await api.patch(`/onboarding/tasks/${id}`, { completed: newCompleted });
         } catch (error) {
             // Revert on failure
-            setTasks(tasks.map(t => t.id === id ? { ...t, completed: task.completed } : t));
+            qc.setQueryData<OnboardingTask[]>(queryKeys.onboarding.tasks(), old =>
+                (old || []).map(t => t.id === id ? { ...t, completed: task.completed } : t)
+            );
             showToast('Failed to update task', 'error');
         }
     };
@@ -547,12 +508,16 @@ export const Onboarding: React.FC = () => {
         const currentIndex = priorities.indexOf(currentPriority);
         const nextPriority = priorities[(currentIndex + 1) % priorities.length];
         // Optimistic update
-        setTasks(tasks.map(t => t.id === id ? { ...t, priority: nextPriority } as OnboardingTask : t));
+        qc.setQueryData<OnboardingTask[]>(queryKeys.onboarding.tasks(), old =>
+            (old || []).map(t => t.id === id ? { ...t, priority: nextPriority } as OnboardingTask : t)
+        );
         try {
             await api.patch(`/onboarding/tasks/${id}`, { priority: nextPriority });
         } catch (error) {
             // Revert on failure
-            setTasks(tasks.map(t => t.id === id ? { ...t, priority: currentPriority } as OnboardingTask : t));
+            qc.setQueryData<OnboardingTask[]>(queryKeys.onboarding.tasks(), old =>
+                (old || []).map(t => t.id === id ? { ...t, priority: currentPriority } as OnboardingTask : t)
+            );
             showToast('Failed to update priority', 'error');
         }
     };
@@ -696,15 +661,8 @@ export const Onboarding: React.FC = () => {
                     }
                 }
 
-                // Refetch tasks and documents to show newly seeded ones
-                try {
-                    const updatedTasks = await api.get<OnboardingTask[]>('/onboarding/tasks');
-                    setTasks(updatedTasks);
-                    const updatedDocs = await api.get<OnboardingDocument[]>('/onboarding/documents');
-                    setOnboardingDocs(updatedDocs);
-                } catch (fetchError) {
-                    console.log('Could not refetch tasks/documents:', fetchError);
-                }
+                // Invalidate onboarding queries to show newly seeded data
+                qc.invalidateQueries({ queryKey: queryKeys.onboarding.all });
 
                 showToast(`Onboarding invitation sent to ${inviteForm.name}!`, 'success');
             } else {
@@ -723,25 +681,24 @@ export const Onboarding: React.FC = () => {
                     avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(inviteForm.name)}&background=random`,
                 });
 
-                // Refresh employees list for autocomplete
-                const updatedEmployees = await api.get<Employee[]>('/employees');
-                setAllEmployees(updatedEmployees);
+                // Invalidate employees list for autocomplete refresh
+                qc.invalidateQueries({ queryKey: queryKeys.employees.all });
 
-                // Seed onboarding tasks for the new employee
+                // Wait briefly for employee creation to propagate, then seed tasks
+                const updatedEmployees = await api.get<Employee[]>('/employees');
                 const newEmployee = updatedEmployees.find(
                     emp => emp.email.toLowerCase() === inviteForm.email.toLowerCase()
                 );
                 if (newEmployee) {
                     try {
                         await api.post(`/onboarding/tasks/seed/${newEmployee.id}`, {});
-                        const updatedTasks = await api.get<OnboardingTask[]>('/onboarding/tasks');
-                        setTasks(updatedTasks);
-                        const updatedDocs = await api.get<OnboardingDocument[]>('/onboarding/documents');
-                        setOnboardingDocs(updatedDocs);
                     } catch (seedError) {
                         console.log('Could not seed tasks for new employee:', seedError);
                     }
                 }
+
+                // Invalidate onboarding queries to refetch tasks/docs
+                qc.invalidateQueries({ queryKey: queryKeys.onboarding.all });
 
                 showToast(`New employee ${inviteForm.name} added and invited to onboarding!`, 'success');
             }
@@ -795,7 +752,9 @@ export const Onboarding: React.FC = () => {
                 throw new Error(err.error);
             }
             const updatedDoc = await response.json();
-            setOnboardingDocs(prev => prev.map(d => d.id === docId ? updatedDoc : d));
+            qc.setQueryData<OnboardingDocument[]>(queryKeys.onboarding.documents(), old =>
+                (old || []).map(d => d.id === docId ? updatedDoc : d)
+            );
             showToast('Document uploaded!', 'success');
         } catch (error: any) {
             showToast(error.message || 'Upload failed', 'error');
@@ -832,7 +791,9 @@ export const Onboarding: React.FC = () => {
     const handleDocReview = async (docId: string, status: 'Approved' | 'Rejected', note?: string) => {
         try {
             const updatedDoc = await api.patch<OnboardingDocument>(`/onboarding/documents/${docId}/review`, { status, note });
-            setOnboardingDocs(prev => prev.map(d => d.id === docId ? updatedDoc : d));
+            qc.setQueryData<OnboardingDocument[]>(queryKeys.onboarding.documents(), old =>
+                (old || []).map(d => d.id === docId ? updatedDoc : d)
+            );
             showToast(`Document ${status.toLowerCase()}!`, status === 'Approved' ? 'success' : 'warning');
             setReviewNoteDocId(null);
             setReviewNote('');

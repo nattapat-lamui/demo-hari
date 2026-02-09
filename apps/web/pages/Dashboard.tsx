@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Users,
   TrendingUp,
@@ -39,42 +40,73 @@ import {
   ChartDataPoint,
   OnboardingProgressSummary,
   UpcomingEvent,
-  AuditLogItem,
-  Announcement,
-  MyTeamHierarchy
 } from '../types';
-import { api, API_HOST } from '../lib/api';
+import {
+  useAllEmployees,
+  useAuditLogs,
+  useHeadcountStats,
+  useUpcomingEvents,
+  useAnnouncements,
+  useAttendanceToday,
+  useDashboardEmployeeStats,
+  useMyTeamHierarchy,
+  useNotes,
+  useAddNote,
+  useDeleteNote,
+  useToggleNotePin,
+  useClockIn,
+  useClockOut,
+  useAddEmployee
+} from '../hooks/queries';
+import { queryKeys } from '../lib/queryKeys';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   // useLeave hook handles fetching from API internally now
   const { requests, updateRequestStatus } = useLeave();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Filter requests for Admin (Pending only) and Employee (Own requests)
   const pendingRequests = requests.filter(r => r.status === 'Pending');
   const myRequests = requests.filter(r => r.employeeName === user?.name);
+
+  // ----- REACT QUERY HOOKS -----
+  const { data: allEmployees = [], isPending: isEmployeesLoading } = useAllEmployees();
+  const { data: auditLogsData = [] } = useAuditLogs();
+  const { data: headcountStats = [] } = useHeadcountStats();
+  const { data: eventsData = [] } = useUpcomingEvents();
+  const { data: announcementsData = [] } = useAnnouncements();
+  const isEmployee = user?.role === 'EMPLOYEE';
+  const { data: attendanceStatus } = useAttendanceToday(isEmployee);
+  const { data: employeeStatsData } = useDashboardEmployeeStats(isEmployee);
+  const { data: teamHierarchyData } = useMyTeamHierarchy(isEmployee);
+  const { data: notesData = [] } = useNotes();
+  const clockInMutation = useClockIn();
+  const clockOutMutation = useClockOut();
+  const addNoteMutation = useAddNote();
+  const deleteNoteMutation = useDeleteNote();
+  const togglePinMutation = useToggleNotePin();
+  const addEmployeeMutation = useAddEmployee();
+
+  // ----- DERIVED LOADING STATE -----
+  const isLoading = isEmployeesLoading;
+
+  // ----- DERIVED DATA -----
+  const employeeStats = employeeStatsData ?? { leaveBalance: 0, nextPayday: null, pendingReviews: 0, pendingSurveys: 0 };
+  const teamHierarchy = teamHierarchyData ?? null;
 
   // ----- ADMIN STATE -----
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [quickNote, setQuickNote] = useState('');
 
-  // ----- NOTES STATE -----
-  interface Note {
-    id: string;
-    content: string;
-    color: string;
-    pinned: boolean;
-    createdAt: string;
-    updatedAt: string;
-  }
-  const [notes, setNotes] = useState<Note[]>([]);
+  // ----- NOTES LOADING STATE -----
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
-  // ----- LOADING STATE -----
-  const [isLoading, setIsLoading] = useState(true);
+  // ----- ATTENDANCE LOADING STATE -----
+  const [isClockingIn, setIsClockingIn] = useState(false);
 
   // ----- TOAST STATE -----
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
@@ -87,61 +119,61 @@ export const Dashboard: React.FC = () => {
     setToast({ show: true, message, type });
   };
 
-  // ----- STATS STATE -----
-  const [activeEmployeesCount, setActiveEmployeesCount] = useState(0);
-  const [onLeaveCount, setOnLeaveCount] = useState(0);
-  const [newHiresCount, setNewHiresCount] = useState(0);
-  const [newHiresTrend, setNewHiresTrend] = useState(0);
-  const [turnoverRate, setTurnoverRate] = useState(0);
-  const [turnoverTrend, setTurnoverTrend] = useState(0);
-  const [myTeam, setMyTeam] = useState<Employee[]>([]);
-  const [teamHierarchy, setTeamHierarchy] = useState<MyTeamHierarchy | null>(null);
+  // ----- COMPUTED STATS (useMemo) -----
+  const { activeEmployeesCount, onLeaveCount, newHiresCount, newHiresTrend, turnoverRate, turnoverTrend } = useMemo(() => {
+    const activeEmployees = allEmployees.filter((employee) => employee.status === 'Active');
+    const onLeaveEmployees = allEmployees.filter((employee) => employee.status === 'On Leave');
+    const terminatedEmployees = allEmployees.filter((employee) => employee.status === 'Terminated');
 
-  // ----- ATTENDANCE STATE -----
-  interface AttendanceStatus {
-    id?: string;
-    clockIn?: string;
-    clockOut?: string;
-    status?: string;
-  }
-  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus | null>(null);
-  const [isClockingIn, setIsClockingIn] = useState(false);
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
 
-  // ----- EMPLOYEE STATS STATE -----
-  interface EmployeeStats {
-    leaveBalance: number;
-    nextPayday: string | null;
-    pendingReviews: number;
-    pendingSurveys: number;
-  }
-  const [employeeStats, setEmployeeStats] = useState<EmployeeStats>({
-    leaveBalance: 0,
-    nextPayday: null,
-    pendingReviews: 0,
-    pendingSurveys: 0,
-  });
+    // Calculate new hires this month
+    const newJoinersThisMonth = allEmployees.filter(e => {
+      const joinDate = new Date(e.joinDate);
+      return joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear;
+    }).length;
 
-  // Fetch employee stats from API
-  const fetchEmployeeStats = async () => {
-    try {
-      const stats = await api.get<EmployeeStats>('/dashboard/employee-stats');
-      setEmployeeStats(stats);
-    } catch (error) {
-      console.error('Error fetching employee stats:', error);
-    }
-  };
+    // Calculate new hires last month for trend
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    const newJoinersLastMonth = allEmployees.filter(e => {
+      const joinDate = new Date(e.joinDate);
+      return joinDate.getMonth() === lastMonth && joinDate.getFullYear() === lastMonthYear;
+    }).length;
 
-  // Fetch my team hierarchy from API
-  const fetchMyTeamFromAPI = async () => {
-    try {
-      const hierarchy = await api.get<MyTeamHierarchy>('/dashboard/my-team-hierarchy');
-      setTeamHierarchy(hierarchy);
-      // Use direct reports if available (manager view), otherwise peers
-      const teamMembers = hierarchy.directReports.length > 0
-        ? hierarchy.directReports
-        : hierarchy.peers;
-      // Map TeamMember to Employee-compatible shape for rendering
-      setMyTeam(teamMembers.map(m => ({
+    // Calculate trend percentage for new hires
+    const hireTrend = newJoinersLastMonth > 0
+      ? ((newJoinersThisMonth - newJoinersLastMonth) / newJoinersLastMonth) * 100
+      : newJoinersThisMonth > 0 ? 100 : 0;
+
+    // Calculate turnover rate (terminated / total employees * 100)
+    const totalEmployees = allEmployees.length;
+    const turnoverRateCalc = totalEmployees > 0
+      ? (terminatedEmployees.length / totalEmployees) * 100
+      : 0;
+
+    const turnoverTrendCalc = terminatedEmployees.length > 0 ? turnoverRateCalc : 0;
+
+    return {
+      activeEmployeesCount: activeEmployees.length,
+      onLeaveCount: onLeaveEmployees.length,
+      newHiresCount: newJoinersThisMonth,
+      newHiresTrend: hireTrend,
+      turnoverRate: turnoverRateCalc,
+      turnoverTrend: turnoverTrendCalc,
+    };
+  }, [allEmployees]);
+
+  // ----- COMPUTED MY TEAM -----
+  const myTeam = useMemo<Employee[]>(() => {
+    // If we have team hierarchy data (employee view), use it
+    if (teamHierarchy) {
+      const teamMembers = teamHierarchy.directReports.length > 0
+        ? teamHierarchy.directReports
+        : teamHierarchy.peers;
+      return teamMembers.map(m => ({
         id: m.id,
         name: m.name,
         role: m.role,
@@ -153,23 +185,81 @@ export const Dashboard: React.FC = () => {
         joinDate: '',
         location: '',
         skills: [],
-      })));
-    } catch (error) {
-      console.error('Error fetching my team:', error);
+      }));
     }
-  };
 
-  // Fetch today's attendance status
-  const fetchAttendanceStatus = async () => {
-    try {
-      const status = await api.get<AttendanceStatus>('/attendance/today');
-      setAttendanceStatus(status);
-    } catch (error) {
-      console.error('Error fetching attendance:', error);
-      // If no attendance record for today, set status to null (not checked in yet)
-      setAttendanceStatus(null);
+    // Fallback: derive from allEmployees for employee role
+    if (user?.role === 'EMPLOYEE') {
+      const currentEmployee = allEmployees.find((employee) => employee.email === user?.email);
+      const department = currentEmployee?.department || 'Product';
+      return allEmployees.filter((employee) => employee.department === department && employee.id !== user?.id).slice(0, 3);
     }
-  };
+
+    return [];
+  }, [teamHierarchy, allEmployees, user?.role, user?.email, user?.id]);
+
+  // ----- COMPUTED HEADCOUNT DATA -----
+  const headcountData = useMemo<ChartDataPoint[]>(() => {
+    if (headcountStats && headcountStats.length > 0) {
+      return headcountStats;
+    }
+
+    // Generate headcount data from employees by join month
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const generatedData: ChartDataPoint[] = [];
+
+    // Generate data for last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const targetDate = new Date(currentYear, currentMonth - i, 1);
+      const targetMonth = targetDate.getMonth();
+      const targetYear = targetDate.getFullYear();
+      const thisMonthEnd = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+
+      const employeesUpToThisMonth = allEmployees.filter(e => {
+        if (!e.joinDate) return false;
+        const joinDate = new Date(e.joinDate);
+        if (isNaN(joinDate.getTime())) return false;
+        return joinDate <= thisMonthEnd && e.status !== 'Terminated';
+      }).length;
+
+      generatedData.push({
+        name: monthNames[targetMonth] ?? '',
+        value: employeesUpToThisMonth
+      });
+    }
+
+    return generatedData;
+  }, [allEmployees, headcountStats]);
+
+  // ----- COMPUTED ONBOARDING SUMMARY -----
+  const onboardingSummary = useMemo<OnboardingProgressSummary[]>(() => {
+    const onboarding = allEmployees
+      .filter(e => e.onboardingStatus === 'In Progress' || e.onboardingStatus === 'Not Started')
+      .map(e => ({
+        id: e.id,
+        name: e.name,
+        role: e.role,
+        progress: e.onboardingStatus === 'In Progress' ? 50 : 0,
+        avatar: e.avatar
+      }));
+    return onboarding.length ? onboarding : [];
+  }, [allEmployees]);
+
+  // ----- COMPUTED UPCOMING EVENTS -----
+  const upcomingEvents = useMemo<UpcomingEvent[]>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return eventsData.filter(event => {
+      const eventDate = new Date(event.date);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate >= today;
+    });
+  }, [eventsData]);
+
+  // ----- MUTATION HANDLERS -----
 
   // Handle clock in/out
   const handleClockAction = async () => {
@@ -179,23 +269,20 @@ export const Dashboard: React.FC = () => {
 
       if (isClockedIn) {
         // Clock out
-        await api.post('/attendance/clock-out', {});
+        await clockOutMutation.mutateAsync();
         showToast('Checked out successfully!', 'success');
       } else {
         // Clock in
-        await api.post('/attendance/clock-in', {});
+        await clockInMutation.mutateAsync();
         showToast('Checked in successfully!', 'success');
       }
-
-      // Refresh status
-      await fetchAttendanceStatus();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';
 
       // If already clocked in, refresh status to sync with server
       if (message.includes('Already clocked in') || message.includes('already checked in')) {
         showToast('You have already checked in today', 'info');
-        await fetchAttendanceStatus(); // Refresh to show correct status
+        queryClient.invalidateQueries({ queryKey: queryKeys.attendance.today() });
       } else {
         showToast(message, 'error');
       }
@@ -204,204 +291,14 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // ----- WIDGET STATE (Replacing Constants) -----
-  const [headcountData, setHeadcountData] = useState<ChartDataPoint[]>([]);
-  const [onboardingSummary, setOnboardingSummary] = useState<OnboardingProgressSummary[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-
-  // Fetch Data from API (Extracted as reusable function)
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const [employeesRaw, auditLogs, headcountStats, eventsRaw, announcements] = await Promise.all([
-        api.get<Employee[]>('/employees'),
-        api.get<AuditLogItem[]>('/audit-logs'),
-        api.get<ChartDataPoint[]>('/headcount-stats'),
-        api.get<UpcomingEvent[]>('/upcoming-events').catch(() => []),
-        api.get<Announcement[]>('/announcements')
-      ]);
-
-      // Transform relative avatar URLs to absolute URLs
-      const employees = employeesRaw.map(emp => ({
-        ...emp,
-        avatar: emp.avatar && emp.avatar.startsWith('/')
-          ? `${API_HOST}${emp.avatar}`
-          : emp.avatar
-      }));
-
-      const events = eventsRaw.map(evt => ({
-        ...evt,
-        avatar: evt.avatar && evt.avatar.startsWith('/')
-          ? `${API_HOST}${evt.avatar}`
-          : evt.avatar
-      }));
-
-      // Stats
-      const activeEmployees = employees.filter((employee) => employee.status === 'Active');
-      const onLeaveEmployees = employees.filter((employee) => employee.status === 'On Leave');
-      const terminatedEmployees = employees.filter((employee) => employee.status === 'Terminated');
-
-      setActiveEmployeesCount(activeEmployees.length);
-      setOnLeaveCount(onLeaveEmployees.length);
-
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      const currentYear = currentDate.getFullYear();
-
-      // Calculate new hires this month
-      const newJoinersThisMonth = employees.filter(e => {
-        const joinDate = new Date(e.joinDate);
-        return joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear;
-      }).length;
-
-      // Calculate new hires last month for trend
-      const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-      const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-      const newJoinersLastMonth = employees.filter(e => {
-        const joinDate = new Date(e.joinDate);
-        return joinDate.getMonth() === lastMonth && joinDate.getFullYear() === lastMonthYear;
-      }).length;
-
-      setNewHiresCount(newJoinersThisMonth);
-
-      // Calculate trend percentage for new hires
-      const hireTrend = newJoinersLastMonth > 0
-        ? ((newJoinersThisMonth - newJoinersLastMonth) / newJoinersLastMonth) * 100
-        : newJoinersThisMonth > 0 ? 100 : 0;
-      setNewHiresTrend(hireTrend);
-
-      // Calculate turnover rate (terminated / total employees * 100)
-      const totalEmployees = employees.length;
-      const turnoverRateCalc = totalEmployees > 0
-        ? (terminatedEmployees.length / totalEmployees) * 100
-        : 0;
-      setTurnoverRate(turnoverRateCalc);
-
-      const turnoverTrendCalc = terminatedEmployees.length > 0 ? turnoverRateCalc : 0;
-      setTurnoverTrend(turnoverTrendCalc);
-
-      // My Team (if employee)
-      if (user?.role === 'EMPLOYEE') {
-        const currentEmployee = employees.find((employee) => employee.email === user?.email);
-        const department = currentEmployee?.department || 'Product';
-        const teamMembers = employees.filter((employee) => employee.department === department && employee.id !== user?.id).slice(0, 3);
-        setMyTeam(teamMembers);
-      }
-
-      // Onboarding Summary (Derived)
-      const onboarding = employees
-        .filter(e => e.onboardingStatus === 'In Progress' || e.onboardingStatus === 'Not Started')
-        .map(e => ({
-          id: e.id,
-          name: e.name,
-          role: e.role,
-          progress: e.onboardingStatus === 'In Progress' ? 50 : 0, // Simplified: In Progress = 50%, Not Started = 0%
-          avatar: e.avatar
-        }));
-      setOnboardingSummary(onboarding.length ? onboarding : []);
-
-      setAuditLogs(auditLogs);
-
-      // Use headcount stats from API, or generate from employees if empty
-      if (headcountStats && headcountStats.length > 0) {
-        setHeadcountData(headcountStats);
-      } else {
-        // Generate headcount data from employees by join month
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const generatedData: ChartDataPoint[] = [];
-
-        // Generate data for last 6 months
-        for (let i = 5; i >= 0; i--) {
-          // Calculate the target month by subtracting from current date
-          const targetDate = new Date(currentYear, currentMonth - i, 1);
-          const targetMonth = targetDate.getMonth();
-          const targetYear = targetDate.getFullYear();
-          const thisMonthEnd = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
-
-          const employeesUpToThisMonth = employees.filter(e => {
-            // Skip employees without valid joinDate
-            if (!e.joinDate) return false;
-            const joinDate = new Date(e.joinDate);
-            // Check if the date is valid
-            if (isNaN(joinDate.getTime())) return false;
-            // Count employees who joined on or before end of target month and are not terminated
-            return joinDate <= thisMonthEnd && e.status !== 'Terminated';
-          }).length;
-
-          generatedData.push({
-            name: monthNames[targetMonth],
-            value: employeesUpToThisMonth
-          });
-        }
-
-        setHeadcountData(generatedData);
-      }
-
-      // Filter events to only show today and future events
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset to start of day
-      const futureEvents = events.filter(event => {
-        const eventDate = new Date(event.date);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate >= today;
-      });
-
-      setUpcomingEvents(futureEvents);
-      setAnnouncements(announcements);
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [user?.role, user?.email, user?.id]);
-
-  // Fetch attendance status and employee stats on mount (for employees)
-  useEffect(() => {
-    if (user?.role === 'EMPLOYEE') {
-      fetchAttendanceStatus();
-      fetchEmployeeStats();
-      fetchMyTeamFromAPI();
-    }
-  }, [user?.role]);
-
-  // Fetch notes on mount (for all users)
-  useEffect(() => {
-    fetchNotes();
-  }, []);
-
-
   // ----- NOTES HANDLERS -----
-  const fetchNotes = async () => {
-    try {
-      const fetchedNotes = await api.get<Note[]>('/notes');
-      setNotes(fetchedNotes);
-      // If there are notes, show the most recent one in the textarea
-      if (fetchedNotes.length > 0) {
-        // Show pinned note first, or most recent
-        const pinnedNote = fetchedNotes.find(n => n.pinned);
-        setQuickNote(pinnedNote?.content || fetchedNotes[0]?.content || '');
-      }
-    } catch (error) {
-      console.error('Error fetching notes:', error);
-    }
-  };
-
   const handleSaveNote = async () => {
     if (!quickNote.trim()) return;
     setIsSavingNote(true);
     try {
-      await api.post('/notes', { content: quickNote.trim() });
+      await addNoteMutation.mutateAsync({ content: quickNote.trim() });
       showToast("Note saved successfully!", "success");
       setQuickNote('');
-      // Refresh notes list
-      fetchNotes();
     } catch (error) {
       console.error('Error saving note:', error);
       showToast("Failed to save note", "error");
@@ -413,8 +310,7 @@ export const Dashboard: React.FC = () => {
   const handleDeleteNote = async (noteId: string) => {
     setDeletingNoteId(noteId);
     try {
-      await api.delete(`/notes/${noteId}`);
-      fetchNotes();
+      await deleteNoteMutation.mutateAsync(noteId);
       showToast("Note deleted", "success");
     } catch (error) {
       console.error('Error deleting note:', error);
@@ -426,8 +322,7 @@ export const Dashboard: React.FC = () => {
 
   const handleTogglePin = async (noteId: string) => {
     try {
-      await api.post(`/notes/${noteId}/toggle-pin`, {});
-      fetchNotes();
+      await togglePinMutation.mutateAsync(noteId);
     } catch (error) {
       console.error('Error toggling pin:', error);
       showToast("Failed to pin note", "error");
@@ -465,13 +360,10 @@ export const Dashboard: React.FC = () => {
       };
 
       // Call API to add employee
-      await api.post('/employees', payload);
+      await addEmployeeMutation.mutateAsync(payload);
 
       // Success: Close modal
       setIsAddEmployeeModalOpen(false);
-
-      // Refetch dashboard data to show new employee
-      fetchData();
 
       // Show success message
       showToast(`Successfully added ${employeeData.name} to the system!`, 'success');
@@ -505,7 +397,7 @@ export const Dashboard: React.FC = () => {
   // EMPLOYEE DASHBOARD RENDER
   // =========================================================================
   if (user?.role === 'EMPLOYEE') {
-    // myTeam state is populated by effect
+    // myTeam state is populated by useMemo
 
     return (
       <>
@@ -745,8 +637,8 @@ export const Dashboard: React.FC = () => {
               <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">View All</button>
             </div>
             <div className="p-4 space-y-3 flex-grow">
-              {announcements.length > 0 ? (
-                announcements.slice(0, 3).map(ann => (
+              {announcementsData.length > 0 ? (
+                announcementsData.slice(0, 3).map(ann => (
                   <div key={ann.id} className="p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark hover:border-primary/30 transition-colors">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide ${
@@ -791,8 +683,8 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Personal Notes</h2>
               </div>
-              {notes.length > 0 && (
-                <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{notes.length} saved</span>
+              {notesData.length > 0 && (
+                <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{notesData.length} saved</span>
               )}
             </div>
             <div className="p-4 flex-grow flex flex-col gap-3">
@@ -821,11 +713,11 @@ export const Dashboard: React.FC = () => {
               </div>
 
               {/* Recent notes list */}
-              {notes.length > 0 && (
+              {notesData.length > 0 && (
                 <div className="flex-grow">
                   <p className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-2 uppercase tracking-wide">Recent</p>
                   <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
-                    {notes.slice(0, 5).map(note => (
+                    {notesData.slice(0, 5).map(note => (
                       <div
                         key={note.id}
                         className={`group flex items-start gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
@@ -878,7 +770,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
               )}
-              {notes.length === 0 && (
+              {notesData.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-4 text-text-muted-light dark:text-text-muted-dark">
                   <StickyNote size={24} className="mb-1.5 opacity-20" />
                   <p className="text-xs">No notes yet. Start writing!</p>
@@ -895,8 +787,6 @@ export const Dashboard: React.FC = () => {
   // =========================================================================
   // ADMIN DASHBOARD RENDER (Existing Logic)
   // =========================================================================
-
-  // State calculated in top-level effect
 
   // Show loading skeleton while fetching data
   if (isLoading) {
@@ -1233,9 +1123,9 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div className="p-4 space-y-4 max-h-[280px] overflow-y-auto flex-grow">
-              {auditLogs.length > 0 ? (
+              {auditLogsData.length > 0 ? (
                 <>
-                  {auditLogs.slice(0, 4).map(log => (
+                  {auditLogsData.slice(0, 4).map(log => (
                     <div key={log.id} className="flex gap-3 items-start text-sm">
                       <div className="mt-0.5 p-1.5 bg-background-light dark:bg-background-dark rounded-full border border-border-light dark:border-border-dark text-text-muted-light">
                         <Activity size={14} />
@@ -1268,8 +1158,8 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Notes</h2>
               </div>
-              {notes.length > 0 && (
-                <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark">{notes.length} saved</span>
+              {notesData.length > 0 && (
+                <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark">{notesData.length} saved</span>
               )}
             </div>
             <div className="p-4 flex-grow flex flex-col">
@@ -1295,11 +1185,11 @@ export const Dashboard: React.FC = () => {
                   </button>
                 </div>
               </div>
-              {notes.length > 0 && (
+              {notesData.length > 0 && (
                 <div className="mt-3 pt-2 border-t border-border-light dark:border-border-dark">
                   <p className="text-[10px] font-medium text-text-muted-light dark:text-text-muted-dark mb-1.5 uppercase tracking-wide">Recent</p>
                   <div className="space-y-1 max-h-20 overflow-y-auto">
-                    {notes.slice(0, 3).map(note => (
+                    {notesData.slice(0, 3).map(note => (
                       <div
                         key={note.id}
                         className={`group flex items-center gap-2 py-1 px-1 rounded cursor-pointer transition-colors ${

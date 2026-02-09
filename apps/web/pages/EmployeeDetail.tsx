@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { JobHistoryItem, Employee, PerformanceReview, DocumentItem } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { api, API_HOST, BASE_URL } from '../lib/api';
+import { queryKeys } from '../lib/queryKeys';
 import { Toast } from '../components/Toast';
 import { DatePicker } from '../components/DatePicker';
 import {
@@ -41,6 +43,7 @@ export const EmployeeDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user, updateUser } = useAuth();
+    const qc = useQueryClient();
 
     // Permissions Logic
     const isOwnProfile = user?.id === id;
@@ -194,6 +197,10 @@ export const EmployeeDetail: React.FC = () => {
 
             setIsEditProfileOpen(false);
             showToast('Profile updated successfully!', 'success');
+
+            // Invalidate React Query caches so lists/org chart stay in sync
+            qc.invalidateQueries({ queryKey: queryKeys.employees.all });
+            qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
         } catch (error) {
             const apiError = error as Error;
             showToast(apiError.message || 'Failed to update profile.', 'error');
@@ -251,6 +258,9 @@ export const EmployeeDetail: React.FC = () => {
                     : data.avatarUrl;
                 setAvatar(fullAvatarUrl);
                 showToast('Avatar uploaded successfully!', 'success');
+
+                // Invalidate React Query caches so employee list avatars stay in sync
+                qc.invalidateQueries({ queryKey: queryKeys.employees.all });
             } catch (error) {
                 console.error('Avatar upload error:', error);
                 showToast('Failed to upload avatar. Please try again.', 'error');
@@ -282,6 +292,9 @@ export const EmployeeDetail: React.FC = () => {
             setEmployee({ ...employee, skills: currentSkills });
             setIsEditingSkills(false);
             showToast('Skills updated successfully!', 'success');
+
+            // Invalidate React Query caches so employee list stays in sync
+            qc.invalidateQueries({ queryKey: queryKeys.employees.all });
         } catch (error) {
             const apiError = error as Error;
             showToast(apiError.message || 'Failed to update skills.', 'error');

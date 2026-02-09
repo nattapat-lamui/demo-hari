@@ -1,18 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Clock, TrendingUp, AlertCircle, CheckCircle2, Briefcase } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { api } from '../lib/api';
+import { useAttendanceRecords, useAttendanceSummary } from '../hooks/queries';
 import { Dropdown, DropdownOption } from '../components/Dropdown';
-
-interface AttendanceRecord {
-  id: string;
-  date: string;
-  clockIn: string | null;
-  clockOut: string | null;
-  totalHours: number | null;
-  status: 'Present' | 'Absent' | 'Late' | 'Half-day' | 'Remote';
-  notes: string | null;
-}
 
 interface AttendanceSummary {
   totalDays: number;
@@ -25,39 +15,19 @@ interface AttendanceSummary {
 
 const Attendance: React.FC = () => {
   const { user } = useAuth();
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [summary, setSummary] = useState<AttendanceSummary | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  useEffect(() => {
-    fetchAttendanceData();
-  }, [selectedMonth, selectedYear]);
-
-  const fetchAttendanceData = async () => {
-    try {
-      setLoading(true);
-      const startDate = new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0];
-      const endDate = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
-
-      // Fetch attendance records
-      const recordsData = await api.get<AttendanceRecord[]>(
-        `/attendance/employee/${user?.employeeId}?startDate=${startDate}&endDate=${endDate}`
-      );
-      setRecords(recordsData);
-
-      // Fetch summary
-      const summaryData = await api.get<AttendanceSummary>(
-        `/attendance/summary/${user?.employeeId}?startDate=${startDate}&endDate=${endDate}`
-      );
-      setSummary(summaryData);
-    } catch (error) {
-      console.error('Error fetching attendance:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: records = [], isPending: loading } = useAttendanceRecords(
+    user?.employeeId,
+    selectedMonth,
+    selectedYear,
+  );
+  const { data: summary } = useAttendanceSummary(
+    user?.employeeId,
+    selectedMonth,
+    selectedYear,
+  ) as { data: AttendanceSummary | undefined };
 
   const formatTime = (dateString: string | null) => {
     if (!dateString) return '-';

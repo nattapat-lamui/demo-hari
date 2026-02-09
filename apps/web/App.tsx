@@ -1,5 +1,8 @@
 import React, { Suspense, lazy } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { queryClient } from "./lib/queryClient";
 import { Layout } from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -73,6 +76,7 @@ const PageLoader = () => (
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <AuthProvider>
           <HashRouter>
@@ -119,6 +123,8 @@ const App: React.FC = () => {
           </HashRouter>
         </AuthProvider>
       </ToastProvider>
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 };

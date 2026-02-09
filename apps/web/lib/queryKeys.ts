@@ -1,0 +1,86 @@
+export const queryKeys = {
+  employees: {
+    all: ['employees'] as const,
+    lists: () => [...queryKeys.employees.all, 'list'] as const,
+    list: (filters: Record<string, unknown>) => [...queryKeys.employees.lists(), filters] as const,
+    details: () => [...queryKeys.employees.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.employees.details(), id] as const,
+  },
+  leaveRequests: {
+    all: ['leaveRequests'] as const,
+    list: () => [...queryKeys.leaveRequests.all, 'list'] as const,
+  },
+  leaveBalances: {
+    all: ['leaveBalances'] as const,
+    byEmployee: (id: string) => [...queryKeys.leaveBalances.all, id] as const,
+  },
+  notifications: {
+    all: ['notifications'] as const,
+    list: () => [...queryKeys.notifications.all, 'list'] as const,
+  },
+  orgChart: {
+    all: ['orgChart'] as const,
+    tree: () => [...queryKeys.orgChart.all, 'tree'] as const,
+    subtree: (id: string) => [...queryKeys.orgChart.all, 'subtree', id] as const,
+  },
+  dashboard: {
+    all: ['dashboard'] as const,
+    employeeStats: () => [...queryKeys.dashboard.all, 'employeeStats'] as const,
+    teamHierarchy: () => [...queryKeys.dashboard.all, 'teamHierarchy'] as const,
+  },
+  attendance: {
+    all: ['attendance'] as const,
+    today: () => [...queryKeys.attendance.all, 'today'] as const,
+    employee: (id: string, params: Record<string, unknown>) => [...queryKeys.attendance.all, 'employee', id, params] as const,
+    summary: (id: string, params: Record<string, unknown>) => [...queryKeys.attendance.all, 'summary', id, params] as const,
+  },
+  auditLogs: {
+    all: ['auditLogs'] as const,
+    list: () => [...queryKeys.auditLogs.all, 'list'] as const,
+  },
+  headcount: {
+    all: ['headcount'] as const,
+    stats: () => [...queryKeys.headcount.all, 'stats'] as const,
+  },
+  events: {
+    all: ['events'] as const,
+    list: () => [...queryKeys.events.all, 'list'] as const,
+  },
+  announcements: {
+    all: ['announcements'] as const,
+    list: () => [...queryKeys.announcements.all, 'list'] as const,
+  },
+  notes: {
+    all: ['notes'] as const,
+    list: () => [...queryKeys.notes.all, 'list'] as const,
+  },
+  documents: {
+    all: ['documents'] as const,
+    lists: () => [...queryKeys.documents.all, 'list'] as const,
+    list: (filters: Record<string, unknown>) => [...queryKeys.documents.lists(), filters] as const,
+    trash: () => [...queryKeys.documents.all, 'trash'] as const,
+    storage: () => [...queryKeys.documents.all, 'storage'] as const,
+  },
+  onboarding: {
+    all: ['onboarding'] as const,
+    tasks: () => [...queryKeys.onboarding.all, 'tasks'] as const,
+    contacts: () => [...queryKeys.onboarding.all, 'contacts'] as const,
+    documents: () => [...queryKeys.onboarding.all, 'documents'] as const,
+  },
+  performanceReviews: {
+    all: ['performanceReviews'] as const,
+    byEmployee: (id: string) => [...queryKeys.performanceReviews.all, id] as const,
+  },
+  jobHistory: {
+    all: ['jobHistory'] as const,
+    byEmployee: (id: string) => [...queryKeys.jobHistory.all, id] as const,
+  },
+  training: {
+    all: ['training'] as const,
+    byEmployee: (id: string) => [...queryKeys.training.all, id] as const,
+  },
+  employeeDocuments: {
+    all: ['employeeDocuments'] as const,
+    byEmployee: (id: string) => [...queryKeys.employeeDocuments.all, id] as const,
+  },
+} as const;

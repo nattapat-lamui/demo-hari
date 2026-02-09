@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { api, BASE_URL } from '../lib/api';
+import { BASE_URL } from '../lib/api';
+import { useDocumentList, useDocumentTrash, useDocumentStorage, useDeleteDocument, useRestoreDocument, usePermanentDeleteDocument } from '../hooks/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../lib/queryKeys';
 import {
   FileText,
   Download,
@@ -21,7 +24,7 @@ import {
   Trash2,
   RotateCcw,
 } from 'lucide-react';
-import { DocumentItem, PaginatedResponse } from '../types';
+import { DocumentItem } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../components/Toast';
 import { Pagination } from '../components/Pagination';
@@ -53,7 +56,6 @@ export const Documents: React.FC = () => {
   // Dropdown menu state
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState<string>('All Files');
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,92 +66,29 @@ export const Documents: React.FC = () => {
   // Upload State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-  const [trashDocuments, setTrashDocuments] = useState<DocumentItem[]>([]);
-
-  // Storage stats
-  const [storageStats, setStorageStats] = useState<{
-    used: number;
-    total: number;
-    usedFormatted: string;
-    totalFormatted: string;
-    percentage: number;
-  } | null>(null);
-
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
-  const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
 
-  const fetchDocuments = async () => {
-    try {
-      // Build query params for pagination
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: itemsPerPage.toString(),
-      });
+  const qc = useQueryClient();
 
-      if (selectedCategory !== 'All Files' && selectedCategory !== 'Recent' && selectedCategory !== 'Trash') {
-        params.append('category', selectedCategory);
-      }
-      if (selectedFileType !== 'All') {
-        params.append('type', selectedFileType);
-      }
-      if (searchTerm) {
-        params.append('search', searchTerm);
-      }
+  // React Query
+  const { data: docsResponse } = useDocumentList({
+    page: currentPage,
+    limit: itemsPerPage,
+    category: selectedCategory !== 'All Files' && selectedCategory !== 'Recent' && selectedCategory !== 'Trash' ? selectedCategory : undefined,
+    type: selectedFileType !== 'All' ? selectedFileType : undefined,
+    search: searchTerm || undefined,
+  });
+  const { data: trashDocuments = [] } = useDocumentTrash();
+  const { data: storageStats } = useDocumentStorage() as { data: { used: number; total: number; usedFormatted: string; totalFormatted: string; percentage: number } | undefined };
+  const deleteDocMutation = useDeleteDocument();
+  const restoreDocMutation = useRestoreDocument();
+  const permanentDeleteMutation = usePermanentDeleteDocument();
 
-      const response = await api.get<PaginatedResponse<DocumentItem>>(`/documents?${params.toString()}`);
-
-      // Handle paginated response
-      if ('data' in response && 'pagination' in response) {
-        setDocuments(response.data);
-        setTotalItems(response.total);
-        setTotalPages(response.totalPages);
-      } else {
-        // Fallback for non-paginated response
-        const data = response as unknown as DocumentItem[];
-        setDocuments(data);
-        setTotalItems(data.length);
-        setTotalPages(1);
-      }
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-    }
-  };
-
-  const fetchTrashDocuments = async () => {
-    try {
-      const data = await api.get<DocumentItem[]>('/documents/trash');
-      setTrashDocuments(data);
-    } catch (error) {
-      console.error('Error fetching trash documents:', error);
-    }
-  };
-
-  const fetchStorageStats = async () => {
-    try {
-      const data = await api.get<{
-        used: number;
-        total: number;
-        usedFormatted: string;
-        totalFormatted: string;
-        percentage: number;
-      }>('/documents/storage');
-      setStorageStats(data);
-    } catch (error) {
-      console.error('Error fetching storage stats:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedCategory !== 'Trash') {
-      fetchDocuments();
-    } else {
-      fetchTrashDocuments();
-    }
-    fetchStorageStats();
-  }, [currentPage, selectedCategory, selectedFileType, searchTerm]);
+  const documents = docsResponse?.data ?? [];
+  const totalItems = docsResponse?.total ?? 0;
+  const totalPages = docsResponse?.totalPages ?? 1;
 
   // Handler functions for pagination and filters
   const handlePageChange = (page: number) => {
@@ -356,8 +295,7 @@ export const Documents: React.FC = () => {
         throw new Error(error.error);
       }
 
-      fetchDocuments();
-      fetchStorageStats();
+      qc.invalidateQueries({ queryKey: queryKeys.documents.all });
       setIsUploadModalOpen(false);
       setSelectedFile(null);
       setUploadCategory('HR');
@@ -378,9 +316,7 @@ export const Documents: React.FC = () => {
     if (!deleteConfirmId) return;
 
     try {
-      await api.delete(`/documents/${deleteConfirmId}`);
-      fetchDocuments();
-      fetchTrashDocuments();
+      await deleteDocMutation.mutateAsync(deleteConfirmId);
       if (previewDoc?.id === deleteConfirmId) setPreviewDoc(null);
       showToast('Document moved to trash.', 'success');
     } catch (error) {
@@ -394,9 +330,7 @@ export const Documents: React.FC = () => {
   const handleRestore = async (e: React.MouseEvent, docId: string) => {
     e.stopPropagation();
     try {
-      await api.post(`/documents/${docId}/restore`, {});
-      fetchDocuments();
-      fetchTrashDocuments();
+      await restoreDocMutation.mutateAsync(docId);
       showToast('Document restored successfully.', 'success');
     } catch (error) {
       console.error('Error restoring document:', error);
@@ -407,9 +341,7 @@ export const Documents: React.FC = () => {
   const handlePermanentDelete = async (e: React.MouseEvent, docId: string) => {
     e.stopPropagation();
     try {
-      await api.delete(`/documents/${docId}/permanent`);
-      fetchTrashDocuments();
-      fetchStorageStats();
+      await permanentDeleteMutation.mutateAsync(docId);
       showToast('Document permanently deleted.', 'success');
     } catch (error) {
       console.error('Error permanently deleting document:', error);

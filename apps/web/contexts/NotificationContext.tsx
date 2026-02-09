@@ -1,7 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, ReactNode } from 'react';
 import { NotificationItem } from '../types';
-import { api } from '../lib/api';
-import { getSocket } from '../lib/socket';
+import {
+  useNotificationsList,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  useDeleteNotification,
+} from '../hooks/queries';
 
 interface NotificationContextType {
   notifications: NotificationItem[];
@@ -16,76 +20,41 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: notifications = [], isPending: isLoading, refetch } = useNotificationsList();
+  const markReadMutation = useMarkNotificationRead();
+  const markAllReadMutation = useMarkAllNotificationsRead();
+  const deleteMutation = useDeleteNotification();
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const fetchNotifications = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await api.get<NotificationItem[]>('/notifications');
-      setNotifications(data);
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchNotifications();
-
-    const socket = getSocket();
-
-    const handleNewNotification = (notification: NotificationItem) => {
-      console.log('Real-time: New notification', notification.id);
-      setNotifications(prev => [notification, ...prev]);
-    };
-
-    const handleRefresh = () => {
-      console.log('Real-time: Notification refresh');
-      fetchNotifications();
-    };
-
-    socket.on('notification:new', handleNewNotification);
-    socket.on('notification:refresh', handleRefresh);
-
-    return () => {
-      socket.off('notification:new', handleNewNotification);
-      socket.off('notification:refresh', handleRefresh);
-    };
-  }, [fetchNotifications]);
-
   const markAsRead = useCallback(async (id: string) => {
     try {
-      await api.patch(`/notifications/${id}/read`, {});
-      setNotifications(prev =>
-        prev.map(n => n.id === id ? { ...n, read: true } : n)
-      );
+      await markReadMutation.mutateAsync(id);
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
-  }, []);
+  }, [markReadMutation]);
 
   const markAllAsRead = useCallback(async () => {
     try {
-      await api.put('/notifications/mark-all-read', {});
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      await markAllReadMutation.mutateAsync();
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
     }
-  }, []);
+  }, [markAllReadMutation]);
 
-  const deleteNotification = useCallback(async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
-      await api.delete(`/notifications/${id}`);
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      await deleteMutation.mutateAsync(id);
     } catch (error) {
       console.error('Failed to delete notification:', error);
       throw error;
     }
-  }, []);
+  }, [deleteMutation]);
+
+  const handleRefetch = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   return (
     <NotificationContext.Provider value={{
@@ -94,8 +63,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       isLoading,
       markAsRead,
       markAllAsRead,
-      deleteNotification,
-      refetch: fetchNotifications,
+      deleteNotification: handleDelete,
+      refetch: handleRefetch,
     }}>
       {children}
     </NotificationContext.Provider>

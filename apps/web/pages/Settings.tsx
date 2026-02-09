@@ -12,12 +12,15 @@ import {
   AlertCircle,
   Camera,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Toast } from '../components/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { api, API_HOST, BASE_URL } from '../lib/api';
+import { queryKeys } from '../lib/queryKeys';
 
 export const Settings: React.FC = () => {
   const { user, updateUser } = useAuth();
+  const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<
@@ -215,6 +218,9 @@ export const Settings: React.FC = () => {
       });
 
       showToast('Profile saved successfully!', 'success');
+
+      // Invalidate React Query caches so employee lists stay in sync
+      qc.invalidateQueries({ queryKey: queryKeys.employees.all });
     } catch (error: any) {
       let errorMessage = 'Failed to save profile. Please try again.';
       if (error.message) {

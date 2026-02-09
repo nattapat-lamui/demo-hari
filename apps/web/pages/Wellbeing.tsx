@@ -1,15 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Megaphone, ScrollText, PartyPopper, ChevronLeft, ChevronRight, Plus, X, Check, Calendar, Type, AlignLeft } from 'lucide-react';
 import { Announcement, UpcomingEvent } from '../types';
 import { Toast } from '../components/Toast';
 import { Dropdown } from '../components/Dropdown';
 import { DatePicker } from '../components/DatePicker';
-import { api } from '../lib/api';
+import { useAnnouncements, useUpcomingEvents, useAddAnnouncement, useAddEvent, useDeleteEvent } from '../hooks/queries';
 
 export const Wellbeing: React.FC = () => {
-  const [announcementsList, setAnnouncementsList] = useState<Announcement[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const { data: announcementsList = [] } = useAnnouncements();
+  const { data: upcomingEvents = [] } = useUpcomingEvents();
+  const addAnnouncementMutation = useAddAnnouncement();
+  const addEventMutation = useAddEvent();
+  const deleteEventMutation = useDeleteEvent();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [newAnnouncement, setNewAnnouncement] = useState<Partial<Announcement>>({
@@ -31,22 +35,6 @@ export const Wellbeing: React.FC = () => {
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
     setToast({ show: true, message, type });
   };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [annData, eventsData] = await Promise.all([
-          api.get<Announcement[]>('/announcements'),
-          api.get<UpcomingEvent[]>('/upcoming-events').catch(() => [])
-        ]);
-        setAnnouncementsList(annData);
-        setUpcomingEvents(eventsData);
-      } catch (error) {
-        console.error('Error fetching wellbeing data:', error);
-      }
-    };
-    fetchData();
-  }, []);
 
   // Helper function to get days in a month
   const getDaysInMonth = (year: number, month: number) => {
@@ -136,15 +124,13 @@ export const Wellbeing: React.FC = () => {
     }
 
     try {
-      const createdAnnouncement = await api.post<Announcement>('/announcements', {
+      await addAnnouncementMutation.mutateAsync({
         title: newAnnouncement.title,
         description: newAnnouncement.description,
         type: newAnnouncement.type || 'announcement',
-        date: newAnnouncement.date || null
+        date: newAnnouncement.date || null,
       });
 
-      // Add to local state
-      setAnnouncementsList([createdAnnouncement, ...announcementsList]);
       setIsModalOpen(false);
       setNewAnnouncement({ type: 'announcement', title: '', description: '', date: '' });
       showToast('Announcement posted successfully!', 'success');
@@ -164,8 +150,7 @@ export const Wellbeing: React.FC = () => {
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      await api.delete(`/upcoming-events/${eventId}`);
-      setUpcomingEvents(upcomingEvents.filter(e => e.id !== eventId));
+      await deleteEventMutation.mutateAsync(eventId);
       showToast('Event deleted successfully!', 'success');
     } catch (error: any) {
       console.error('Error deleting event:', error);
@@ -181,14 +166,12 @@ export const Wellbeing: React.FC = () => {
     }
 
     try {
-      const createdEvent = await api.post<UpcomingEvent>('/upcoming-events', {
+      await addEventMutation.mutateAsync({
         title: newEvent.title,
         date: newEvent.date,
-        type: newEvent.type || 'Meeting'
+        type: newEvent.type || 'Meeting',
       });
 
-      // Add to local state
-      setUpcomingEvents([...upcomingEvents, createdEvent]);
       setIsEventModalOpen(false);
       setNewEvent({ type: 'Meeting', title: '', date: '' });
       showToast('Event created successfully!', 'success');
