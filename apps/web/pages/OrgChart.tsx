@@ -466,8 +466,11 @@ export const OrgChart: React.FC = () => {
     (e: React.DragEvent, nodeId: string) => {
       if (!isAdmin) return;
       const node = nodes.find((n) => n.id === nodeId);
-      if (!node || !node.parentId) {
-        e.preventDefault(); // Block root nodes
+      if (!node) { e.preventDefault(); return; }
+      // Block true root nodes (no parent + has children), but allow orphans (no parent + no children)
+      const hasReports = nodes.some((n) => n.parentId === nodeId);
+      if (!node.parentId && hasReports) {
+        e.preventDefault();
         return;
       }
       e.dataTransfer.effectAllowed = 'move';
@@ -535,7 +538,8 @@ export const OrgChart: React.FC = () => {
     const isDragging = draggedNodeId === node.id;
     const isDragOver = dragOverNodeId === node.id && draggedNodeId !== null;
     const canDrop = isDragOver && draggedNodeId !== null && isValidDrop(draggedNodeId, node.id);
-    const isDraggable = isAdmin && !!node.parentId;
+    const isOrphan = !node.parentId && (!node.children || node.children.length === 0);
+    const isDraggable = isAdmin && (!!node.parentId || isOrphan);
 
     return (
       <div className="flex flex-col items-center">
