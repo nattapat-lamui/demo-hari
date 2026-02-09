@@ -1,12 +1,46 @@
 import { Request, Response } from 'express';
 import LeaveRequestService from '../services/LeaveRequestService';
 import { emitLeaveRequestCreated, emitLeaveRequestUpdated, emitLeaveRequestDeleted } from '../socket';
+import { getPaginationParams, getSortParams } from '../utils/pagination';
 
 export class LeaveRequestController {
+    /**
+     * Get all leave requests with optional pagination
+     * Query params: page, limit, status, employeeId, type, sortBy, sortOrder
+     */
     async getAllLeaveRequests(req: Request, res: Response): Promise<void> {
         try {
-            const requests = await LeaveRequestService.getAllLeaveRequests();
-            res.json(requests);
+            // Check if pagination is requested
+            const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
+
+            if (usePagination) {
+                const paginationParams = getPaginationParams(req);
+                const sortParams = getSortParams(
+                    req,
+                    ['created_at', 'start_date', 'end_date', 'status', 'type'],
+                    'created_at',
+                    'DESC'
+                );
+
+                const filters = {
+                    status: req.query.status as string | undefined,
+                    employeeId: req.query.employeeId as string | undefined,
+                    type: req.query.type as string | undefined,
+                };
+
+                const result = await LeaveRequestService.getLeaveRequestsPaginated(
+                    paginationParams,
+                    filters,
+                    sortParams.field,
+                    sortParams.order
+                );
+
+                res.json(result);
+            } else {
+                // Backward compatibility: return all requests without pagination
+                const requests = await LeaveRequestService.getAllLeaveRequests();
+                res.json(requests);
+            }
         } catch (error: any) {
             console.error('Get leave requests error:', error);
             res.status(500).json({ error: 'Failed to fetch leave requests' });

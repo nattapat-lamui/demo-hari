@@ -2,6 +2,7 @@ import { query } from '../db';
 import { LeaveRequest, CreateLeaveRequestDTO, UpdateLeaveRequestDTO } from '../models/LeaveRequest';
 import SystemConfigService from './SystemConfigService';
 import NotificationService from './NotificationService';
+import { PaginationParams, PaginatedResult, createPaginatedResult, buildPaginationClause, buildSortClause } from '../utils/pagination';
 
 export class LeaveRequestService {
     async getAllLeaveRequests(): Promise<LeaveRequest[]> {
@@ -14,6 +15,76 @@ export class LeaveRequestService {
             ORDER BY lr.created_at DESC
         `);
         return result.rows.map(this.mapRowToLeaveRequest);
+    }
+
+    async getLeaveRequestsPaginated(
+        paginationParams: PaginationParams,
+        filters: { status?: string; employeeId?: string; type?: string },
+        sortField: string = 'created_at',
+        sortOrder: 'ASC' | 'DESC' = 'DESC'
+    ): Promise<PaginatedResult<LeaveRequest>> {
+        // Build WHERE clause for filters
+        const whereClauses: string[] = [];
+        const params: any[] = [];
+        let paramCount = 0;
+
+        if (filters.status) {
+            paramCount++;
+            whereClauses.push(`lr.status = $${paramCount}`);
+            params.push(filters.status);
+        }
+
+        if (filters.employeeId) {
+            paramCount++;
+            whereClauses.push(`lr.employee_id = $${paramCount}`);
+            params.push(filters.employeeId);
+        }
+
+        if (filters.type) {
+            paramCount++;
+            whereClauses.push(`lr.leave_type = $${paramCount}`);
+            params.push(filters.type);
+        }
+
+        const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        // Field mapping for sorting
+        const fieldMapping: Record<string, string> = {
+            'created_at': 'lr.created_at',
+            'start_date': 'lr.start_date',
+            'end_date': 'lr.end_date',
+            'status': 'lr.status',
+            'type': 'lr.leave_type',
+        };
+
+        // Get total count
+        const countResult = await query(
+            `SELECT COUNT(*) as total
+             FROM leave_requests lr
+             ${whereClause}`,
+            params
+        );
+        const total = parseInt(countResult.rows[0].total);
+
+        // Get paginated data
+        const sortClause = buildSortClause(sortField, sortOrder, fieldMapping);
+        const paginationClause = buildPaginationClause(paginationParams);
+
+        const result = await query(
+            `SELECT lr.*, e.avatar, e.name as employee_name,
+                    (lr.end_date::date - lr.start_date::date) + 1 as days,
+                    TO_CHAR(lr.start_date, 'Mon DD') || ' - ' || TO_CHAR(lr.end_date, 'Mon DD') as dates
+             FROM leave_requests lr
+             LEFT JOIN employees e ON lr.employee_id = e.id
+             ${whereClause}
+             ${sortClause}
+             ${paginationClause}`,
+            params
+        );
+
+        const data = result.rows.map(this.mapRowToLeaveRequest);
+
+        return createPaginatedResult(data, total, paginationParams);
     }
 
     async getLeaveRequestById(id: string): Promise<LeaveRequest | null> {

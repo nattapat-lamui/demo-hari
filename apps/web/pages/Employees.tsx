@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MoreHorizontal, Mail, MapPin, Eye, ChevronDown, User, Briefcase, Users, Calendar, Check, Circle, CheckCircle2, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Employee } from '../types';
+import { Employee, PaginatedResponse } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { api, API_HOST } from '../lib/api';
 import { Toast } from '../components/Toast';
 import { Modal } from '../components/Modal';
 import { Dropdown, DropdownOption } from '../components/Dropdown';
 import { Avatar } from '../components/Avatar';
+import { Pagination } from '../components/Pagination';
 
 export const Employees: React.FC = () => {
   const { user } = useAuth();
@@ -29,6 +30,12 @@ export const Employees: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const navigate = useNavigate();
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   // Add Employee Form State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
@@ -42,10 +49,14 @@ export const Employees: React.FC = () => {
   // Extract unique departments for filter dropdown
   const departments: DropdownOption[] = [
     { value: 'All', label: 'All Departments' },
-    ...Array.from(new Set(employeesList.map(e => e.department))).map(dept => ({
-      value: dept,
-      label: dept
-    }))
+    { value: 'Engineering', label: 'Engineering' },
+    { value: 'Human Resources', label: 'Human Resources' },
+    { value: 'Marketing', label: 'Marketing' },
+    { value: 'Sales', label: 'Sales' },
+    { value: 'Finance', label: 'Finance' },
+    { value: 'Operations', label: 'Operations' },
+    { value: 'Product', label: 'Product' },
+    { value: 'Design', label: 'Design' },
   ];
   const statuses: DropdownOption[] = [
     { value: 'All', label: 'All Statuses' },
@@ -54,36 +65,72 @@ export const Employees: React.FC = () => {
     { value: 'Terminated', label: 'Terminated' }
   ];
 
-  const filteredEmployees = employeesList.filter(emp => {
-    const matchesSearch =
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (emp.skills && emp.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase())));
+  // Server-side filtering - no need for client-side filtering
+  // When filters change, reset to page 1
+  const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<string>>) => (value: string) => {
+    setter(value);
+    setCurrentPage(1);
+  };
 
-    const matchesDepartment = departmentFilter === 'All' || emp.department === departmentFilter;
-    const matchesStatus = statusFilter === 'All' || emp.status === statusFilter;
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
 
-    return matchesSearch && matchesDepartment && matchesStatus;
-  });
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-  // Fetch employees from API
+  // Fetch employees from API - refetch when filters or pagination changes
   useEffect(() => {
     fetchEmployees();
-  }, []);
+  }, [currentPage, departmentFilter, statusFilter, searchTerm]);
 
-  // ... (fetchEmployees)
   const fetchEmployees = async () => {
     try {
-      const data = await api.get<any[]>('/employees');
-      // Transform relative avatar URLs to absolute URLs
-      const employeesWithFullAvatars = data.map(emp => ({
-        ...emp,
-        avatar: emp.avatar && emp.avatar.startsWith('/')
-          ? `${API_HOST}${emp.avatar}`
-          : emp.avatar
-      }));
-      setEmployeesList(employeesWithFullAvatars);
+      // Build query params
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+      });
+
+      if (departmentFilter !== 'All') {
+        params.append('department', departmentFilter);
+      }
+      if (statusFilter !== 'All') {
+        params.append('status', statusFilter);
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+
+      const response = await api.get<PaginatedResponse<Employee>>(`/employees?${params.toString()}`);
+
+      // Handle paginated response
+      if ('data' in response && 'pagination' in response) {
+        const employeesWithFullAvatars = response.data.map(emp => ({
+          ...emp,
+          avatar: emp.avatar && emp.avatar.startsWith('/')
+            ? `${API_HOST}${emp.avatar}`
+            : emp.avatar
+        }));
+        setEmployeesList(employeesWithFullAvatars);
+        setTotalItems(response.total);
+        setTotalPages(response.totalPages);
+      } else {
+        // Fallback for non-paginated response
+        const data = response as unknown as Employee[];
+        const employeesWithFullAvatars = data.map(emp => ({
+          ...emp,
+          avatar: emp.avatar && emp.avatar.startsWith('/')
+            ? `${API_HOST}${emp.avatar}`
+            : emp.avatar
+        }));
+        setEmployeesList(employeesWithFullAvatars);
+        setTotalItems(data.length);
+        setTotalPages(1);
+      }
     } catch (error) {
       console.error('Error fetching employees:', error);
     }
@@ -157,7 +204,7 @@ export const Employees: React.FC = () => {
               type="text"
               placeholder="Search by name, role, department, or skills..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
           </div>
@@ -167,14 +214,14 @@ export const Employees: React.FC = () => {
             <Dropdown
               options={departments}
               value={departmentFilter}
-              onChange={setDepartmentFilter}
+              onChange={handleFilterChange(setDepartmentFilter)}
               width="w-full md:w-48"
             />
 
             <Dropdown
               options={statuses}
               value={statusFilter}
-              onChange={setStatusFilter}
+              onChange={handleFilterChange(setStatusFilter)}
               width="w-full md:w-40"
             />
           </div>
@@ -194,7 +241,7 @@ export const Employees: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {filteredEmployees.map((emp) => (
+              {employeesList.map((emp) => (
                 <tr
                   key={emp.id}
                   className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group cursor-pointer"
@@ -267,7 +314,7 @@ export const Employees: React.FC = () => {
 
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4 p-4">
-          {filteredEmployees.map((emp) => (
+          {employeesList.map((emp) => (
             <div
               key={emp.id}
               onClick={() => navigate(`/employees/${emp.id}`)}
@@ -340,11 +387,16 @@ export const Employees: React.FC = () => {
         </div>
 
         {/* Empty State */}
-        {filteredEmployees.length === 0 && (
+        {employeesList.length === 0 && (
           <div className="p-12 text-center text-text-muted-light dark:text-text-muted-dark">
             <p>No employees found matching your filters.</p>
             <button
-              onClick={() => { setSearchTerm(''); setDepartmentFilter('All'); setStatusFilter('All'); }}
+              onClick={() => {
+                setSearchTerm('');
+                setDepartmentFilter('All');
+                setStatusFilter('All');
+                setCurrentPage(1);
+              }}
               className="mt-2 text-primary hover:underline text-sm"
             >
               Clear all filters
@@ -352,14 +404,18 @@ export const Employees: React.FC = () => {
           </div>
         )}
 
-        {/* Pagination Placeholder */}
-        <div className="p-4 border-t border-border-light dark:border-border-dark flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-text-muted-light dark:text-text-muted-dark">
-          <span>Showing <span className="font-medium text-text-light dark:text-text-dark">1</span> to <span className="font-medium text-text-light dark:text-text-dark">{filteredEmployees.length}</span> of <span className="font-medium text-text-light dark:text-text-dark">{filteredEmployees.length}</span> results</span>
-          <div className="flex gap-2">
-            <button className="px-3 py-1 border border-border-light dark:border-border-dark rounded hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">Previous</button>
-            <button className="px-3 py-1 border border-border-light dark:border-border-dark rounded hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">Next</button>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-border-light dark:border-border-dark">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+            />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Add Employee Modal */}
