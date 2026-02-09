@@ -32,3 +32,10 @@ apps/api/uploads/
 
 # Debug files
 debug-*.js
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*.local
+!.env.example
