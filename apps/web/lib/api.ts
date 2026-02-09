@@ -1,4 +1,6 @@
 import { LoginCredentials, AuthResponse } from '../types';
+import { retryFetch } from '../utils/retry';
+import errorLogging from '../services/errorLogging';
 
 // Use environment variable for API URL, fallback to /api for local development with proxy
 export const BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -51,11 +53,30 @@ const handleResponse = async (response: Response) => {
 
 export const api = {
     get: async <T>(endpoint: string): Promise<T> => {
-        const response = await fetch(`${BASE_URL}${endpoint}`, {
-            method: 'GET',
-            headers: getHeaders(),
-        });
-        return handleResponse(response);
+        try {
+            // Use retry logic for GET requests (safe to retry)
+            const response = await retryFetch(
+                `${BASE_URL}${endpoint}`,
+                {
+                    method: 'GET',
+                    headers: getHeaders(),
+                },
+                {
+                    maxRetries: 3,
+                    onRetry: (attempt, error) => {
+                        console.log(`Retrying request to ${endpoint} (attempt ${attempt}):`, error.message);
+                        errorLogging.logWarning(`API retry attempt ${attempt} for ${endpoint}`, {
+                            endpoint,
+                            error: error.message,
+                        });
+                    },
+                }
+            );
+            return handleResponse(response);
+        } catch (error: any) {
+            errorLogging.logError(error, { endpoint, method: 'GET' });
+            throw error;
+        }
     },
 
     post: async <T>(endpoint: string, data: RequestBody): Promise<T> => {

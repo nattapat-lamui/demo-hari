@@ -1,3 +1,5 @@
+import { captureError, addBreadcrumb } from '../config/sentry';
+
 /**
  * Error logging service
  * Centralizes error logging for the application
@@ -29,10 +31,11 @@ class ErrorLoggingService {
       console.error('Error logged:', errorData);
     }
 
-    // In production, send to error tracking service (e.g., Sentry, LogRocket)
+    // In production, send to error tracking service
     if (process.env.NODE_ENV === 'production') {
-      // TODO: Integrate with error tracking service
-      // Example: Sentry.captureException(error, { extra: context });
+      // Send to Sentry
+      captureError(error, context);
+      // Also send to backend for logging
       this.sendToBackend(errorData);
     }
   }
@@ -96,6 +99,9 @@ class ErrorLoggingService {
     if (process.env.NODE_ENV === 'development') {
       console.log('Action tracked:', action, properties);
     }
+
+    // Add breadcrumb to Sentry for context
+    addBreadcrumb(action, properties);
 
     // TODO: Integrate with analytics service (Google Analytics, Mixpanel, etc.)
   }
