@@ -21,9 +21,10 @@ import {
   Trash2,
   RotateCcw,
 } from 'lucide-react';
-import { DocumentItem } from '../types';
+import { DocumentItem, PaginatedResponse } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../components/Toast';
+import { Pagination } from '../components/Pagination';
 
 export const Documents: React.FC = () => {
   const { user } = useAuth();
@@ -74,10 +75,44 @@ export const Documents: React.FC = () => {
     percentage: number;
   } | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const fetchDocuments = async () => {
     try {
-      const data = await api.get<DocumentItem[]>('/documents');
-      setDocuments(data);
+      // Build query params for pagination
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+      });
+
+      if (selectedCategory !== 'All Files' && selectedCategory !== 'Recent' && selectedCategory !== 'Trash') {
+        params.append('category', selectedCategory);
+      }
+      if (selectedFileType !== 'All') {
+        params.append('type', selectedFileType);
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+
+      const response = await api.get<PaginatedResponse<DocumentItem>>(`/documents?${params.toString()}`);
+
+      // Handle paginated response
+      if ('data' in response && 'pagination' in response) {
+        setDocuments(response.data);
+        setTotalItems(response.total);
+        setTotalPages(response.totalPages);
+      } else {
+        // Fallback for non-paginated response
+        const data = response as unknown as DocumentItem[];
+        setDocuments(data);
+        setTotalItems(data.length);
+        setTotalPages(1);
+      }
     } catch (error) {
       console.error('Error fetching documents:', error);
     }
@@ -108,10 +143,34 @@ export const Documents: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchDocuments();
-    fetchTrashDocuments();
+    if (selectedCategory !== 'Trash') {
+      fetchDocuments();
+    } else {
+      fetchTrashDocuments();
+    }
     fetchStorageStats();
-  }, []);
+  }, [currentPage, selectedCategory, selectedFileType, searchTerm]);
+
+  // Handler functions for pagination and filters
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setCurrentPage(1);
+  };
+
+  const handleFileTypeChange = (type: string) => {
+    setSelectedFileType(type);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
 
   // Fetch image preview with auth token
   useEffect(() => {
@@ -375,7 +434,7 @@ export const Documents: React.FC = () => {
             {categories.map((cat) => (
               <button
                 key={cat.name}
-                onClick={() => setSelectedCategory(cat.name)}
+                onClick={() => handleCategoryChange(cat.name)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   selectedCategory === cat.name
                     ? 'bg-primary/10 text-primary'
@@ -433,7 +492,7 @@ export const Documents: React.FC = () => {
               />
               <select
                 value={selectedFileType}
-                onChange={(e) => setSelectedFileType(e.target.value)}
+                onChange={(e) => handleFileTypeChange(e.target.value)}
                 className="appearance-none pl-9 pr-8 py-2 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer text-text-light dark:text-text-dark"
               >
                 {fileTypes.map((type) => (
@@ -468,7 +527,7 @@ export const Documents: React.FC = () => {
                 type="text"
                 placeholder="Search files..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
                 className="w-full sm:w-64 pl-9 pr-4 py-2 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -727,6 +786,19 @@ export const Documents: React.FC = () => {
               <p className="text-sm">
                 You have access to your personal documents and company policies.
               </p>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {selectedCategory !== 'Trash' && totalPages > 1 && (
+            <div className="p-4 border-t border-border-light dark:border-border-dark mt-6">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={handlePageChange}
+              />
             </div>
           )}
         </div>
