@@ -457,9 +457,6 @@ export const Onboarding: React.FC = () => {
                 emp.name.toLowerCase().includes(value.toLowerCase())
             ).slice(0, 5); // Show max 5 suggestions
 
-            console.log('All employees:', allEmployees.length);
-            console.log('Filtered employees:', filtered);
-
             setEmailSuggestions(filtered);
             setShowSuggestions(filtered.length > 0);
         } else {
@@ -491,6 +488,8 @@ export const Onboarding: React.FC = () => {
         );
         try {
             await api.patch(`/onboarding/tasks/${id}`, { completed: newCompleted });
+            // Backend updates employee onboarding_percentage/status — sync the cache
+            qc.invalidateQueries({ queryKey: queryKeys.employees.all });
         } catch (error) {
             // Revert on failure
             qc.setQueryData<OnboardingTask[]>(queryKeys.onboarding.tasks(), old =>
