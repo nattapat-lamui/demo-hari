@@ -507,26 +507,26 @@ export const Settings: React.FC = () => {
                     Phone Number
                   </label>
                   <div className="flex gap-2">
-                    <select
+                    <Dropdown
                       id="countryCode"
                       name="countryCode"
                       value={countryCode}
-                      onChange={(e) => setCountryCode(e.target.value)}
-                      aria-label="Country code"
-                      className="w-32 px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark cursor-pointer"
-                    >
-                      <option value="+66">🇹🇭 +66</option>
-                      <option value="+1">🇺🇸 +1</option>
-                      <option value="+44">🇬🇧 +44</option>
-                      <option value="+65">🇸🇬 +65</option>
-                      <option value="+81">🇯🇵 +81</option>
-                      <option value="+86">🇨🇳 +86</option>
-                      <option value="+91">🇮🇳 +91</option>
-                      <option value="+61">🇦🇺 +61</option>
-                      <option value="+82">🇰🇷 +82</option>
-                      <option value="+33">🇫🇷 +33</option>
-                      <option value="+49">🇩🇪 +49</option>
-                    </select>
+                      onChange={(value) => setCountryCode(value)}
+                      className="w-32"
+                      options={[
+                        { value: '+66', label: '🇹🇭 +66' },
+                        { value: '+1', label: '🇺🇸 +1' },
+                        { value: '+44', label: '🇬🇧 +44' },
+                        { value: '+65', label: '🇸🇬 +65' },
+                        { value: '+81', label: '🇯🇵 +81' },
+                        { value: '+86', label: '🇨🇳 +86' },
+                        { value: '+91', label: '🇮🇳 +91' },
+                        { value: '+61', label: '🇦🇺 +61' },
+                        { value: '+82', label: '🇰🇷 +82' },
+                        { value: '+33', label: '🇫🇷 +33' },
+                        { value: '+49', label: '🇩🇪 +49' },
+                      ]}
+                    />
                     <input
                       id="phone"
                       name="phone"
@@ -534,9 +534,9 @@ export const Settings: React.FC = () => {
                       value={profile.phone}
                       onChange={(e) => {
                         const val = e.target.value.replace(/\D/g, '');
-                        if (val.length <= 12) setProfile((prev) => ({ ...prev, phone: val }));
+                        if (val.length <= 10) setProfile((prev) => ({ ...prev, phone: val }));
                       }}
-                      maxLength={12}
+                      maxLength={10}
                       placeholder="812345678"
                       className="flex-1 px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                     />
