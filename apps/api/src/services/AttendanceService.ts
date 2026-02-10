@@ -8,7 +8,7 @@ export interface AttendanceRecord {
   clockOut: string | null;
   breakDuration: number;
   totalHours: number | null;
-  status: 'On-time' | 'Late' | 'Absent';
+  status: 'On-time' | 'Late' | 'Absent' | 'On-leave';
   notes: string | null;
   modifiedBy: string | null;
   createdAt: Date;
@@ -34,6 +34,7 @@ export interface AttendanceSnapshot {
   present: number;
   late: number;
   absent: number;
+  onLeave: number;
   total: number;
 }
 
@@ -209,6 +210,7 @@ export class AttendanceService {
     presentDays: number;
     absentDays: number;
     lateDays: number;
+    onLeaveDays: number;
     totalHours: number;
   }> {
     const result = await query(
@@ -217,6 +219,7 @@ export class AttendanceService {
         COUNT(*) FILTER (WHERE status = 'On-time') as present_days,
         COUNT(*) FILTER (WHERE status = 'Absent') as absent_days,
         COUNT(*) FILTER (WHERE status = 'Late') as late_days,
+        COUNT(*) FILTER (WHERE status = 'On-leave') as on_leave_days,
         COALESCE(SUM(total_hours), 0) as total_hours
        FROM attendance_records
        WHERE employee_id = $1 AND date BETWEEN $2 AND $3`,
@@ -229,6 +232,7 @@ export class AttendanceService {
       presentDays: parseInt(row.present_days, 10),
       absentDays: parseInt(row.absent_days, 10),
       lateDays: parseInt(row.late_days, 10),
+      onLeaveDays: parseInt(row.on_leave_days, 10),
       totalHours: parseFloat(row.total_hours),
     };
   }
@@ -249,6 +253,11 @@ export class AttendanceService {
         COUNT(*) FILTER (WHERE status = 'On-time') AS present,
         COUNT(*) FILTER (WHERE status = 'Late') AS late,
         COUNT(*) FILTER (WHERE status = 'Absent') AS absent,
+        COUNT(*) FILTER (WHERE status = 'On-leave') AS on_leave_records,
+        (SELECT COUNT(DISTINCT lr.employee_id)
+         FROM leave_requests lr
+         JOIN employees e ON lr.employee_id = e.id AND e.status = 'Active'
+         WHERE lr.status = 'Approved' AND $1::date BETWEEN lr.start_date AND lr.end_date) AS on_leave_requests,
         (SELECT COUNT(*) FROM employees WHERE status = 'Active') AS total
        FROM attendance_records
        WHERE date = $1`,
@@ -256,10 +265,13 @@ export class AttendanceService {
     );
 
     const row = result.rows[0];
+    const onLeaveRecords = parseInt(row.on_leave_records, 10);
+    const onLeaveRequests = parseInt(row.on_leave_requests, 10);
     return {
       present: parseInt(row.present, 10),
       late: parseInt(row.late, 10),
       absent: parseInt(row.absent, 10),
+      onLeave: Math.max(onLeaveRecords, onLeaveRequests),
       total: parseInt(row.total, 10),
     };
   }

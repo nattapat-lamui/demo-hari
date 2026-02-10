@@ -24,6 +24,7 @@ const STATUS_OPTIONS: DropdownOption[] = [
   { value: 'On-time', label: 'On-time' },
   { value: 'Late', label: 'Late' },
   { value: 'Absent', label: 'Absent' },
+  { value: 'On-leave', label: 'On-leave' },
 ];
 
 export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
@@ -72,11 +73,12 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
     e.preventDefault();
     if (!employeeId || !date) return;
 
+    const dateStr = date.slice(0, 10); // Normalize to YYYY-MM-DD
     onSubmit({
       employeeId,
-      date,
-      clockIn: clockIn ? `${date}T${clockIn}:00+07:00` : undefined,
-      clockOut: clockOut ? `${date}T${clockOut}:00+07:00` : undefined,
+      date: dateStr,
+      clockIn: clockIn ? `${dateStr}T${clockIn}:00+07:00` : undefined,
+      clockOut: clockOut ? `${dateStr}T${clockOut}:00+07:00` : undefined,
       status,
       notes: notes || undefined,
     });

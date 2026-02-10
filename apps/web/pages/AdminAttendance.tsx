@@ -4,6 +4,7 @@ import {
   Clock,
   AlertCircle,
   XCircle,
+  CalendarX2,
   Plus,
   Pencil,
   Trash2,
@@ -48,6 +49,7 @@ const STATUS_FILTER_OPTIONS: DropdownOption[] = [
   { value: 'On-time', label: 'On-time' },
   { value: 'Late', label: 'Late' },
   { value: 'Absent', label: 'Absent' },
+  { value: 'On-leave', label: 'On-leave' },
 ];
 
 const getStatusStyle = (status: string): { dot: string; badge: string } => {
@@ -58,6 +60,8 @@ const getStatusStyle = (status: string): { dot: string; badge: string } => {
       return { dot: 'bg-yellow-500', badge: 'bg-yellow-50 text-yellow-700 ring-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:ring-yellow-800' };
     case 'Absent':
       return { dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800' };
+    case 'On-leave':
+      return { dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:ring-blue-800' };
     default:
       return { dot: 'bg-gray-500', badge: 'bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:ring-gray-800' };
   }
@@ -75,6 +79,9 @@ const formatTime = (dateString: string | null) => {
 const formatTotalHours = (record: AdminAttendanceRecord): { text: string; className: string } => {
   if (record.status === 'Absent') {
     return { text: 'Absent', className: 'text-red-500 dark:text-red-400' };
+  }
+  if (record.status === 'On-leave') {
+    return { text: 'On-leave', className: 'text-blue-500 dark:text-blue-400' };
   }
   if (record.clockIn && record.clockOut) {
     const hours = record.totalHours != null ? Number(record.totalHours).toFixed(1) : '-';
@@ -242,7 +249,7 @@ const AdminAttendance: React.FC = () => {
 
       {/* Snapshot Cards */}
       {snapshot && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <SnapshotCard
             icon={<Users size={20} />}
             label="Total Employees"
@@ -266,6 +273,12 @@ const AdminAttendance: React.FC = () => {
             label="Absent"
             value={snapshot.absent}
             iconColor="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+          />
+          <SnapshotCard
+            icon={<CalendarX2 size={20} />}
+            label="On-leave"
+            value={snapshot.onLeave}
+            iconColor="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
           />
         </div>
       )}
