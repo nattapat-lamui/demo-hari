@@ -383,7 +383,7 @@ export const useOnboardingDocuments = () => {
 export const useJobHistory = (id: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.jobHistory.byEmployee(id!),
-    queryFn: () => api.get<JobHistoryItem[]>(`/employees/${id}/job-history`),
+    queryFn: () => api.get<JobHistoryItem[]>(`/job-history?employeeId=${id}`),
     enabled: !!id,
   });
 };
@@ -399,7 +399,7 @@ export const usePerformanceReviews = (id: string | undefined) => {
 export const useEmployeeTraining = (id: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.training.byEmployee(id!),
-    queryFn: () => api.get<EmployeeTrainingRecord[]>(`/employees/${id}/training`),
+    queryFn: () => api.get<EmployeeTrainingRecord[]>(`/employee-training/${id}`),
     enabled: !!id,
   });
 };
@@ -407,7 +407,23 @@ export const useEmployeeTraining = (id: string | undefined) => {
 export const useEmployeeDocuments = (id: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.employeeDocuments.byEmployee(id!),
-    queryFn: () => api.get<DocumentItem[]>(`/employees/${id}/documents`),
+    queryFn: () => api.get<DocumentItem[]>('/documents'),
+    enabled: !!id,
+  });
+};
+
+export const useEmployeeManager = (id: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.employeeManager.byEmployee(id!),
+    queryFn: () => api.get<Employee>(`/employees/${id}/manager`).catch(() => null),
+    enabled: !!id,
+  });
+};
+
+export const useEmployeeDirectReports = (id: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.employeeDirectReports.byEmployee(id!),
+    queryFn: () => api.get<Employee[]>(`/employees/${id}/direct-reports`).catch(() => []),
     enabled: !!id,
   });
 };

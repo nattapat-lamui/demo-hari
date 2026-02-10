@@ -83,6 +83,14 @@ export const queryKeys = {
     all: ['employeeDocuments'] as const,
     byEmployee: (id: string) => [...queryKeys.employeeDocuments.all, id] as const,
   },
+  employeeManager: {
+    all: ['employeeManager'] as const,
+    byEmployee: (id: string) => [...queryKeys.employeeManager.all, id] as const,
+  },
+  employeeDirectReports: {
+    all: ['employeeDirectReports'] as const,
+    byEmployee: (id: string) => [...queryKeys.employeeDirectReports.all, id] as const,
+  },
   adminAttendance: {
     all: ['adminAttendance'] as const,
     snapshot: () => [...queryKeys.adminAttendance.all, 'snapshot'] as const,

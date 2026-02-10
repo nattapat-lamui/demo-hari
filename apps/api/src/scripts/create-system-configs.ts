@@ -39,7 +39,7 @@ async function createSystemConfigsTable() {
                 key: 'quotas',
                 value: JSON.stringify([
                     { type: 'Vacation', total: 15 },
-                    { type: 'Sick Leave', total: 10 },
+                    { type: 'Sick Leave', total: 30 },
                     { type: 'Personal Day', total: -1 } // -1 = unlimited
                 ]),
                 data_type: 'json',
@@ -128,7 +128,7 @@ async function createSystemConfigsTable() {
 
         console.log('\n✅ All configurations inserted successfully!');
         console.log('\nDefault configurations:');
-        console.log('  - Leave quotas: Vacation (15), Sick Leave (10), Personal Day (Unlimited)');
+        console.log('  - Leave quotas: Vacation (15), Sick Leave (30), Personal Day (Unlimited)');
         console.log('  - Default password: Welcome123!');
         console.log('  - Session timeout: 8 hours');
         console.log('  - Max file upload: 50 MB');

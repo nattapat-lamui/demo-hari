@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { JobHistoryItem, Employee, PerformanceReview, DocumentItem } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { api, API_HOST, BASE_URL } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
+import {
+    useEmployeeDetail,
+    useJobHistory,
+    usePerformanceReviews,
+    useEmployeeTraining,
+    useEmployeeDocuments,
+    useEmployeeManager,
+    useEmployeeDirectReports,
+} from '../hooks/queries';
 import { Toast } from '../components/Toast';
 import { Users } from 'lucide-react';
 import {
@@ -50,37 +59,65 @@ export const EmployeeDetail: React.FC = () => {
         setToast({ show: true, message, type });
     };
 
-    // Loading State
-    const [isLoading, setIsLoading] = useState(true);
+    // ---------------------------------------------------------------------------
+    // React Query hooks
+    // ---------------------------------------------------------------------------
+    const employeeQ = useEmployeeDetail(id);
+    const historyQ = useJobHistory(id);
+    const reviewsQ = usePerformanceReviews(id);
+    const trainingQ = useEmployeeTraining(id);
+    const docsQ = useEmployeeDocuments(id);
+    const managerQ = useEmployeeManager(id);
+    const directReportsQ = useEmployeeDirectReports(id);
 
-    // Employee State
-    const [employee, setEmployee] = useState<Employee | null>(null);
+    const employee = (employeeQ.data as Employee | undefined) ?? null;
+    const isLoading = employeeQ.isPending;
+    const manager = (managerQ.data as Employee | null | undefined) ?? null;
+    const directReports = (directReportsQ.data as Employee[] | undefined) ?? [];
+    const trainingRecords = trainingQ.data ?? [];
+
+    // ---------------------------------------------------------------------------
+    // Derived avatar (with local preview override)
+    // ---------------------------------------------------------------------------
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const avatar = useMemo(() => {
+        if (avatarPreview) return avatarPreview;
+        if (!employee?.avatar) return `https://ui-avatars.com/api/?name=${employee?.name}`;
+        return employee.avatar.startsWith('/') ? `${API_HOST}${employee.avatar}` : employee.avatar;
+    }, [avatarPreview, employee?.avatar, employee?.name]);
+
+    // ---------------------------------------------------------------------------
+    // Local state synced from query data (needed for UI editing)
+    // ---------------------------------------------------------------------------
+    const [historyList, setHistoryList] = useState<JobHistoryItem[]>([]);
+    const [reviewsList, setReviewsList] = useState<PerformanceReview[]>([]);
+    const [documentsList, setDocumentsList] = useState<DocumentItem[]>([]);
+    const [currentSkills, setCurrentSkills] = useState<string[]>([]);
+
+    useEffect(() => { if (historyQ.data) setHistoryList(historyQ.data); }, [historyQ.data]);
+    useEffect(() => { if (reviewsQ.data) setReviewsList(reviewsQ.data); }, [reviewsQ.data]);
+    useEffect(() => {
+        if (docsQ.data && employee) {
+            setDocumentsList(docsQ.data.filter((d: any) =>
+                d.employeeId === employee.id || d.owner === employee.name
+            ));
+        }
+    }, [docsQ.data, employee]);
+    useEffect(() => { if (employee?.skills) setCurrentSkills(employee.skills); }, [employee?.skills]);
 
     // Profile Edit State
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
     const [editForm, setEditForm] = useState<Partial<Employee>>({});
 
-    // Documents State
-    const [documentsList, setDocumentsList] = useState<DocumentItem[]>([]);
-
-    // Other Data
-    const [trainingRecords, setTrainingRecords] = useState<any[]>([]);
-
     // Performance Review State
-    const [reviewsList, setReviewsList] = useState<PerformanceReview[]>([]);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewForm, setReviewForm] = useState<Partial<PerformanceReview>>({});
 
-    // Avatar Editing State
-    const [avatar, setAvatar] = useState('');
-
     // Skills Editing State
     const [isEditingSkills, setIsEditingSkills] = useState(false);
-    const [currentSkills, setCurrentSkills] = useState<string[]>([]);
     const [newSkillInput, setNewSkillInput] = useState('');
 
     // History Editing State
-    const [historyList, setHistoryList] = useState<JobHistoryItem[]>([]);
     const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null);
     const [tempHistoryItem, setTempHistoryItem] = useState<JobHistoryItem | null>(null);
 
@@ -88,53 +125,8 @@ export const EmployeeDetail: React.FC = () => {
     const [isAddHistoryModalOpen, setIsAddHistoryModalOpen] = useState(false);
     const [newHistoryForm, setNewHistoryForm] = useState<Partial<JobHistoryItem>>({});
 
-    // Team Hierarchy State
-    const [manager, setManager] = useState<Employee | null>(null);
-    const [directReports, setDirectReports] = useState<Employee[]>([]);
-
     // Delete confirmation state
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchEmployeeDetail = async () => {
-            setIsLoading(true);
-            try {
-                const [employeeData, history, reviews, training, docs, managerData, directReportsData] = await Promise.all([
-                    api.get<Employee>(`/employees/${id}`),
-                    api.get<any[]>(`/job-history?employeeId=${id}`),
-                    api.get<PerformanceReview[]>(`/performance/reviews?employeeId=${id}`),
-                    api.get<any[]>(`/employee-training/${id}`),
-                    api.get<DocumentItem[]>('/documents'),
-                    api.get<Employee>(`/employees/${id}/manager`).catch(() => null),
-                    api.get<Employee[]>(`/employees/${id}/direct-reports`).catch(() => [])
-                ]);
-
-                if (employeeData) {
-                    setEmployee(employeeData);
-                    const avatarUrl = employeeData.avatar
-                        ? (employeeData.avatar.startsWith('/') ? `${API_HOST}${employeeData.avatar}` : employeeData.avatar)
-                        : `https://ui-avatars.com/api/?name=${employeeData.name}`;
-                    setAvatar(avatarUrl);
-                    setCurrentSkills(employeeData.skills || []);
-
-                    setHistoryList(history);
-                    setReviewsList(reviews);
-                    setTrainingRecords(training);
-                    setDocumentsList(docs.filter((d: any) =>
-                        d.employeeId === employeeData.id || d.owner === employeeData.name
-                    ));
-
-                    setManager(managerData);
-                    setDirectReports(directReportsData || []);
-                }
-            } catch (error) {
-                console.error('Error fetching employee detail:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchEmployeeDetail();
-    }, [id]);
 
     // Profile Edit Handlers
     const handleEditProfileClick = () => {
@@ -162,12 +154,6 @@ export const EmployeeDetail: React.FC = () => {
                 avatar: avatar.startsWith('blob:') ? undefined : avatar
             });
 
-            setEmployee(updatedEmployee);
-            const avatarUrl = updatedEmployee.avatar
-                ? (updatedEmployee.avatar.startsWith('/') ? `${API_HOST}${updatedEmployee.avatar}` : updatedEmployee.avatar)
-                : avatar;
-            setAvatar(avatarUrl);
-
             if (isOwnProfile && updateUser) {
                 updateUser({
                     name: updatedEmployee.name,
@@ -178,9 +164,11 @@ export const EmployeeDetail: React.FC = () => {
                 });
             }
 
+            setAvatarPreview(null);
             setIsEditProfileOpen(false);
             showToast('Profile updated successfully!', 'success');
 
+            qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id!) });
             qc.invalidateQueries({ queryKey: queryKeys.employees.all });
             qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
         } catch (error) {
@@ -210,7 +198,7 @@ export const EmployeeDetail: React.FC = () => {
             }
 
             const previewUrl = URL.createObjectURL(file);
-            setAvatar(previewUrl);
+            setAvatarPreview(previewUrl);
 
             try {
                 const formData = new FormData();
@@ -233,14 +221,15 @@ export const EmployeeDetail: React.FC = () => {
                 const fullAvatarUrl = data.avatarUrl.startsWith('/')
                     ? `${API_HOST}${data.avatarUrl}`
                     : data.avatarUrl;
-                setAvatar(fullAvatarUrl);
+                setAvatarPreview(fullAvatarUrl);
                 showToast('Avatar uploaded successfully!', 'success');
 
+                qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id!) });
                 qc.invalidateQueries({ queryKey: queryKeys.employees.all });
             } catch (error) {
                 console.error('Avatar upload error:', error);
                 showToast('Failed to upload avatar. Please try again.', 'error');
-                setAvatar(employee?.avatar || `https://ui-avatars.com/api/?name=${employee?.name}`);
+                setAvatarPreview(null);
             }
         }
     };
@@ -264,11 +253,10 @@ export const EmployeeDetail: React.FC = () => {
             await api.patch(`/employees/${employee.id}`, {
                 skills: currentSkills
             });
-            setEmployee({ ...employee, skills: currentSkills });
             setIsEditingSkills(false);
             showToast('Skills updated successfully!', 'success');
 
-            qc.invalidateQueries({ queryKey: queryKeys.employees.all });
+            qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id!) });
         } catch (error) {
             const apiError = error as Error;
             showToast(apiError.message || 'Failed to update skills.', 'error');
@@ -330,6 +318,8 @@ export const EmployeeDetail: React.FC = () => {
             setHistoryList([newItem, ...historyList]);
             setIsAddHistoryModalOpen(false);
             showToast('Employment history added successfully!', 'success');
+
+            qc.invalidateQueries({ queryKey: queryKeys.jobHistory.byEmployee(id!) });
         } catch (error) {
             const apiError = error as Error;
             showToast(apiError.message || 'Failed to add employment history.', 'error');
@@ -365,6 +355,8 @@ export const EmployeeDetail: React.FC = () => {
 
                 setDocumentsList([uploadedDoc, ...documentsList]);
                 showToast('Document uploaded successfully!', 'success');
+
+                qc.invalidateQueries({ queryKey: queryKeys.employeeDocuments.byEmployee(id!) });
 
                 e.target.value = '';
             } catch (error: any) {
