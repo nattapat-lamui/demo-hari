@@ -20,6 +20,10 @@ import type {
   OnboardingTask,
   KeyContact,
   OnboardingDocument,
+  AdminAttendanceRecord,
+  AttendanceSnapshot,
+  AdminAttendanceUpsertData,
+  AdminAttendanceFilters,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -699,6 +703,76 @@ export const useDeleteOrgNode = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.employees.all });
       qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
+    },
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Admin Attendance Queries
+// ---------------------------------------------------------------------------
+
+export const useAdminAttendanceSnapshot = () => {
+  return useQuery({
+    queryKey: queryKeys.adminAttendance.snapshot(),
+    queryFn: () => api.get<AttendanceSnapshot>('/admin/attendance/snapshot'),
+    refetchInterval: 60_000,
+  });
+};
+
+export const useAdminAttendanceRecords = (filters: AdminAttendanceFilters) => {
+  return useQuery({
+    queryKey: queryKeys.adminAttendance.records(filters as Record<string, unknown>),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.search) params.append('search', filters.search);
+      if (filters.department && filters.department !== 'All') params.append('department', filters.department);
+      if (filters.status && filters.status !== 'All') params.append('status', filters.status);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.page) params.append('page', filters.page.toString());
+      if (filters.limit) params.append('limit', filters.limit.toString());
+      const qs = params.toString();
+      const result = await api.get<PaginatedResponse<AdminAttendanceRecord>>(
+        qs ? `/admin/attendance/records?${qs}` : '/admin/attendance/records'
+      );
+      return {
+        ...result,
+        data: result.data.map((r: AdminAttendanceRecord) => ({
+          ...r,
+          employeeAvatar:
+            r.employeeAvatar && r.employeeAvatar.startsWith('/')
+              ? `${API_HOST}${r.employeeAvatar}`
+              : r.employeeAvatar,
+        })),
+      };
+    },
+    placeholderData: (prev) => prev,
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Admin Attendance Mutations
+// ---------------------------------------------------------------------------
+
+export const useAdminUpsertAttendance = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: AdminAttendanceUpsertData) =>
+      api.put('/admin/attendance/records', data as unknown as Record<string, unknown>),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.adminAttendance.all });
+      qc.invalidateQueries({ queryKey: queryKeys.attendance.all });
+    },
+  });
+};
+
+export const useAdminDeleteAttendance = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/attendance/records/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.adminAttendance.all });
+      qc.invalidateQueries({ queryKey: queryKeys.attendance.all });
     },
   });
 };

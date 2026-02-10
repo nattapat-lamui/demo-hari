@@ -39,6 +39,7 @@ export const Sidebar: React.FC = () => {
     { icon: <ClipboardList size={20} />, label: 'Onboarding', path: '/onboarding', allowed: true },
 
     // Admin Specific
+    { icon: <Clock size={20} />, label: 'Attendance', path: '/admin-attendance', allowed: isAdmin },
     { icon: <ShieldCheck size={20} />, label: 'Compliance', path: '/compliance', allowed: isAdmin },
     { icon: <BarChart2 size={20} />, label: 'Analytics', path: '/analytics', allowed: isAdmin },
 

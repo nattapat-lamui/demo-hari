@@ -31,6 +31,7 @@ import performanceRoutes from "./routes/performanceRoutes";
 import eventsRoutes from "./routes/eventsRoutes";
 import announcementsRoutes from "./routes/announcementsRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
+import adminAttendanceRoutes from "./routes/adminAttendanceRoutes";
 import { runMigration } from "./scripts/init-db";
 
 dotenv.config();
@@ -145,6 +146,7 @@ app.use("/api/performance", performanceRoutes);
 app.use("/api/events", eventsRoutes);
 app.use("/api/announcements", announcementsRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/admin/attendance", adminAttendanceRoutes);
 
 // Backward compatibility for leave balances endpoint
 // Old: GET /api/leave-balances/:employeeId
@@ -262,6 +264,11 @@ app.post(
 // Lightweight migrations (safe to run multiple times)
 const runLightMigrations = async () => {
   try {
+    // Admin attendance: add modified_by column + indexes
+    await query(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS modified_by UUID REFERENCES users(id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_attendance_date_status ON attendance_records(date DESC, status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_attendance_date_range ON attendance_records(date DESC, employee_id)`);
+
     await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id) ON DELETE SET NULL`);
     await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
 

@@ -83,4 +83,9 @@ export const queryKeys = {
     all: ['employeeDocuments'] as const,
     byEmployee: (id: string) => [...queryKeys.employeeDocuments.all, id] as const,
   },
+  adminAttendance: {
+    all: ['adminAttendance'] as const,
+    snapshot: () => [...queryKeys.adminAttendance.all, 'snapshot'] as const,
+    records: (filters: Record<string, unknown>) => [...queryKeys.adminAttendance.all, 'records', filters] as const,
+  },
 } as const;
