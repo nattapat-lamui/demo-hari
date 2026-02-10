@@ -30,7 +30,7 @@ class AttendanceService {
             // Determine if late (after 9:00 AM Thailand time)
             const lateThreshold = new Date(now);
             lateThreshold.setHours(9, 0, 0, 0);
-            const status = now > lateThreshold ? 'Late' : 'Present';
+            const status = now > lateThreshold ? 'Late' : 'On-time';
             if (existing.rows.length > 0) {
                 // Update existing record
                 const result = yield (0, db_1.query)(`UPDATE attendance_records
@@ -68,8 +68,7 @@ class AttendanceService {
             const breakDuration = existing.rows[0].break_duration || 0;
             const totalMinutes = (now.getTime() - clockIn.getTime()) / 1000 / 60 - breakDuration;
             const totalHours = Math.round(totalMinutes / 60 * 100) / 100;
-            // Determine if half-day (less than 4 hours)
-            const status = totalHours < 4 ? 'Half-day' : existing.rows[0].status;
+            const status = existing.rows[0].status;
             const result = yield (0, db_1.query)(`UPDATE attendance_records
        SET clock_out = $1, total_hours = $2, status = $3, notes = COALESCE($4, notes), updated_at = CURRENT_TIMESTAMP
        WHERE id = $5
@@ -120,10 +119,10 @@ class AttendanceService {
         return __awaiter(this, void 0, void 0, function* () {
             const result = yield (0, db_1.query)(`SELECT
         COUNT(*) as total_days,
-        COUNT(*) FILTER (WHERE status = 'Present') as present_days,
+        COUNT(*) FILTER (WHERE status = 'On-time') as present_days,
         COUNT(*) FILTER (WHERE status = 'Absent') as absent_days,
         COUNT(*) FILTER (WHERE status = 'Late') as late_days,
-        COUNT(*) FILTER (WHERE status = 'Remote') as remote_days,
+        COUNT(*) FILTER (WHERE status = 'On-leave') as on_leave_days,
         COALESCE(SUM(total_hours), 0) as total_hours
        FROM attendance_records
        WHERE employee_id = $1 AND date BETWEEN $2 AND $3`, [employeeId, startDate, endDate]);
@@ -133,9 +132,134 @@ class AttendanceService {
                 presentDays: parseInt(row.present_days, 10),
                 absentDays: parseInt(row.absent_days, 10),
                 lateDays: parseInt(row.late_days, 10),
-                remoteDays: parseInt(row.remote_days, 10),
+                onLeaveDays: parseInt(row.on_leave_days, 10),
                 totalHours: parseFloat(row.total_hours),
             };
+        });
+    }
+    // ===========================================================================
+    // Admin Methods
+    // ===========================================================================
+    /**
+     * Get today's attendance snapshot counts for admin dashboard
+     */
+    adminGetTodaySnapshot() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const bangkokTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
+            const today = new Date(bangkokTime).toISOString().split('T')[0];
+            const result = yield (0, db_1.query)(`SELECT
+        COUNT(*) FILTER (WHERE status = 'On-time') AS present,
+        COUNT(*) FILTER (WHERE status = 'Late') AS late,
+        COUNT(*) FILTER (WHERE status = 'Absent') AS absent,
+        COUNT(*) FILTER (WHERE status = 'On-leave') AS on_leave_records,
+        (SELECT COUNT(DISTINCT lr.employee_id)
+         FROM leave_requests lr
+         JOIN employees e ON lr.employee_id = e.id AND e.status = 'Active'
+         WHERE lr.status = 'Approved' AND $1::date BETWEEN lr.start_date AND lr.end_date) AS on_leave_requests,
+        (SELECT COUNT(*) FROM employees WHERE status = 'Active') AS total
+       FROM attendance_records
+       WHERE date = $1`, [today]);
+            const row = result.rows[0];
+            const onLeaveRecords = parseInt(row.on_leave_records, 10);
+            const onLeaveRequests = parseInt(row.on_leave_requests, 10);
+            return {
+                present: parseInt(row.present, 10),
+                late: parseInt(row.late, 10),
+                absent: parseInt(row.absent, 10),
+                onLeave: Math.max(onLeaveRecords, onLeaveRequests),
+                total: parseInt(row.total, 10),
+            };
+        });
+    }
+    /**
+     * Get paginated attendance records with employee details for admin view
+     */
+    adminGetAllAttendance(filters) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { search, department, status, startDate, endDate, page = 1, limit = 20 } = filters;
+            const conditions = [];
+            const params = [];
+            let paramIndex = 1;
+            if (search) {
+                conditions.push(`e.name ILIKE $${paramIndex++}`);
+                params.push(`%${search}%`);
+            }
+            if (department && department !== 'All') {
+                conditions.push(`e.department = $${paramIndex++}`);
+                params.push(department);
+            }
+            if (status && status !== 'All') {
+                conditions.push(`ar.status = $${paramIndex++}`);
+                params.push(status);
+            }
+            if (startDate) {
+                conditions.push(`ar.date >= $${paramIndex++}`);
+                params.push(startDate);
+            }
+            if (endDate) {
+                conditions.push(`ar.date <= $${paramIndex++}`);
+                params.push(endDate);
+            }
+            const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+            // Count total
+            const countResult = yield (0, db_1.query)(`SELECT COUNT(*) AS total
+       FROM attendance_records ar
+       JOIN employees e ON ar.employee_id = e.id
+       ${whereClause}`, params);
+            const total = parseInt(countResult.rows[0].total, 10);
+            const totalPages = Math.ceil(total / limit);
+            const offset = (page - 1) * limit;
+            // Fetch paginated records
+            const dataResult = yield (0, db_1.query)(`SELECT ar.*, e.name AS employee_name, e.department AS employee_department, e.avatar AS employee_avatar
+       FROM attendance_records ar
+       JOIN employees e ON ar.employee_id = e.id
+       ${whereClause}
+       ORDER BY ar.date DESC, e.name ASC
+       LIMIT $${paramIndex++} OFFSET $${paramIndex++}`, [...params, limit, offset]);
+            const data = dataResult.rows.map((row) => (Object.assign(Object.assign({}, this.mapRowToAttendance(row)), { employeeName: row.employee_name, employeeDepartment: row.employee_department, employeeAvatar: row.employee_avatar })));
+            return { data, total, page, limit, totalPages };
+        });
+    }
+    /**
+     * Upsert an attendance record (admin manual entry)
+     * Bypasses late-threshold and double-clock-in checks
+     */
+    adminUpsertAttendance(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { employeeId, date, clockIn, clockOut, status, notes, modifiedBy } = data;
+            // Auto-compute totalHours when both clock in and out are provided
+            let totalHours = null;
+            if (clockIn && clockOut) {
+                const inTime = new Date(clockIn).getTime();
+                const outTime = new Date(clockOut).getTime();
+                if (outTime > inTime) {
+                    totalHours = Math.round((outTime - inTime) / 1000 / 60 / 60 * 100) / 100;
+                }
+            }
+            const result = yield (0, db_1.query)(`INSERT INTO attendance_records (employee_id, date, clock_in, clock_out, total_hours, status, notes, modified_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (employee_id, date)
+       DO UPDATE SET
+         clock_in = COALESCE($3, attendance_records.clock_in),
+         clock_out = COALESCE($4, attendance_records.clock_out),
+         total_hours = COALESCE($5, attendance_records.total_hours),
+         status = COALESCE($6, attendance_records.status),
+         notes = COALESCE($7, attendance_records.notes),
+         modified_by = $8,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING *`, [employeeId, date, clockIn || null, clockOut || null, totalHours, status || 'On-time', notes || null, modifiedBy]);
+            return this.mapRowToAttendance(result.rows[0]);
+        });
+    }
+    /**
+     * Delete an attendance record by ID
+     */
+    adminDeleteAttendance(recordId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const result = yield (0, db_1.query)('DELETE FROM attendance_records WHERE id = $1', [recordId]);
+            if (result.rowCount === 0) {
+                throw new Error('Attendance record not found');
+            }
         });
     }
     mapRowToAttendance(row) {
@@ -149,6 +273,7 @@ class AttendanceService {
             totalHours: row.total_hours,
             status: row.status,
             notes: row.notes,
+            modifiedBy: row.modified_by,
             createdAt: row.created_at,
         };
     }

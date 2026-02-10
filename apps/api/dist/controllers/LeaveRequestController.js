@@ -14,12 +14,34 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LeaveRequestController = void 0;
 const LeaveRequestService_1 = __importDefault(require("../services/LeaveRequestService"));
+const socket_1 = require("../socket");
+const pagination_1 = require("../utils/pagination");
 class LeaveRequestController {
+    /**
+     * Get all leave requests with optional pagination
+     * Query params: page, limit, status, employeeId, type, sortBy, sortOrder
+     */
     getAllLeaveRequests(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const requests = yield LeaveRequestService_1.default.getAllLeaveRequests();
-                res.json(requests);
+                // Check if pagination is requested
+                const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
+                if (usePagination) {
+                    const paginationParams = (0, pagination_1.getPaginationParams)(req);
+                    const sortParams = (0, pagination_1.getSortParams)(req, ['created_at', 'start_date', 'end_date', 'status', 'type'], 'created_at', 'DESC');
+                    const filters = {
+                        status: req.query.status,
+                        employeeId: req.query.employeeId,
+                        type: req.query.type,
+                    };
+                    const result = yield LeaveRequestService_1.default.getLeaveRequestsPaginated(paginationParams, filters, sortParams.field, sortParams.order);
+                    res.json(result);
+                }
+                else {
+                    // Backward compatibility: return all requests without pagination
+                    const requests = yield LeaveRequestService_1.default.getAllLeaveRequests();
+                    res.json(requests);
+                }
             }
             catch (error) {
                 console.error('Get leave requests error:', error);
@@ -44,6 +66,8 @@ class LeaveRequestController {
                     return;
                 }
                 const leaveRequest = yield LeaveRequestService_1.default.createLeaveRequest(requestData);
+                // Emit real-time event
+                (0, socket_1.emitLeaveRequestCreated)(leaveRequest);
                 res.status(201).json(leaveRequest);
             }
             catch (error) {
@@ -62,6 +86,8 @@ class LeaveRequestController {
                     return;
                 }
                 const leaveRequest = yield LeaveRequestService_1.default.updateLeaveRequestStatus(id, { status });
+                // Emit real-time event
+                (0, socket_1.emitLeaveRequestUpdated)(leaveRequest);
                 res.json(leaveRequest);
             }
             catch (error) {
@@ -80,6 +106,8 @@ class LeaveRequestController {
             try {
                 const { id } = req.params;
                 yield LeaveRequestService_1.default.deleteLeaveRequest(id);
+                // Emit real-time event
+                (0, socket_1.emitLeaveRequestDeleted)(id);
                 res.json({ message: 'Leave request deleted successfully' });
             }
             catch (error) {

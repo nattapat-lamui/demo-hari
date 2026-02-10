@@ -13,7 +13,7 @@ exports.OrgChartService = void 0;
 const db_1 = require("../db");
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001';
 function resolveAvatar(avatar, name) {
-    if (!avatar)
+    if (!avatar || avatar.startsWith('blob:'))
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=128`;
     if (avatar.startsWith('/'))
         return `${BASE_URL}${avatar}`;

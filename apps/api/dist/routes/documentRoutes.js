@@ -7,6 +7,7 @@ const express_1 = require("express");
 const DocumentController_1 = __importDefault(require("../controllers/DocumentController"));
 const security_1 = require("../middlewares/security");
 const auth_1 = require("../middlewares/auth");
+const cache_1 = require("../middlewares/cache");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
@@ -51,20 +52,20 @@ const upload = (0, multer_1.default)({
 });
 // All routes require authentication
 router.use(auth_1.authenticateToken);
-// GET /api/documents - Get all documents
-router.get('/', DocumentController_1.default.getAllDocuments.bind(DocumentController_1.default));
+// GET /api/documents - Get all documents - cached for 30s
+router.get('/', (0, cache_1.cacheMiddleware)(), DocumentController_1.default.getAllDocuments.bind(DocumentController_1.default));
 // POST /api/documents - Upload document
-router.post('/', security_1.apiLimiter, upload.single('file'), DocumentController_1.default.createDocument.bind(DocumentController_1.default));
-// GET /api/documents/trash - Get deleted documents (must be before :id route)
-router.get('/trash', DocumentController_1.default.getDeletedDocuments.bind(DocumentController_1.default));
-// GET /api/documents/storage - Get storage statistics
-router.get('/storage', DocumentController_1.default.getStorageStats.bind(DocumentController_1.default));
+router.post('/', security_1.apiLimiter, upload.single('file'), (0, cache_1.invalidateCache)('/api/documents'), DocumentController_1.default.createDocument.bind(DocumentController_1.default));
+// GET /api/documents/trash - Get deleted documents (must be before :id route) - cached for 30s
+router.get('/trash', (0, cache_1.cacheMiddleware)(), DocumentController_1.default.getDeletedDocuments.bind(DocumentController_1.default));
+// GET /api/documents/storage - Get storage statistics - cached for 60s
+router.get('/storage', (0, cache_1.cacheMiddleware)(60000), DocumentController_1.default.getStorageStats.bind(DocumentController_1.default));
 // GET /api/documents/:id/download - Download document
 router.get('/:id/download', DocumentController_1.default.downloadDocument.bind(DocumentController_1.default));
 // POST /api/documents/:id/restore - Restore from trash
-router.post('/:id/restore', security_1.apiLimiter, DocumentController_1.default.restoreDocument.bind(DocumentController_1.default));
+router.post('/:id/restore', security_1.apiLimiter, (0, cache_1.invalidateCache)('/api/documents'), DocumentController_1.default.restoreDocument.bind(DocumentController_1.default));
 // DELETE /api/documents/:id - Soft delete (move to trash)
-router.delete('/:id', security_1.apiLimiter, DocumentController_1.default.deleteDocument.bind(DocumentController_1.default));
+router.delete('/:id', security_1.apiLimiter, (0, cache_1.invalidateCache)('/api/documents'), DocumentController_1.default.deleteDocument.bind(DocumentController_1.default));
 // DELETE /api/documents/:id/permanent - Permanent delete
-router.delete('/:id/permanent', security_1.apiLimiter, DocumentController_1.default.permanentDeleteDocument.bind(DocumentController_1.default));
+router.delete('/:id/permanent', security_1.apiLimiter, (0, cache_1.invalidateCache)('/api/documents'), DocumentController_1.default.permanentDeleteDocument.bind(DocumentController_1.default));
 exports.default = router;

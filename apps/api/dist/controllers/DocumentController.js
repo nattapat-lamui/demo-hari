@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DocumentController = void 0;
 const DocumentService_1 = __importDefault(require("../services/DocumentService"));
 const path_1 = __importDefault(require("path"));
+const pagination_1 = require("../utils/pagination");
 // Fix UTF-8 filename encoding from multipart form
 const fixFilename = (filename) => {
     try {
@@ -26,11 +27,31 @@ const fixFilename = (filename) => {
     }
 };
 class DocumentController {
+    /**
+     * Get all documents with optional pagination
+     * Query params: page, limit, category, type, search, sortBy, sortOrder
+     */
     getAllDocuments(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const documents = yield DocumentService_1.default.getAllDocuments();
-                res.json(documents);
+                // Check if pagination is requested
+                const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
+                if (usePagination) {
+                    const paginationParams = (0, pagination_1.getPaginationParams)(req);
+                    const sortParams = (0, pagination_1.getSortParams)(req, ['created_at', 'name', 'type', 'size', 'category'], 'created_at', 'DESC');
+                    const filters = {
+                        category: req.query.category,
+                        type: req.query.type,
+                        search: req.query.search,
+                    };
+                    const result = yield DocumentService_1.default.getDocumentsPaginated(paginationParams, filters, sortParams.field, sortParams.order);
+                    res.json(result);
+                }
+                else {
+                    // Backward compatibility: return all documents without pagination
+                    const documents = yield DocumentService_1.default.getAllDocuments();
+                    res.json(documents);
+                }
             }
             catch (error) {
                 console.error('Get documents error:', error);
