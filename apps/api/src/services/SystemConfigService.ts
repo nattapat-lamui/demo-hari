@@ -113,7 +113,7 @@ export class SystemConfigService {
             // Return default values if not configured
             return [
                 { type: 'Vacation', total: 15 },
-                { type: 'Sick Leave', total: 10 },
+                { type: 'Sick Leave', total: 30 },
                 { type: 'Personal Day', total: -1 }, // -1 = unlimited
             ];
         }
