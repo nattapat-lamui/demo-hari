@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationService = void 0;
 const db_1 = require("../db");
+const socket_1 = require("../socket");
 // Helper function to format relative time
 function formatRelativeTime(date) {
     const now = new Date();
@@ -77,7 +78,9 @@ class NotificationService {
             const result = yield (0, db_1.query)(`INSERT INTO notifications (user_id, title, message, type, link)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`, [data.user_id, data.title, data.message, data.type || "info", data.link]);
-            return toResponse(result.rows[0]);
+            const notification = toResponse(result.rows[0]);
+            (0, socket_1.emitNotificationCreated)(notification);
+            return notification;
         });
     }
     // Create notifications for multiple users
@@ -97,6 +100,7 @@ class NotificationService {
             ]);
             yield (0, db_1.query)(`INSERT INTO notifications (user_id, title, message, type, link)
        VALUES ${values}`, params);
+            (0, socket_1.emitNotificationRefresh)();
         });
     }
     // Create notification for all HR admins

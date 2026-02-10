@@ -25,9 +25,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmployeeService = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
-const db_1 = require("../db");
-const SystemConfigService_1 = __importDefault(require("./SystemConfigService"));
-const pagination_1 = require("../utils/pagination");
+const db_1 = require("../../db");
+const SystemConfigService_1 = __importDefault(require("../../services/SystemConfigService"));
+const pagination_1 = require("../../utils/pagination");
 class EmployeeService {
     /**
      * Get all employees (no pagination - for backward compatibility)

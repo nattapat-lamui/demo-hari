@@ -16,6 +16,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const compression_1 = __importDefault(require("compression"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const http_1 = __importDefault(require("http"));
 const db_1 = require("./db");
 const path_1 = __importDefault(require("path"));
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
@@ -23,6 +24,7 @@ const security_1 = require("./middlewares/security");
 const auditLog_1 = require("./middlewares/auditLog");
 const auth_1 = require("./middlewares/auth");
 const swagger_1 = require("./config/swagger");
+const socket_1 = require("./socket");
 // Import Clean Architecture routes
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const employeeRoutes_1 = __importDefault(require("./routes/employeeRoutes"));
@@ -35,10 +37,21 @@ const notificationRoutes_1 = __importDefault(require("./routes/notificationRoute
 const dashboardRoutes_1 = __importDefault(require("./routes/dashboardRoutes"));
 const orgChartRoutes_1 = __importDefault(require("./routes/orgChartRoutes"));
 const notesRoutes_1 = __importDefault(require("./routes/notesRoutes"));
+const onboardingRoutes_1 = __importDefault(require("./routes/onboardingRoutes"));
+const trainingRoutes_1 = __importDefault(require("./routes/trainingRoutes"));
+const jobHistoryRoutes_1 = __importDefault(require("./routes/jobHistoryRoutes"));
+const performanceRoutes_1 = __importDefault(require("./routes/performanceRoutes"));
+const eventsRoutes_1 = __importDefault(require("./routes/eventsRoutes"));
+const announcementsRoutes_1 = __importDefault(require("./routes/announcementsRoutes"));
+const analyticsRoutes_1 = __importDefault(require("./routes/analyticsRoutes"));
+const adminAttendanceRoutes_1 = __importDefault(require("./routes/adminAttendanceRoutes"));
 const init_db_1 = require("./scripts/init-db");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3001;
+// Trust proxy for Render.com and other reverse proxies
+// Required for express-rate-limit to work correctly behind proxies
+app.set('trust proxy', 1);
 // Security: Helmet - Security headers
 app.use(security_1.helmetConfig);
 // Performance: Gzip/Brotli compression for responses
@@ -56,6 +69,8 @@ app.use((0, compression_1.default)({
 const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "https://hari-hr-system.vercel.app",
+    "https://hari-hr-system-api.vercel.app",
     process.env.FRONTEND_URL,
 ].filter(Boolean);
 const corsOptions = {
@@ -99,6 +114,12 @@ app.get("/api-docs.json", (_req, res) => {
     res.send(swagger_1.swaggerSpec);
 });
 // ==========================================
+// HEALTH CHECK (for cron jobs / keep-alive)
+// ==========================================
+app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+// ==========================================
 // CLEAN ARCHITECTURE ROUTES
 // ==========================================
 // Auth routes (login is public, change-password is protected)
@@ -114,6 +135,14 @@ app.use("/api/notifications", notificationRoutes_1.default);
 app.use("/api/dashboard", dashboardRoutes_1.default);
 app.use("/api/org-chart", orgChartRoutes_1.default);
 app.use("/api/notes", notesRoutes_1.default);
+app.use("/api/onboarding", onboardingRoutes_1.default);
+app.use("/api/training", trainingRoutes_1.default);
+app.use("/api/job-history", jobHistoryRoutes_1.default);
+app.use("/api/performance", performanceRoutes_1.default);
+app.use("/api/events", eventsRoutes_1.default);
+app.use("/api/announcements", announcementsRoutes_1.default);
+app.use("/api/analytics", analyticsRoutes_1.default);
+app.use("/api/admin/attendance", adminAttendanceRoutes_1.default);
 // Backward compatibility for leave balances endpoint
 // Old: GET /api/leave-balances/:employeeId
 // New: GET /api/leave-requests/balances/:employeeId
@@ -122,404 +151,40 @@ app.get("/api/leave-balances/:employeeId", (req, res) => __awaiter(void 0, void 
     (0, leaveRequestRoutes_1.default)(req, res, () => { });
 }));
 // ==========================================
-// NEW ENDPOINTS (Tasks, Documents, etc.)
+// BACKWARD COMPATIBILITY & LEGACY ENDPOINTS
 // ==========================================
-// GET /api/tasks
-app.get("/api/tasks", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const result = yield (0, db_1.query)("SELECT * FROM tasks ORDER BY due_date ASC");
-        const tasks = result.rows.map((row) => ({
-            id: row.id,
-            title: row.title,
-            description: row.description,
-            stage: row.stage,
-            assignee: row.assignee,
-            dueDate: row.due_date, // Date string
-            completed: row.completed,
-            priority: row.priority,
-            link: row.link,
-        }));
-        res.json(tasks);
-    }
-    catch (err) {
-        console.error("Error fetching tasks:", err);
-        res.status(500).json({ error: "Failed to fetch tasks" });
-    }
-}));
-// GET /api/training-modules
-app.get("/api/training-modules", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const result = yield (0, db_1.query)("SELECT * FROM training_modules");
-        res.json(result.rows);
-    }
-    catch (err) {
-        console.error("Error fetching training modules:", err);
-        res.status(500).json({ error: "Failed to fetch modules" });
-    }
-}));
-// GET /api/job-history
-app.get("/api/job-history", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { employeeId } = req.query;
-    try {
-        let queryText = "SELECT * FROM job_history";
-        const params = [];
-        if (employeeId) {
-            queryText += " WHERE employee_id = $1";
-            params.push(employeeId);
-        }
-        queryText += " ORDER BY start_date DESC";
-        const result = yield (0, db_1.query)(queryText, params);
-        const history = result.rows.map((row) => ({
-            id: row.id,
-            role: row.role,
-            department: row.department,
-            startDate: row.start_date,
-            endDate: row.end_date || "Present",
-            description: row.description,
-        }));
-        res.json(history);
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed" });
-    }
-}));
-// GET /api/performance-reviews
-app.get("/api/performance-reviews", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { employeeId } = req.query;
-    try {
-        let queryText = "SELECT * FROM performance_reviews";
-        const params = [];
-        if (employeeId) {
-            queryText += " WHERE employee_id = $1";
-            params.push(employeeId);
-        }
-        queryText += " ORDER BY date DESC";
-        const result = yield (0, db_1.query)(queryText, params);
-        const reviews = result.rows.map((row) => ({
-            id: row.id,
-            employeeId: row.employee_id,
-            date: row.date,
-            rating: row.rating,
-            notes: row.notes,
-        }));
-        res.json(reviews);
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed" });
-    }
-}));
-// GET /api/employee-training/:employeeId
-app.get("/api/employee-training/:employeeId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { employeeId } = req.params;
-    try {
-        const result = yield (0, db_1.query)(`SELECT et.id, et.title, et.duration, et.status, et.completion_date, et.score,
-                    tm.type, tm.thumbnail, tm.progress as module_progress
-             FROM employee_training et
-             LEFT JOIN training_modules tm ON et.module_id = tm.id
-             WHERE et.employee_id = $1
-             ORDER BY et.completion_date DESC NULLS LAST`, [employeeId]);
-        const training = result.rows.map((row) => ({
-            id: row.id,
-            title: row.title,
-            duration: row.duration,
-            status: row.status,
-            completedDate: row.completion_date,
-            score: row.score,
-            type: row.type || "Course",
-            thumbnail: row.thumbnail,
-            progress: row.module_progress || 0,
-        }));
-        res.json(training);
-    }
-    catch (err) {
-        console.error("Error fetching employee training:", err);
-        res.status(500).json({ error: "Failed to fetch training records" });
-    }
-}));
-// POST /api/employee-training (Admin assigns training to employee)
-app.post("/api/employee-training", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { employeeId, moduleId, title, duration } = req.body;
-    if (!employeeId)
-        return res.status(400).json({ error: "employeeId required" });
-    try {
-        const result = yield (0, db_1.query)(`INSERT INTO employee_training (employee_id, module_id, title, duration, status)
-             VALUES ($1, $2, $3, $4, 'Not Started')
-             RETURNING *`, [
-            employeeId,
-            moduleId || null,
-            title || "Untitled Training",
-            duration || "1h",
-        ]);
-        res.status(201).json(result.rows[0]);
-    }
-    catch (err) {
-        console.error("Error assigning training:", err);
-        res.status(500).json({ error: "Failed to assign training" });
-    }
-}));
-// PATCH /api/employee-training/:id (Update training status/progress)
-app.patch("/api/employee-training/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const { status, score } = req.body;
-    try {
-        const completionDate = status === "Completed" ? new Date() : null;
-        const result = yield (0, db_1.query)(`UPDATE employee_training 
-             SET status = COALESCE($1, status), 
-                 score = COALESCE($2, score),
-                 completion_date = COALESCE($3, completion_date)
-             WHERE id = $4 
-             RETURNING *`, [status, score, completionDate, id]);
-        if (result.rows.length === 0)
-            return res.status(404).json({ error: "Training record not found" });
-        res.json(result.rows[0]);
-    }
-    catch (err) {
-        console.error("Error updating training:", err);
-        res.status(500).json({ error: "Failed to update training" });
-    }
-}));
-// GET /api/events
-app.get("/api/events", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const result = yield (0, db_1.query)("SELECT * FROM events");
-        const events = result.rows.map((row) => ({
-            id: row.id,
-            title: row.title,
-            date: row.date_str,
-            type: row.type,
-            avatar: row.avatar,
-            color: row.color,
-        }));
-        res.json(events);
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed" });
-    }
-}));
-// GET /api/announcements
-app.get("/api/announcements", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const result = yield (0, db_1.query)(`
-      SELECT a.*, e.name AS author_name
-      FROM announcements a
-      LEFT JOIN users u ON a.created_by = u.id
-      LEFT JOIN employees e ON e.user_id = u.id
-      ORDER BY a.created_at DESC NULLS LAST, a.id DESC
-    `);
-        const items = result.rows.map((row) => ({
-            id: row.id,
-            title: row.title,
-            description: row.description,
-            type: row.type,
-            date: row.date_str,
-            author: row.author_name || null,
-            createdAt: row.created_at || null,
-        }));
-        res.json(items);
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed" });
-    }
-}));
-// POST /api/announcements - Create new announcement
-app.post("/api/announcements", auth_1.authenticateToken, security_1.apiLimiter, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
-    const { title, description, type, date } = req.body;
-    // Validation
-    if (!title || !description) {
-        return res.status(400).json({ error: "Title and description are required" });
-    }
-    if (type && !['announcement', 'policy', 'event'].includes(type)) {
-        return res.status(400).json({ error: "Invalid type. Must be 'announcement', 'policy', or 'event'" });
-    }
-    try {
-        const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || null;
-        const result = yield (0, db_1.query)(`INSERT INTO announcements (title, description, type, date_str, created_by)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`, [title, description, type || 'announcement', date || null, userId]);
-        // Fetch author name
-        let authorName = null;
-        if (userId) {
-            const authorResult = yield (0, db_1.query)(`SELECT e.name FROM employees e JOIN users u ON e.user_id = u.id WHERE u.id = $1`, [userId]);
-            authorName = ((_b = authorResult.rows[0]) === null || _b === void 0 ? void 0 : _b.name) || null;
-        }
-        const newAnnouncement = result.rows[0];
-        res.status(201).json({
-            id: newAnnouncement.id,
-            title: newAnnouncement.title,
-            description: newAnnouncement.description,
-            type: newAnnouncement.type,
-            date: newAnnouncement.date_str,
-            author: authorName,
-            createdAt: newAnnouncement.created_at,
-        });
-    }
-    catch (err) {
-        console.error("Error creating announcement:", err);
-        res.status(500).json({ error: "Failed to create announcement" });
-    }
-}));
-// PATCH /api/announcements/:id - Update announcement
-app.patch("/api/announcements/:id", auth_1.authenticateToken, auth_1.requireAdmin, security_1.apiLimiter, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const { id } = req.params;
-    const { title, description, type, date } = req.body;
-    // Validate type if provided
-    if (type && !['announcement', 'policy', 'event'].includes(type)) {
-        return res.status(400).json({ error: "Invalid type. Must be 'announcement', 'policy', or 'event'" });
-    }
-    try {
-        // Build dynamic update query
-        const updates = [];
-        const values = [];
-        let paramCount = 1;
-        if (title !== undefined) {
-            updates.push(`title = $${paramCount++}`);
-            values.push(title);
-        }
-        if (description !== undefined) {
-            updates.push(`description = $${paramCount++}`);
-            values.push(description);
-        }
-        if (type !== undefined) {
-            updates.push(`type = $${paramCount++}`);
-            values.push(type);
-        }
-        if (date !== undefined) {
-            updates.push(`date_str = $${paramCount++}`);
-            values.push(date);
-        }
-        if (updates.length === 0) {
-            return res.status(400).json({ error: "No fields to update" });
-        }
-        values.push(id);
-        const result = yield (0, db_1.query)(`UPDATE announcements SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`, values);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Announcement not found" });
-        }
-        const updatedAnnouncement = result.rows[0];
-        // Fetch author name if created_by exists
-        let authorName = null;
-        if (updatedAnnouncement.created_by) {
-            const authorResult = yield (0, db_1.query)(`SELECT e.name FROM employees e JOIN users u ON e.user_id = u.id WHERE u.id = $1`, [updatedAnnouncement.created_by]);
-            authorName = ((_a = authorResult.rows[0]) === null || _a === void 0 ? void 0 : _a.name) || null;
-        }
-        res.json({
-            id: updatedAnnouncement.id,
-            title: updatedAnnouncement.title,
-            description: updatedAnnouncement.description,
-            type: updatedAnnouncement.type,
-            date: updatedAnnouncement.date_str,
-            author: authorName,
-            createdAt: updatedAnnouncement.created_at,
-        });
-    }
-    catch (err) {
-        console.error("Error updating announcement:", err);
-        res.status(500).json({ error: "Failed to update announcement" });
-    }
-}));
-// DELETE /api/announcements/:id - Delete announcement
-app.delete("/api/announcements/:id", auth_1.authenticateToken, auth_1.requireAdmin, security_1.apiLimiter, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    try {
-        const result = yield (0, db_1.query)("DELETE FROM announcements WHERE id = $1 RETURNING id", [id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Announcement not found" });
-        }
-        res.json({ message: "Announcement deleted successfully", id: result.rows[0].id });
-    }
-    catch (err) {
-        console.error("Error deleting announcement:", err);
-        res.status(500).json({ error: "Failed to delete announcement" });
-    }
-}));
-// GET /api/contacts
-app.get("/api/contacts", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const result = yield (0, db_1.query)("SELECT * FROM contacts");
-        res.json(result.rows);
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed" });
-    }
-}));
-// GET /api/audit-logs
-app.get("/api/audit-logs", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        // Get real-time audit logs from our logging system
-        const auditLogs = (0, auditLog_1.getAuditLogs)(100);
-        // Transform to match expected format for frontend
-        const logs = auditLogs.map((log, index) => ({
-            id: index + 1,
-            user: log.userEmail || "System",
-            action: log.action,
-            target: log.resource,
-            time: new Date(log.timestamp).toLocaleString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-            }),
-            type: getLogType(log.resource),
-        }));
-        res.json(logs);
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to fetch audit logs" });
-    }
-}));
-// Helper function to map resource to log type for UI
-function getLogType(resource) {
-    if (resource === "Employee")
-        return "user";
-    if (resource === "Leave Request")
-        return "leave";
-    if (resource === "Document")
-        return "policy";
-    return "user";
-}
-// GET /api/headcount-stats
-app.get("/api/headcount-stats", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const result = yield (0, db_1.query)("SELECT * FROM stats_headcount ORDER BY id ASC");
-        res.json(result.rows);
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed" });
-    }
-}));
-// GET /api/compliance
-app.get("/api/compliance", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const result = yield (0, db_1.query)("SELECT * FROM compliance_items");
-        res.json(result.rows);
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed" });
-    }
-}));
-// GET /api/sentiment
-app.get("/api/sentiment", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        // Return array of { name, value }
-        const result = yield (0, db_1.query)("SELECT * FROM sentiment_stats");
-        res.json(result.rows);
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed" });
-    }
-}));
-// GET /api/leave-balances/:employeeId (Existing code continues...)
+// Backward compatibility: old training endpoints
+// Redirect to new /api/training routes
+app.get("/api/training-modules", (req, res) => res.redirect(301, "/api/training/modules"));
+app.get("/api/employee-training/:employeeId", (req, res) => res.redirect(301, `/api/training/employee/${req.params.employeeId}`));
+app.post("/api/employee-training", (req, res, next) => {
+    req.url = "/api/training/assign";
+    (0, trainingRoutes_1.default)(req, res, next);
+});
+app.patch("/api/employee-training/:id", (req, res, next) => {
+    req.url = `/${req.params.id}`;
+    (0, trainingRoutes_1.default)(req, res, next);
+});
+// Backward compatibility: old events endpoints
+// Redirect to new /api/events routes
+app.get("/api/upcoming-events", (req, res) => res.redirect(301, "/api/events/upcoming"));
+app.post("/api/upcoming-events", (req, res, next) => {
+    req.url = "/upcoming";
+    (0, eventsRoutes_1.default)(req, res, next);
+});
+app.delete("/api/upcoming-events/:id", (req, res, next) => {
+    req.url = `/upcoming/${req.params.id}`;
+    (0, eventsRoutes_1.default)(req, res, next);
+});
+// Backward compatibility: old analytics endpoints
+// Redirect to new /api/analytics routes
+app.get("/api/headcount-stats", (req, res) => res.redirect(301, "/api/analytics/headcount-stats"));
+app.get("/api/audit-logs", (req, res) => res.redirect(301, "/api/analytics/audit-logs"));
+app.get("/api/compliance", (req, res) => res.redirect(301, "/api/analytics/compliance"));
+app.get("/api/sentiment", (req, res) => res.redirect(301, "/api/analytics/sentiment"));
+// ==========================================
+// SYSTEM MANAGEMENT ENDPOINTS
+// ==========================================
 // POST /api/system/setup (Initial setup - only works when database is empty)
 // This allows setting up the database without authentication for first-time deployment
 app.post("/api/system/setup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -576,19 +241,107 @@ app.post("/api/system/seed", auth_1.authenticateToken, auth_1.requireAdmin, (req
 }));
 // Lightweight migrations (safe to run multiple times)
 const runLightMigrations = () => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
+        // Admin attendance: add modified_by column + indexes
+        yield (0, db_1.query)(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS modified_by UUID REFERENCES users(id)`);
+        yield (0, db_1.query)(`CREATE INDEX IF NOT EXISTS idx_attendance_date_status ON attendance_records(date DESC, status)`);
+        yield (0, db_1.query)(`CREATE INDEX IF NOT EXISTS idx_attendance_date_range ON attendance_records(date DESC, employee_id)`);
+        // Migrate attendance status VARCHAR → ENUM (only when column is still VARCHAR)
+        const colType = yield (0, db_1.query)(`SELECT data_type FROM information_schema.columns WHERE table_name = 'attendance_records' AND column_name = 'status'`);
+        if (((_a = colType.rows[0]) === null || _a === void 0 ? void 0 : _a.data_type) === 'character varying') {
+            yield (0, db_1.query)(`UPDATE attendance_records SET status = 'On-time' WHERE status IN ('Present', 'Remote')`);
+            yield (0, db_1.query)(`UPDATE attendance_records SET status = 'On-time' WHERE status = 'Half-day' AND clock_in IS NOT NULL AND (clock_in AT TIME ZONE 'Asia/Bangkok')::time <= '09:00:00'::time`);
+            yield (0, db_1.query)(`UPDATE attendance_records SET status = 'Late' WHERE status = 'Half-day' AND clock_in IS NOT NULL AND (clock_in AT TIME ZONE 'Asia/Bangkok')::time > '09:00:00'::time`);
+            yield (0, db_1.query)(`UPDATE attendance_records SET status = 'Absent' WHERE status = 'Half-day'`);
+            yield (0, db_1.query)(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_status_enum') THEN CREATE TYPE attendance_status_enum AS ENUM ('On-time', 'Late', 'Absent'); END IF; END $$`);
+            yield (0, db_1.query)(`ALTER TABLE attendance_records ALTER COLUMN status DROP DEFAULT`);
+            yield (0, db_1.query)(`ALTER TABLE attendance_records ALTER COLUMN status TYPE attendance_status_enum USING status::attendance_status_enum`);
+            yield (0, db_1.query)(`ALTER TABLE attendance_records ALTER COLUMN status SET DEFAULT 'On-time'::attendance_status_enum`);
+        }
+        // Add On-leave to attendance status enum (safe to run multiple times)
+        yield (0, db_1.query)(`ALTER TYPE attendance_status_enum ADD VALUE IF NOT EXISTS 'On-leave'`);
+        // Fix: Absent records with clock_in were incorrectly migrated — recalculate
+        yield (0, db_1.query)(`UPDATE attendance_records SET status = 'On-time' WHERE status = 'Absent' AND clock_in IS NOT NULL AND (clock_in AT TIME ZONE 'Asia/Bangkok')::time <= '09:00:00'::time`);
+        yield (0, db_1.query)(`UPDATE attendance_records SET status = 'Late' WHERE status = 'Absent' AND clock_in IS NOT NULL`);
         yield (0, db_1.query)(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id) ON DELETE SET NULL`);
         yield (0, db_1.query)(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
+        // Create upcoming_events table if it doesn't exist
+        yield (0, db_1.query)(`
+      CREATE TABLE IF NOT EXISTS upcoming_events (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        title VARCHAR(255) NOT NULL,
+        date DATE NOT NULL,
+        type VARCHAR(50) DEFAULT 'Meeting',
+        avatar TEXT,
+        color VARCHAR(20),
+        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+        yield (0, db_1.query)(`CREATE INDEX IF NOT EXISTS idx_upcoming_events_date ON upcoming_events(date)`);
+        yield (0, db_1.query)(`CREATE INDEX IF NOT EXISTS idx_upcoming_events_type ON upcoming_events(type)`);
+        // Create onboarding_documents table if it doesn't exist
+        yield (0, db_1.query)(`
+      CREATE TABLE IF NOT EXISTS onboarding_documents (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        status VARCHAR(50) DEFAULT 'Pending',
+        file_path TEXT,
+        file_type VARCHAR(20),
+        file_size VARCHAR(20),
+        uploaded_at TIMESTAMP WITH TIME ZONE,
+        reviewed_by UUID REFERENCES users(id),
+        reviewed_at TIMESTAMP WITH TIME ZONE,
+        review_note TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+        yield (0, db_1.query)(`CREATE INDEX IF NOT EXISTS idx_onboarding_docs_employee ON onboarding_documents(employee_id)`);
+        yield (0, db_1.query)(`CREATE INDEX IF NOT EXISTS idx_onboarding_docs_status ON onboarding_documents(status)`);
+        // Fix: change onboarding_status default from 'Completed' to 'Not Started'
+        yield (0, db_1.query)(`ALTER TABLE employees ALTER COLUMN onboarding_status SET DEFAULT 'Not Started'`);
+        // Recalculate onboarding progress for all employees based on actual task data
+        yield (0, db_1.query)(`
+      UPDATE employees e SET
+        onboarding_percentage = COALESCE(sub.pct, 0),
+        onboarding_status = CASE
+          WHEN sub.pct IS NULL THEN 'Not Started'
+          WHEN sub.pct = 100 THEN 'Completed'
+          WHEN sub.pct > 0 THEN 'In Progress'
+          ELSE 'Not Started'
+        END
+      FROM (
+        SELECT employee_id,
+          ROUND(COUNT(*) FILTER (WHERE completed = true) * 100.0 / NULLIF(COUNT(*), 0))::int AS pct
+        FROM tasks
+        GROUP BY employee_id
+      ) sub
+      WHERE e.id = sub.employee_id
+    `);
+        // Employees with no tasks at all → 'Not Started'
+        yield (0, db_1.query)(`
+      UPDATE employees SET onboarding_status = 'Not Started', onboarding_percentage = 0
+      WHERE id NOT IN (SELECT DISTINCT employee_id FROM tasks WHERE employee_id IS NOT NULL)
+        AND onboarding_status = 'Completed'
+    `);
     }
     catch (err) {
         // Table may not exist yet — ignore
     }
 });
+// Create HTTP server for Socket.io
+const httpServer = http_1.default.createServer(app);
+// Initialize Socket.io
+(0, socket_1.initializeSocket)(httpServer);
 // Only start the server when running locally (not in Vercel serverless)
 if (process.env.VERCEL !== '1') {
     runLightMigrations().then(() => {
-        app.listen(port, () => {
+        httpServer.listen(port, () => {
             console.log(`Server running at http://localhost:${port}`);
+            console.log(`Socket.io enabled for real-time updates`);
         });
     });
 }

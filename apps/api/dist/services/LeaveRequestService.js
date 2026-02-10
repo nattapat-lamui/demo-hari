@@ -16,6 +16,7 @@ exports.LeaveRequestService = void 0;
 const db_1 = require("../db");
 const SystemConfigService_1 = __importDefault(require("./SystemConfigService"));
 const NotificationService_1 = __importDefault(require("./NotificationService"));
+const pagination_1 = require("../utils/pagination");
 class LeaveRequestService {
     getAllLeaveRequests() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -28,6 +29,56 @@ class LeaveRequestService {
             ORDER BY lr.created_at DESC
         `);
             return result.rows.map(this.mapRowToLeaveRequest);
+        });
+    }
+    getLeaveRequestsPaginated(paginationParams_1, filters_1) {
+        return __awaiter(this, arguments, void 0, function* (paginationParams, filters, sortField = 'created_at', sortOrder = 'DESC') {
+            // Build WHERE clause for filters
+            const whereClauses = [];
+            const params = [];
+            let paramCount = 0;
+            if (filters.status) {
+                paramCount++;
+                whereClauses.push(`lr.status = $${paramCount}`);
+                params.push(filters.status);
+            }
+            if (filters.employeeId) {
+                paramCount++;
+                whereClauses.push(`lr.employee_id = $${paramCount}`);
+                params.push(filters.employeeId);
+            }
+            if (filters.type) {
+                paramCount++;
+                whereClauses.push(`lr.leave_type = $${paramCount}`);
+                params.push(filters.type);
+            }
+            const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+            // Field mapping for sorting
+            const fieldMapping = {
+                'created_at': 'lr.created_at',
+                'start_date': 'lr.start_date',
+                'end_date': 'lr.end_date',
+                'status': 'lr.status',
+                'type': 'lr.leave_type',
+            };
+            // Get total count
+            const countResult = yield (0, db_1.query)(`SELECT COUNT(*) as total
+             FROM leave_requests lr
+             ${whereClause}`, params);
+            const total = parseInt(countResult.rows[0].total);
+            // Get paginated data
+            const sortClause = (0, pagination_1.buildSortClause)(sortField, sortOrder, fieldMapping);
+            const paginationClause = (0, pagination_1.buildPaginationClause)(paginationParams);
+            const result = yield (0, db_1.query)(`SELECT lr.*, e.avatar, e.name as employee_name,
+                    (lr.end_date::date - lr.start_date::date) + 1 as days,
+                    TO_CHAR(lr.start_date, 'Mon DD') || ' - ' || TO_CHAR(lr.end_date, 'Mon DD') as dates
+             FROM leave_requests lr
+             LEFT JOIN employees e ON lr.employee_id = e.id
+             ${whereClause}
+             ${sortClause}
+             ${paginationClause}`, params);
+            const data = result.rows.map(this.mapRowToLeaveRequest);
+            return (0, pagination_1.createPaginatedResult)(data, total, paginationParams);
         });
     }
     getLeaveRequestById(id) {
@@ -140,9 +191,9 @@ class LeaveRequestService {
             const leaveQuotas = yield SystemConfigService_1.default.getLeaveQuotas();
             return leaveQuotas.map(({ type, total }) => ({
                 type,
-                total: total === -1 ? Infinity : total, // -1 in DB means unlimited
+                total, // -1 means unlimited (JSON-safe, unlike Infinity)
                 used: usedDays[type] || 0,
-                remaining: total === -1 ? Infinity : total - (usedDays[type] || 0),
+                remaining: total === -1 ? -1 : Math.max(0, total - (usedDays[type] || 0)),
             }));
         });
     }

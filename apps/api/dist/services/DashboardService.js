@@ -8,12 +8,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DashboardService = void 0;
 const db_1 = require("../db");
+const SystemConfigService_1 = __importDefault(require("./SystemConfigService"));
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001';
 function resolveAvatar(avatar, name) {
-    if (!avatar)
+    if (!avatar || avatar.startsWith('blob:'))
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=128`;
     if (avatar.startsWith('/'))
         return `${BASE_URL}${avatar}`;
@@ -47,14 +51,22 @@ class DashboardService {
     getLeaveBalance(employeeId) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
-            // Total annual leave days (default 14)
-            const totalDays = 14;
-            // Get used days from approved leave requests this year
+            // Get real leave quotas from system config
+            const leaveQuotas = yield SystemConfigService_1.default.getLeaveQuotas();
+            const totalDays = leaveQuotas
+                .filter(q => q.total !== -1) // Exclude unlimited types
+                .reduce((sum, q) => sum + q.total, 0);
+            // Get used days from approved leave requests this year (exclude unlimited types)
+            const limitedTypes = leaveQuotas.filter(q => q.total !== -1).map(q => q.type);
+            if (limitedTypes.length === 0)
+                return 0;
+            const placeholders = limitedTypes.map((_, i) => `$${i + 2}`).join(', ');
             const result = yield (0, db_1.query)(`SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
        FROM leave_requests
        WHERE employee_id = $1
        AND status = 'Approved'
-       AND EXTRACT(YEAR FROM start_date) = EXTRACT(YEAR FROM CURRENT_DATE)`, [employeeId]);
+       AND leave_type IN (${placeholders})
+       AND EXTRACT(YEAR FROM start_date) = EXTRACT(YEAR FROM CURRENT_DATE)`, [employeeId, ...limitedTypes]);
             const usedDays = parseInt(((_a = result.rows[0]) === null || _a === void 0 ? void 0 : _a.used_days) || '0', 10);
             return Math.max(0, totalDays - usedDays);
         });
