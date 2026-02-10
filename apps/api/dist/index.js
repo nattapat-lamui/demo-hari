@@ -264,6 +264,22 @@ const runLightMigrations = () => __awaiter(void 0, void 0, void 0, function* () 
         // Fix: Absent records with clock_in were incorrectly migrated — recalculate
         yield (0, db_1.query)(`UPDATE attendance_records SET status = 'On-time' WHERE status = 'Absent' AND clock_in IS NOT NULL AND (clock_in AT TIME ZONE 'Asia/Bangkok')::time <= '09:00:00'::time`);
         yield (0, db_1.query)(`UPDATE attendance_records SET status = 'Late' WHERE status = 'Absent' AND clock_in IS NOT NULL`);
+        // One-time fix: Employee clock-in/out on UTC servers stored Bangkok time as UTC (+7h off).
+        // Uses tz_fixed column as idempotency guard so it only runs once per record.
+        yield (0, db_1.query)(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS tz_fixed BOOLEAN DEFAULT FALSE`);
+        const serverOffsetMin = new Date().getTimezoneOffset(); // 0 for UTC, -420 for Bangkok
+        if (serverOffsetMin === 0) {
+            // UTC server: shift employee-created records back by 7 hours
+            yield (0, db_1.query)(`
+        UPDATE attendance_records
+        SET clock_in  = clock_in  - interval '7 hours',
+            clock_out = CASE WHEN clock_out IS NOT NULL THEN clock_out - interval '7 hours' ELSE NULL END,
+            tz_fixed  = TRUE
+        WHERE tz_fixed = FALSE AND modified_by IS NULL AND clock_in IS NOT NULL
+      `);
+        }
+        // Mark remaining records as processed (admin-created or non-UTC server records)
+        yield (0, db_1.query)(`UPDATE attendance_records SET tz_fixed = TRUE WHERE tz_fixed = FALSE`);
         yield (0, db_1.query)(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id) ON DELETE SET NULL`);
         yield (0, db_1.query)(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
         // Create upcoming_events table if it doesn't exist

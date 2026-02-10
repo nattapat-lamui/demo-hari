@@ -18,18 +18,17 @@ class AttendanceService {
     clockIn(data) {
         return __awaiter(this, void 0, void 0, function* () {
             const { employeeId, notes } = data;
-            // Use Thailand timezone (UTC+7)
-            const bangkokTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
-            const now = new Date(bangkokTime);
-            const today = now.toISOString().split('T')[0];
+            // Current moment in correct UTC
+            const now = new Date();
+            // Today's date in Bangkok timezone (YYYY-MM-DD) for the DB date column
+            const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
             // Check if already clocked in today
             const existing = yield (0, db_1.query)('SELECT * FROM attendance_records WHERE employee_id = $1 AND date = $2', [employeeId, today]);
             if (existing.rows.length > 0 && existing.rows[0].clock_in) {
                 throw new Error('Already clocked in for today');
             }
-            // Determine if late (after 9:00 AM Thailand time)
-            const lateThreshold = new Date(now);
-            lateThreshold.setHours(9, 0, 0, 0);
+            // Determine if late (after 9:00 AM Bangkok = 02:00 AM UTC)
+            const lateThreshold = new Date(`${today}T09:00:00+07:00`);
             const status = now > lateThreshold ? 'Late' : 'On-time';
             if (existing.rows.length > 0) {
                 // Update existing record
@@ -52,10 +51,10 @@ class AttendanceService {
     clockOut(data) {
         return __awaiter(this, void 0, void 0, function* () {
             const { employeeId, notes } = data;
-            // Use Thailand timezone (UTC+7)
-            const bangkokTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
-            const now = new Date(bangkokTime);
-            const today = now.toISOString().split('T')[0];
+            // Current moment in correct UTC
+            const now = new Date();
+            // Today's date in Bangkok timezone (YYYY-MM-DD) for the DB date column
+            const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
             // Find today's attendance record
             const existing = yield (0, db_1.query)('SELECT * FROM attendance_records WHERE employee_id = $1 AND date = $2', [employeeId, today]);
             if (existing.rows.length === 0 || !existing.rows[0].clock_in) {
@@ -102,9 +101,8 @@ class AttendanceService {
      */
     getTodayStatus(employeeId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Use Thailand timezone (UTC+7)
-            const bangkokTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
-            const today = new Date(bangkokTime).toISOString().split('T')[0];
+            // Today's date in Bangkok timezone
+            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
             const result = yield (0, db_1.query)('SELECT * FROM attendance_records WHERE employee_id = $1 AND date = $2', [employeeId, today]);
             if (result.rows.length === 0) {
                 return null;
@@ -145,8 +143,8 @@ class AttendanceService {
      */
     adminGetTodaySnapshot() {
         return __awaiter(this, void 0, void 0, function* () {
-            const bangkokTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
-            const today = new Date(bangkokTime).toISOString().split('T')[0];
+            // Today's date in Bangkok timezone
+            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
             const result = yield (0, db_1.query)(`SELECT
         COUNT(*) FILTER (WHERE status = 'On-time') AS present,
         COUNT(*) FILTER (WHERE status = 'Late') AS late,
