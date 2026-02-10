@@ -450,3 +450,53 @@ export interface NotificationItem {
   time: string;
   created_at: string;
 }
+
+// ============================================================================
+// Admin Attendance Types
+// ============================================================================
+
+export type AttendanceStatus = 'On-time' | 'Late' | 'Absent' | 'On-leave';
+
+export interface AdminAttendanceRecord {
+  id: string;
+  employeeId: string;
+  date: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  breakDuration: number;
+  totalHours: number | null;
+  status: AttendanceStatus;
+  notes: string | null;
+  modifiedBy: string | null;
+  createdAt: string;
+  employeeName: string;
+  employeeDepartment: string;
+  employeeAvatar: string | null;
+}
+
+export interface AttendanceSnapshot {
+  present: number;
+  late: number;
+  absent: number;
+  onLeave: number;
+  total: number;
+}
+
+export interface AdminAttendanceUpsertData {
+  employeeId: string;
+  date: string;
+  clockIn?: string;
+  clockOut?: string;
+  status?: AttendanceStatus;
+  notes?: string;
+}
+
+export interface AdminAttendanceFilters {
+  search?: string;
+  department?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}

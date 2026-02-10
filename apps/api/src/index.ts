@@ -31,6 +31,7 @@ import performanceRoutes from "./routes/performanceRoutes";
 import eventsRoutes from "./routes/eventsRoutes";
 import announcementsRoutes from "./routes/announcementsRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
+import adminAttendanceRoutes from "./routes/adminAttendanceRoutes";
 import { runMigration } from "./scripts/init-db";
 
 dotenv.config();
@@ -145,6 +146,7 @@ app.use("/api/performance", performanceRoutes);
 app.use("/api/events", eventsRoutes);
 app.use("/api/announcements", announcementsRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/admin/attendance", adminAttendanceRoutes);
 
 // Backward compatibility for leave balances endpoint
 // Old: GET /api/leave-balances/:employeeId
@@ -262,6 +264,31 @@ app.post(
 // Lightweight migrations (safe to run multiple times)
 const runLightMigrations = async () => {
   try {
+    // Admin attendance: add modified_by column + indexes
+    await query(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS modified_by UUID REFERENCES users(id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_attendance_date_status ON attendance_records(date DESC, status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_attendance_date_range ON attendance_records(date DESC, employee_id)`);
+
+    // Migrate attendance status VARCHAR → ENUM (only when column is still VARCHAR)
+    const colType = await query(`SELECT data_type FROM information_schema.columns WHERE table_name = 'attendance_records' AND column_name = 'status'`);
+    if (colType.rows[0]?.data_type === 'character varying') {
+      await query(`UPDATE attendance_records SET status = 'On-time' WHERE status IN ('Present', 'Remote')`);
+      await query(`UPDATE attendance_records SET status = 'On-time' WHERE status = 'Half-day' AND clock_in IS NOT NULL AND (clock_in AT TIME ZONE 'Asia/Bangkok')::time <= '09:00:00'::time`);
+      await query(`UPDATE attendance_records SET status = 'Late' WHERE status = 'Half-day' AND clock_in IS NOT NULL AND (clock_in AT TIME ZONE 'Asia/Bangkok')::time > '09:00:00'::time`);
+      await query(`UPDATE attendance_records SET status = 'Absent' WHERE status = 'Half-day'`);
+      await query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_status_enum') THEN CREATE TYPE attendance_status_enum AS ENUM ('On-time', 'Late', 'Absent'); END IF; END $$`);
+      await query(`ALTER TABLE attendance_records ALTER COLUMN status DROP DEFAULT`);
+      await query(`ALTER TABLE attendance_records ALTER COLUMN status TYPE attendance_status_enum USING status::attendance_status_enum`);
+      await query(`ALTER TABLE attendance_records ALTER COLUMN status SET DEFAULT 'On-time'::attendance_status_enum`);
+    }
+
+    // Add On-leave to attendance status enum (safe to run multiple times)
+    await query(`ALTER TYPE attendance_status_enum ADD VALUE IF NOT EXISTS 'On-leave'`);
+
+    // Fix: Absent records with clock_in were incorrectly migrated — recalculate
+    await query(`UPDATE attendance_records SET status = 'On-time' WHERE status = 'Absent' AND clock_in IS NOT NULL AND (clock_in AT TIME ZONE 'Asia/Bangkok')::time <= '09:00:00'::time`);
+    await query(`UPDATE attendance_records SET status = 'Late' WHERE status = 'Absent' AND clock_in IS NOT NULL`);
+
     await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id) ON DELETE SET NULL`);
     await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
 

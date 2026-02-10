@@ -59,6 +59,7 @@ const Surveys = lazy(() =>
   import("./pages/Surveys").then((m) => ({ default: m.Surveys })),
 );
 const Attendance = lazy(() => import("./pages/Attendance"));
+const AdminAttendance = lazy(() => import("./pages/AdminAttendance"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 
 // Loading component
@@ -100,6 +101,7 @@ const App: React.FC = () => {
                   >
                     <Route index element={<Dashboard />} />
                     <Route path="attendance" element={<Attendance />} />
+                    <Route path="admin-attendance" element={<AdminAttendance />} />
                     <Route path="time-off" element={<TimeOff />} />
                     <Route path="expenses" element={<Expenses />} />
                     <Route path="surveys" element={<Surveys />} />
