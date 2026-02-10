@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Edit2 } from 'lucide-react';
 import { HistoryTabProps } from './EmployeeDetailTypes';
+import { formatDate } from '../../lib/date';
 
 export const HistoryTab: React.FC<HistoryTabProps> = ({
     permissions,
@@ -69,13 +70,13 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                             type="date"
                                             value={tempHistoryItem.endDate && tempHistoryItem.endDate !== 'Present' ? tempHistoryItem.endDate : ''}
                                             onChange={(e) => onSetTempHistoryItem({ ...tempHistoryItem, endDate: e.target.value })}
-                                            disabled={!tempHistoryItem.endDate || tempHistoryItem.endDate === 'Present'}
+                                            disabled={tempHistoryItem.endDate === 'Present'}
                                             className="w-full mt-1 px-2 py-1.5 text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded focus:outline-none focus:ring-1 focus:ring-primary text-text-light dark:text-text-dark disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                         <label className="flex items-center mt-1 cursor-pointer">
                                             <input
                                                 type="checkbox"
-                                                checked={!tempHistoryItem.endDate || tempHistoryItem.endDate === 'Present'}
+                                                checked={tempHistoryItem.endDate === 'Present'}
                                                 onChange={(e) => onSetTempHistoryItem({ ...tempHistoryItem, endDate: e.target.checked ? 'Present' : '' })}
                                                 className="w-3 h-3 text-primary bg-card-light dark:bg-card-dark border-border-light dark:border-border-dark rounded focus:ring-1 focus:ring-primary"
                                             />
@@ -129,7 +130,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                         </p>
                                     </div>
                                     <span className={`text-sm font-medium whitespace-nowrap ${index === 0 ? 'text-green-600 dark:text-green-400' : 'text-text-muted-light dark:text-text-muted-dark'}`}>
-                                        {job.startDate} - {job.endDate}
+                                        {formatDate(job.startDate)} - {job.endDate === 'Present' || !job.endDate ? 'Present' : formatDate(job.endDate)}
                                     </span>
                                 </div>
                             </div>

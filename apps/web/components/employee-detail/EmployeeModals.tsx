@@ -319,12 +319,12 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                         value={newHistoryForm.endDate && newHistoryForm.endDate !== 'Present' ? newHistoryForm.endDate : ''}
                                         onChange={(date) => onSetNewHistoryForm({ ...newHistoryForm, endDate: date })}
                                         placeholder="Select end date"
-                                        disabled={!newHistoryForm.endDate || newHistoryForm.endDate === 'Present'}
+                                        disabled={newHistoryForm.endDate === 'Present'}
                                     />
                                     <label className="flex items-center mt-2 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            checked={!newHistoryForm.endDate || newHistoryForm.endDate === 'Present'}
+                                            checked={newHistoryForm.endDate === 'Present'}
                                             onChange={(e) => onSetNewHistoryForm({ ...newHistoryForm, endDate: e.target.checked ? 'Present' : '' })}
                                             className="w-4 h-4 text-primary bg-background-light dark:bg-background-dark border-border-light dark:border-border-dark rounded focus:ring-2 focus:ring-primary"
                                         />

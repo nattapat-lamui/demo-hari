@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { DocumentItem } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDate } from '../lib/date';
 import { Toast } from '../components/Toast';
 import { Pagination } from '../components/Pagination';
 
@@ -296,7 +297,7 @@ export const Documents: React.FC = () => {
         throw new Error(error.error);
       }
 
-      qc.invalidateQueries({ queryKey: queryKeys.documents.all });
+      await qc.invalidateQueries({ queryKey: queryKeys.documents.all });
       setIsUploadModalOpen(false);
       setSelectedFile(null);
       setUploadCategory('HR');
@@ -617,7 +618,7 @@ export const Documents: React.FC = () => {
                           {doc.owner}
                         </td>
                         <td className="px-6 py-3 text-text-muted-light dark:text-text-muted-dark">
-                          {doc.lastAccessed}
+                          {formatDate(doc.lastAccessed)}
                         </td>
                         <td className="px-6 py-3 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -681,7 +682,7 @@ export const Documents: React.FC = () => {
                         <span className="font-medium">Owner:</span> {doc.owner}
                       </div>
                       <div className="col-span-2">
-                        <span className="font-medium">Modified:</span> {doc.lastAccessed}
+                        <span className="font-medium">Modified:</span> {formatDate(doc.lastAccessed)}
                       </div>
                     </div>
 
@@ -749,7 +750,7 @@ export const Documents: React.FC = () => {
                     {previewDoc.name}
                   </h3>
                   <p className="text-xs text-text-muted-light">
-                    {previewDoc.size} • {previewDoc.lastAccessed}
+                    {previewDoc.size} • {formatDate(previewDoc.lastAccessed)}
                   </p>
                 </div>
               </div>

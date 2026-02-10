@@ -11,4 +11,9 @@ export const formatDateTH = (dateString: string): string => {
   return dayjs(dateString).format('ddd, MMM D');
 };
 
+/** Format a date string to readable format (e.g. "Apr 1, 2025") */
+export const formatDate = (dateString: string): string => {
+  return dayjs(dateString).format('MMM D, YYYY');
+};
+
 export { dayjs };
