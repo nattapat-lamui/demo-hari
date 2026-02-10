@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authenticateToken, requireAdmin, requireOwnerOrAdmin } from '../middlewares/auth';
 import AttendanceService from '../services/AttendanceService';
 import { apiLimiter } from '../middlewares/security';
+import { emitAttendanceUpdated } from '../socket';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.post('/clock-in', apiLimiter, async (req: Request, res: Response) => {
       notes: req.body.notes,
     });
 
+    emitAttendanceUpdated(attendance);
     res.status(201).json(attendance);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to clock in';
@@ -47,6 +49,7 @@ router.post('/clock-out', apiLimiter, async (req: Request, res: Response) => {
       notes: req.body.notes,
     });
 
+    emitAttendanceUpdated(attendance);
     res.json(attendance);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to clock out';

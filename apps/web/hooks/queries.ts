@@ -541,7 +541,7 @@ export const useClockIn = () => {
   return useMutation({
     mutationFn: () => api.post('/attendance/clock-in', {}),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.attendance.today() });
+      qc.invalidateQueries({ queryKey: queryKeys.attendance.all });
     },
   });
 };
@@ -551,7 +551,7 @@ export const useClockOut = () => {
   return useMutation({
     mutationFn: () => api.post('/attendance/clock-out', {}),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.attendance.today() });
+      qc.invalidateQueries({ queryKey: queryKeys.attendance.all });
     },
   });
 };

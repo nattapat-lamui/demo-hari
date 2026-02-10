@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.emitNotificationRefresh = exports.emitNotificationCreated = exports.emitLeaveRequestDeleted = exports.emitLeaveRequestUpdated = exports.emitLeaveRequestCreated = exports.getIO = exports.initializeSocket = void 0;
+exports.emitAttendanceUpdated = exports.emitNotificationRefresh = exports.emitNotificationCreated = exports.emitLeaveRequestDeleted = exports.emitLeaveRequestUpdated = exports.emitLeaveRequestCreated = exports.getIO = exports.initializeSocket = void 0;
 const socket_io_1 = require("socket.io");
 let io = null;
 const initializeSocket = (httpServer) => {
@@ -65,3 +65,10 @@ const emitNotificationRefresh = () => {
     }
 };
 exports.emitNotificationRefresh = emitNotificationRefresh;
+// Event emitters for attendance
+const emitAttendanceUpdated = (attendance) => {
+    if (io) {
+        io.emit('attendance:updated', attendance);
+    }
+};
+exports.emitAttendanceUpdated = emitAttendanceUpdated;

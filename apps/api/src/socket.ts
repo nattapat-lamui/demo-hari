@@ -67,3 +67,10 @@ export const emitNotificationRefresh = () => {
     io.emit('notification:refresh');
   }
 };
+
+// Event emitters for attendance
+export const emitAttendanceUpdated = (attendance: any) => {
+  if (io) {
+    io.emit('attendance:updated', attendance);
+  }
+};

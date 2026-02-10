@@ -39,6 +39,11 @@ export const useSocketQuerySync = () => {
       );
     };
 
+    // -- Attendance events --
+    const onAttendanceUpdated = () => {
+      qc.invalidateQueries({ queryKey: queryKeys.attendance.all });
+    };
+
     // -- Notification events --
     const onNotificationNew = (notification: NotificationItem) => {
       qc.setQueryData<NotificationItem[]>(queryKeys.notifications.list(), (old) =>
@@ -53,6 +58,7 @@ export const useSocketQuerySync = () => {
     socket.on('leave-request:created', onLeaveCreated);
     socket.on('leave-request:updated', onLeaveUpdated);
     socket.on('leave-request:deleted', onLeaveDeleted);
+    socket.on('attendance:updated', onAttendanceUpdated);
     socket.on('notification:new', onNotificationNew);
     socket.on('notification:refresh', onNotificationRefresh);
 
@@ -60,6 +66,7 @@ export const useSocketQuerySync = () => {
       socket.off('leave-request:created', onLeaveCreated);
       socket.off('leave-request:updated', onLeaveUpdated);
       socket.off('leave-request:deleted', onLeaveDeleted);
+      socket.off('attendance:updated', onAttendanceUpdated);
       socket.off('notification:new', onNotificationNew);
       socket.off('notification:refresh', onNotificationRefresh);
     };

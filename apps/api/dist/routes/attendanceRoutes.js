@@ -16,6 +16,7 @@ const express_1 = require("express");
 const auth_1 = require("../middlewares/auth");
 const AttendanceService_1 = __importDefault(require("../services/AttendanceService"));
 const security_1 = require("../middlewares/security");
+const socket_1 = require("../socket");
 const router = (0, express_1.Router)();
 // All routes require authentication
 router.use(auth_1.authenticateToken);
@@ -34,6 +35,7 @@ router.post('/clock-in', security_1.apiLimiter, (req, res) => __awaiter(void 0, 
             employeeId,
             notes: req.body.notes,
         });
+        (0, socket_1.emitAttendanceUpdated)(attendance);
         res.status(201).json(attendance);
     }
     catch (error) {
@@ -56,6 +58,7 @@ router.post('/clock-out', security_1.apiLimiter, (req, res) => __awaiter(void 0,
             employeeId,
             notes: req.body.notes,
         });
+        (0, socket_1.emitAttendanceUpdated)(attendance);
         res.json(attendance);
     }
     catch (error) {
