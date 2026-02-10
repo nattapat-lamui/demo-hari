@@ -269,13 +269,32 @@ const runLightMigrations = () => __awaiter(void 0, void 0, void 0, function* () 
         yield (0, db_1.query)(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS tz_fixed BOOLEAN DEFAULT FALSE`);
         const serverOffsetMin = new Date().getTimezoneOffset(); // 0 for UTC, -420 for Bangkok
         if (serverOffsetMin === 0) {
-            // UTC server: shift employee-created records back by 7 hours
+            // Case 1: Both clock_in & clock_out from old code (clock_out >= clock_in) → fix both
             yield (0, db_1.query)(`
         UPDATE attendance_records
         SET clock_in  = clock_in  - interval '7 hours',
-            clock_out = CASE WHEN clock_out IS NOT NULL THEN clock_out - interval '7 hours' ELSE NULL END,
+            clock_out = clock_out - interval '7 hours',
             tz_fixed  = TRUE
-        WHERE tz_fixed = FALSE AND modified_by IS NULL AND clock_in IS NOT NULL
+        WHERE tz_fixed = FALSE AND modified_by IS NULL
+          AND clock_in IS NOT NULL AND clock_out IS NOT NULL AND clock_out >= clock_in
+      `);
+            // Case 2: Only clock_in, no clock_out yet → fix clock_in only
+            yield (0, db_1.query)(`
+        UPDATE attendance_records
+        SET clock_in = clock_in - interval '7 hours',
+            tz_fixed = TRUE
+        WHERE tz_fixed = FALSE AND modified_by IS NULL
+          AND clock_in IS NOT NULL AND clock_out IS NULL
+      `);
+            // Case 3: clock_in from old code, clock_out from new fixed code (clock_out < clock_in)
+            // Only fix clock_in, recalculate total_hours
+            yield (0, db_1.query)(`
+        UPDATE attendance_records
+        SET clock_in    = clock_in - interval '7 hours',
+            total_hours = ROUND(EXTRACT(EPOCH FROM (clock_out - (clock_in - interval '7 hours')))::numeric / 3600, 2),
+            tz_fixed    = TRUE
+        WHERE tz_fixed = FALSE AND modified_by IS NULL
+          AND clock_in IS NOT NULL AND clock_out IS NOT NULL AND clock_out < clock_in
       `);
         }
         // Mark remaining records as processed (admin-created or non-UTC server records)
