@@ -2,6 +2,24 @@ import React from 'react';
 
 export type UserRole = 'HR_ADMIN' | 'EMPLOYEE';
 
+// Department type for strict type checking
+export const DEPARTMENTS = [
+  'Human Resources',
+  'Engineering',
+  'Developer',
+  'Marketing',
+  'Sales',
+  'Finance',
+  'Operations',
+  'Product',
+  'Design',
+  'Legal',
+  'Customer Support',
+  'Tester',
+] as const;
+
+export type Department = (typeof DEPARTMENTS)[number];
+
 export interface User {
   id: string;
   employeeId?: string;
@@ -141,7 +159,7 @@ export interface UpcomingEvent {
   id: string;
   title: string;
   date: string;
-  type: 'Birthday' | 'Meeting' | 'Social';
+  type: 'Birthday' | 'Meeting' | 'Social' | 'Training' | 'Holiday' | 'Deadline' | 'Company Event';
   avatar?: string;
   color?: string;
 }
@@ -153,6 +171,22 @@ export interface KeyContact {
   relation: string;
   email: string;
   avatar: string;
+}
+
+export interface OnboardingDocument {
+  id: string;
+  employeeId: string;
+  name: string;
+  description: string;
+  status: 'Pending' | 'Uploaded' | 'Approved' | 'Rejected';
+  filePath: string | null;
+  fileType: string | null;
+  fileSize: string | null;
+  uploadedAt: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  createdAt: string;
 }
 
 export interface JobHistoryItem {
@@ -180,9 +214,9 @@ export interface OrgNode {
   name: string;
   role: string;
   avatar: string;
-  department?: string;
+  department?: Department;
   email?: string;
-  status?: string;
+  status?: 'Active' | 'On Leave' | 'Terminated';
   directReportCount?: number;
   children?: OrgNode[]; // Helper for recursive rendering
 }
@@ -398,4 +432,21 @@ export interface EmployeeFilterParams {
   department?: string;
   status?: Employee['status'];
   search?: string;
+}
+
+// ============================================================================
+// Notification Types
+// ============================================================================
+
+export type NotificationType = 'info' | 'success' | 'warning' | 'leave' | 'employee' | 'document' | 'system';
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  read: boolean;
+  link?: string;
+  time: string;
+  created_at: string;
 }

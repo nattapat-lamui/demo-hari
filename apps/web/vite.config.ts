@@ -15,6 +15,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        '/socket.io': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+        },
       },
     },
     plugins: [react()],
@@ -33,6 +39,7 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             // Vendor chunk splitting
             'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+            'query-vendor': ['@tanstack/react-query'],
             'chart-vendor': ['recharts'],
             'ui-vendor': ['lucide-react'],
           },

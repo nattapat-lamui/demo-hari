@@ -2,13 +2,15 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import compression from "compression";
 import dotenv from "dotenv";
+import http from "http";
 import { query } from "./db";
 import path from "path";
 import swaggerUi from "swagger-ui-express";
 import { generalLimiter, helmetConfig, apiLimiter } from "./middlewares/security";
-import { auditLogMiddleware, getAuditLogs } from "./middlewares/auditLog";
+import { auditLogMiddleware } from "./middlewares/auditLog";
 import { authenticateToken, requireAdmin } from "./middlewares/auth";
 import { swaggerSpec } from "./config/swagger";
+import { initializeSocket } from "./socket";
 
 // Import Clean Architecture routes
 import authRoutes from "./routes/authRoutes";
@@ -22,12 +24,23 @@ import notificationRoutes from "./routes/notificationRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
 import orgChartRoutes from "./routes/orgChartRoutes";
 import notesRoutes from "./routes/notesRoutes";
+import onboardingRoutes from "./routes/onboardingRoutes";
+import trainingRoutes from "./routes/trainingRoutes";
+import jobHistoryRoutes from "./routes/jobHistoryRoutes";
+import performanceRoutes from "./routes/performanceRoutes";
+import eventsRoutes from "./routes/eventsRoutes";
+import announcementsRoutes from "./routes/announcementsRoutes";
+import analyticsRoutes from "./routes/analyticsRoutes";
 import { runMigration } from "./scripts/init-db";
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
+
+// Trust proxy for Render.com and other reverse proxies
+// Required for express-rate-limit to work correctly behind proxies
+app.set('trust proxy', 1);
 
 // Security: Helmet - Security headers
 app.use(helmetConfig);
@@ -48,6 +61,8 @@ app.use(compression({
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
+  "https://hari-hr-system.vercel.app",
+  "https://hari-hr-system-api.vercel.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean) as string[];
 
@@ -99,6 +114,13 @@ app.get("/api-docs.json", (_req, res) => {
 });
 
 // ==========================================
+// HEALTH CHECK (for cron jobs / keep-alive)
+// ==========================================
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// ==========================================
 // CLEAN ARCHITECTURE ROUTES
 // ==========================================
 
@@ -116,6 +138,13 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/org-chart", orgChartRoutes);
 app.use("/api/notes", notesRoutes);
+app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/training", trainingRoutes);
+app.use("/api/job-history", jobHistoryRoutes);
+app.use("/api/performance", performanceRoutes);
+app.use("/api/events", eventsRoutes);
+app.use("/api/announcements", announcementsRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // Backward compatibility for leave balances endpoint
 // Old: GET /api/leave-balances/:employeeId
@@ -129,439 +158,44 @@ app.get(
 );
 
 // ==========================================
-// NEW ENDPOINTS (Tasks, Documents, etc.)
+// BACKWARD COMPATIBILITY & LEGACY ENDPOINTS
 // ==========================================
 
-// GET /api/tasks
-app.get("/api/tasks", async (req: Request, res: Response) => {
-  try {
-    const result = await query("SELECT * FROM tasks ORDER BY due_date ASC");
-    const tasks = result.rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      stage: row.stage,
-      assignee: row.assignee,
-      dueDate: row.due_date, // Date string
-      completed: row.completed,
-      priority: row.priority,
-      link: row.link,
-    }));
-    res.json(tasks);
-  } catch (err) {
-    console.error("Error fetching tasks:", err);
-    res.status(500).json({ error: "Failed to fetch tasks" });
-  }
+// Backward compatibility: old training endpoints
+// Redirect to new /api/training routes
+app.get("/api/training-modules", (req, res) => res.redirect(301, "/api/training/modules"));
+app.get("/api/employee-training/:employeeId", (req, res) => res.redirect(301, `/api/training/employee/${req.params.employeeId}`));
+app.post("/api/employee-training", (req, res, next) => {
+  req.url = "/api/training/assign";
+  trainingRoutes(req, res, next);
+});
+app.patch("/api/employee-training/:id", (req, res, next) => {
+  req.url = `/${req.params.id}`;
+  trainingRoutes(req, res, next);
 });
 
-// GET /api/training-modules
-app.get("/api/training-modules", async (req: Request, res: Response) => {
-  try {
-    const result = await query("SELECT * FROM training_modules");
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Error fetching training modules:", err);
-    res.status(500).json({ error: "Failed to fetch modules" });
-  }
+// Backward compatibility: old events endpoints
+// Redirect to new /api/events routes
+app.get("/api/upcoming-events", (req, res) => res.redirect(301, "/api/events/upcoming"));
+app.post("/api/upcoming-events", (req, res, next) => {
+  req.url = "/upcoming";
+  eventsRoutes(req, res, next);
+});
+app.delete("/api/upcoming-events/:id", (req, res, next) => {
+  req.url = `/upcoming/${req.params.id}`;
+  eventsRoutes(req, res, next);
 });
 
-// GET /api/job-history
-app.get("/api/job-history", async (req: Request, res: Response) => {
-  const { employeeId } = req.query;
-  try {
-    let queryText = "SELECT * FROM job_history";
-    const params: (string | number | boolean | null)[] = [];
-    if (employeeId) {
-      queryText += " WHERE employee_id = $1";
-      params.push(employeeId as string);
-    }
-    queryText += " ORDER BY start_date DESC";
+// Backward compatibility: old analytics endpoints
+// Redirect to new /api/analytics routes
+app.get("/api/headcount-stats", (req, res) => res.redirect(301, "/api/analytics/headcount-stats"));
+app.get("/api/audit-logs", (req, res) => res.redirect(301, "/api/analytics/audit-logs"));
+app.get("/api/compliance", (req, res) => res.redirect(301, "/api/analytics/compliance"));
+app.get("/api/sentiment", (req, res) => res.redirect(301, "/api/analytics/sentiment"));
 
-    const result = await query(queryText, params);
-    const history = result.rows.map((row) => ({
-      id: row.id,
-      role: row.role,
-      department: row.department,
-      startDate: row.start_date,
-      endDate: row.end_date || "Present",
-      description: row.description,
-    }));
-    res.json(history);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed" });
-  }
-});
-
-// GET /api/performance-reviews
-app.get("/api/performance-reviews", async (req: Request, res: Response) => {
-  const { employeeId } = req.query;
-  try {
-    let queryText = "SELECT * FROM performance_reviews";
-    const params: (string | number | boolean | null)[] = [];
-    if (employeeId) {
-      queryText += " WHERE employee_id = $1";
-      params.push(employeeId as string);
-    }
-    queryText += " ORDER BY date DESC";
-
-    const result = await query(queryText, params);
-    const reviews = result.rows.map((row) => ({
-      id: row.id,
-      employeeId: row.employee_id,
-      date: row.date,
-      rating: row.rating,
-      notes: row.notes,
-    }));
-    res.json(reviews);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed" });
-  }
-});
-
-// GET /api/employee-training/:employeeId
-app.get(
-  "/api/employee-training/:employeeId",
-  async (req: Request, res: Response) => {
-    const { employeeId } = req.params;
-    try {
-      const result = await query(
-        `SELECT et.id, et.title, et.duration, et.status, et.completion_date, et.score,
-                    tm.type, tm.thumbnail, tm.progress as module_progress
-             FROM employee_training et
-             LEFT JOIN training_modules tm ON et.module_id = tm.id
-             WHERE et.employee_id = $1
-             ORDER BY et.completion_date DESC NULLS LAST`,
-        [employeeId],
-      );
-      const training = result.rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        duration: row.duration,
-        status: row.status,
-        completedDate: row.completion_date,
-        score: row.score,
-        type: row.type || "Course",
-        thumbnail: row.thumbnail,
-        progress: row.module_progress || 0,
-      }));
-      res.json(training);
-    } catch (err) {
-      console.error("Error fetching employee training:", err);
-      res.status(500).json({ error: "Failed to fetch training records" });
-    }
-  },
-);
-
-// POST /api/employee-training (Admin assigns training to employee)
-app.post("/api/employee-training", async (req: Request, res: Response) => {
-  const { employeeId, moduleId, title, duration } = req.body;
-  if (!employeeId)
-    return res.status(400).json({ error: "employeeId required" });
-
-  try {
-    const result = await query(
-      `INSERT INTO employee_training (employee_id, module_id, title, duration, status)
-             VALUES ($1, $2, $3, $4, 'Not Started')
-             RETURNING *`,
-      [
-        employeeId,
-        moduleId || null,
-        title || "Untitled Training",
-        duration || "1h",
-      ],
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error("Error assigning training:", err);
-    res.status(500).json({ error: "Failed to assign training" });
-  }
-});
-
-// PATCH /api/employee-training/:id (Update training status/progress)
-app.patch("/api/employee-training/:id", async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { status, score } = req.body;
-  try {
-    const completionDate = status === "Completed" ? new Date() : null;
-    const result = await query(
-      `UPDATE employee_training 
-             SET status = COALESCE($1, status), 
-                 score = COALESCE($2, score),
-                 completion_date = COALESCE($3, completion_date)
-             WHERE id = $4 
-             RETURNING *`,
-      [status, score, completionDate, id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ error: "Training record not found" });
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("Error updating training:", err);
-    res.status(500).json({ error: "Failed to update training" });
-  }
-});
-
-// GET /api/events
-app.get("/api/events", async (req: Request, res: Response) => {
-  try {
-    const result = await query("SELECT * FROM events");
-    const events = result.rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      date: row.date_str,
-      type: row.type,
-      avatar: row.avatar,
-      color: row.color,
-    }));
-    res.json(events);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed" });
-  }
-});
-
-// GET /api/announcements
-app.get("/api/announcements", async (req: Request, res: Response) => {
-  try {
-    const result = await query(`
-      SELECT a.*, e.name AS author_name
-      FROM announcements a
-      LEFT JOIN users u ON a.created_by = u.id
-      LEFT JOIN employees e ON e.user_id = u.id
-      ORDER BY a.created_at DESC NULLS LAST, a.id DESC
-    `);
-    const items = result.rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      type: row.type,
-      date: row.date_str,
-      author: row.author_name || null,
-      createdAt: row.created_at || null,
-    }));
-    res.json(items);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed" });
-  }
-});
-
-// POST /api/announcements - Create new announcement
-app.post("/api/announcements", authenticateToken, apiLimiter, async (req: Request, res: Response) => {
-  const { title, description, type, date } = req.body;
-
-  // Validation
-  if (!title || !description) {
-    return res.status(400).json({ error: "Title and description are required" });
-  }
-
-  if (type && !['announcement', 'policy', 'event'].includes(type)) {
-    return res.status(400).json({ error: "Invalid type. Must be 'announcement', 'policy', or 'event'" });
-  }
-
-  try {
-    const userId = (req as any).user?.userId || null;
-    const result = await query(
-      `INSERT INTO announcements (title, description, type, date_str, created_by)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [title, description, type || 'announcement', date || null, userId]
-    );
-
-    // Fetch author name
-    let authorName = null;
-    if (userId) {
-      const authorResult = await query(`SELECT e.name FROM employees e JOIN users u ON e.user_id = u.id WHERE u.id = $1`, [userId]);
-      authorName = authorResult.rows[0]?.name || null;
-    }
-
-    const newAnnouncement = result.rows[0];
-    res.status(201).json({
-      id: newAnnouncement.id,
-      title: newAnnouncement.title,
-      description: newAnnouncement.description,
-      type: newAnnouncement.type,
-      date: newAnnouncement.date_str,
-      author: authorName,
-      createdAt: newAnnouncement.created_at,
-    });
-  } catch (err) {
-    console.error("Error creating announcement:", err);
-    res.status(500).json({ error: "Failed to create announcement" });
-  }
-});
-
-// PATCH /api/announcements/:id - Update announcement
-app.patch("/api/announcements/:id", authenticateToken, requireAdmin, apiLimiter, async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { title, description, type, date } = req.body;
-
-  // Validate type if provided
-  if (type && !['announcement', 'policy', 'event'].includes(type)) {
-    return res.status(400).json({ error: "Invalid type. Must be 'announcement', 'policy', or 'event'" });
-  }
-
-  try {
-    // Build dynamic update query
-    const updates: string[] = [];
-    const values: any[] = [];
-    let paramCount = 1;
-
-    if (title !== undefined) {
-      updates.push(`title = $${paramCount++}`);
-      values.push(title);
-    }
-    if (description !== undefined) {
-      updates.push(`description = $${paramCount++}`);
-      values.push(description);
-    }
-    if (type !== undefined) {
-      updates.push(`type = $${paramCount++}`);
-      values.push(type);
-    }
-    if (date !== undefined) {
-      updates.push(`date_str = $${paramCount++}`);
-      values.push(date);
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: "No fields to update" });
-    }
-
-    values.push(id);
-    const result = await query(
-      `UPDATE announcements SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-      values
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Announcement not found" });
-    }
-
-    const updatedAnnouncement = result.rows[0];
-    // Fetch author name if created_by exists
-    let authorName = null;
-    if (updatedAnnouncement.created_by) {
-      const authorResult = await query(`SELECT e.name FROM employees e JOIN users u ON e.user_id = u.id WHERE u.id = $1`, [updatedAnnouncement.created_by]);
-      authorName = authorResult.rows[0]?.name || null;
-    }
-    res.json({
-      id: updatedAnnouncement.id,
-      title: updatedAnnouncement.title,
-      description: updatedAnnouncement.description,
-      type: updatedAnnouncement.type,
-      date: updatedAnnouncement.date_str,
-      author: authorName,
-      createdAt: updatedAnnouncement.created_at,
-    });
-  } catch (err) {
-    console.error("Error updating announcement:", err);
-    res.status(500).json({ error: "Failed to update announcement" });
-  }
-});
-
-// DELETE /api/announcements/:id - Delete announcement
-app.delete("/api/announcements/:id", authenticateToken, requireAdmin, apiLimiter, async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  try {
-    const result = await query("DELETE FROM announcements WHERE id = $1 RETURNING id", [id]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Announcement not found" });
-    }
-
-    res.json({ message: "Announcement deleted successfully", id: result.rows[0].id });
-  } catch (err) {
-    console.error("Error deleting announcement:", err);
-    res.status(500).json({ error: "Failed to delete announcement" });
-  }
-});
-
-// GET /api/contacts
-app.get("/api/contacts", async (req: Request, res: Response) => {
-  try {
-    const result = await query("SELECT * FROM contacts");
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed" });
-  }
-});
-
-// GET /api/audit-logs
-app.get("/api/audit-logs", async (req: Request, res: Response) => {
-  try {
-    // Get real-time audit logs from our logging system
-    const auditLogs = getAuditLogs(100);
-
-    // Transform to match expected format for frontend
-    const logs = auditLogs.map((log, index) => ({
-      id: index + 1,
-      user: log.userEmail || "System",
-      action: log.action,
-      target: log.resource,
-      time: new Date(log.timestamp).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      type: getLogType(log.resource),
-    }));
-
-    res.json(logs);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch audit logs" });
-  }
-});
-
-// Helper function to map resource to log type for UI
-function getLogType(resource: string): string {
-  if (resource === "Employee") return "user";
-  if (resource === "Leave Request") return "leave";
-  if (resource === "Document") return "policy";
-  return "user";
-}
-
-// GET /api/headcount-stats
-app.get("/api/headcount-stats", async (req: Request, res: Response) => {
-  try {
-    const result = await query("SELECT * FROM stats_headcount ORDER BY id ASC");
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed" });
-  }
-});
-
-// GET /api/compliance
-app.get("/api/compliance", async (req: Request, res: Response) => {
-  try {
-    const result = await query("SELECT * FROM compliance_items");
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed" });
-  }
-});
-
-// GET /api/sentiment
-app.get("/api/sentiment", async (req: Request, res: Response) => {
-  try {
-    // Return array of { name, value }
-    const result = await query("SELECT * FROM sentiment_stats");
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed" });
-  }
-});
-
-// GET /api/leave-balances/:employeeId (Existing code continues...)
+// ==========================================
+// SYSTEM MANAGEMENT ENDPOINTS
+// ==========================================
 
 // POST /api/system/setup (Initial setup - only works when database is empty)
 // This allows setting up the database without authentication for first-time deployment
@@ -630,16 +264,89 @@ const runLightMigrations = async () => {
   try {
     await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id) ON DELETE SET NULL`);
     await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
+
+    // Create upcoming_events table if it doesn't exist
+    await query(`
+      CREATE TABLE IF NOT EXISTS upcoming_events (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        title VARCHAR(255) NOT NULL,
+        date DATE NOT NULL,
+        type VARCHAR(50) DEFAULT 'Meeting',
+        avatar TEXT,
+        color VARCHAR(20),
+        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_upcoming_events_date ON upcoming_events(date)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_upcoming_events_type ON upcoming_events(type)`);
+
+    // Create onboarding_documents table if it doesn't exist
+    await query(`
+      CREATE TABLE IF NOT EXISTS onboarding_documents (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        status VARCHAR(50) DEFAULT 'Pending',
+        file_path TEXT,
+        file_type VARCHAR(20),
+        file_size VARCHAR(20),
+        uploaded_at TIMESTAMP WITH TIME ZONE,
+        reviewed_by UUID REFERENCES users(id),
+        reviewed_at TIMESTAMP WITH TIME ZONE,
+        review_note TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_onboarding_docs_employee ON onboarding_documents(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_onboarding_docs_status ON onboarding_documents(status)`);
+
+    // Fix: change onboarding_status default from 'Completed' to 'Not Started'
+    await query(`ALTER TABLE employees ALTER COLUMN onboarding_status SET DEFAULT 'Not Started'`);
+
+    // Recalculate onboarding progress for all employees based on actual task data
+    await query(`
+      UPDATE employees e SET
+        onboarding_percentage = COALESCE(sub.pct, 0),
+        onboarding_status = CASE
+          WHEN sub.pct IS NULL THEN 'Not Started'
+          WHEN sub.pct = 100 THEN 'Completed'
+          WHEN sub.pct > 0 THEN 'In Progress'
+          ELSE 'Not Started'
+        END
+      FROM (
+        SELECT employee_id,
+          ROUND(COUNT(*) FILTER (WHERE completed = true) * 100.0 / NULLIF(COUNT(*), 0))::int AS pct
+        FROM tasks
+        GROUP BY employee_id
+      ) sub
+      WHERE e.id = sub.employee_id
+    `);
+
+    // Employees with no tasks at all → 'Not Started'
+    await query(`
+      UPDATE employees SET onboarding_status = 'Not Started', onboarding_percentage = 0
+      WHERE id NOT IN (SELECT DISTINCT employee_id FROM tasks WHERE employee_id IS NOT NULL)
+        AND onboarding_status = 'Completed'
+    `);
   } catch (err) {
     // Table may not exist yet — ignore
   }
 };
 
+// Create HTTP server for Socket.io
+const httpServer = http.createServer(app);
+
+// Initialize Socket.io
+initializeSocket(httpServer);
+
 // Only start the server when running locally (not in Vercel serverless)
 if (process.env.VERCEL !== '1') {
   runLightMigrations().then(() => {
-    app.listen(port, () => {
+    httpServer.listen(port, () => {
       console.log(`Server running at http://localhost:${port}`);
+      console.log(`Socket.io enabled for real-time updates`);
     });
   });
 }

@@ -4,7 +4,7 @@ export interface Employee {
     email: string;
     role: string;
     department: string;
-    startDate: string;
+    joinDate: string;
     salary?: number;
     avatar?: string;
     status?: string;
@@ -17,6 +17,8 @@ export interface Employee {
     emergencyContact?: string;
     skills?: string[];
     managerId?: string;
+    onboardingStatus?: string;
+    onboardingPercentage?: number;
 }
 
 export interface CreateEmployeeDTO {
@@ -24,7 +26,7 @@ export interface CreateEmployeeDTO {
     email: string;
     role: string;
     department: string;
-    startDate: string;
+    joinDate: string;
     salary?: number;
     password?: string;
 }

@@ -6,8 +6,10 @@ import { Breadcrumbs } from './Breadcrumbs';
 import { Outlet } from 'react-router-dom';
 import { SessionTimeoutWarning } from './SessionTimeoutWarning';
 import { useSessionTimeout } from '../hooks/useSessionTimeout';
+import { useSocketQuerySync } from '../hooks/useSocketQuerySync';
 
 export const Layout: React.FC = () => {
+  useSocketQuerySync();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Session timeout management (30 min timeout, warning at 25 min)

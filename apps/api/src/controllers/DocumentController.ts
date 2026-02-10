@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import DocumentService from '../services/DocumentService';
 import path from 'path';
+import { getPaginationParams, getSortParams } from '../utils/pagination';
 
 // Fix UTF-8 filename encoding from multipart form
 const fixFilename = (filename: string): string => {
@@ -13,10 +14,43 @@ const fixFilename = (filename: string): string => {
 };
 
 export class DocumentController {
+    /**
+     * Get all documents with optional pagination
+     * Query params: page, limit, category, type, search, sortBy, sortOrder
+     */
     async getAllDocuments(req: Request, res: Response): Promise<void> {
         try {
-            const documents = await DocumentService.getAllDocuments();
-            res.json(documents);
+            // Check if pagination is requested
+            const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
+
+            if (usePagination) {
+                const paginationParams = getPaginationParams(req);
+                const sortParams = getSortParams(
+                    req,
+                    ['created_at', 'name', 'type', 'size', 'category'],
+                    'created_at',
+                    'DESC'
+                );
+
+                const filters = {
+                    category: req.query.category as string | undefined,
+                    type: req.query.type as string | undefined,
+                    search: req.query.search as string | undefined,
+                };
+
+                const result = await DocumentService.getDocumentsPaginated(
+                    paginationParams,
+                    filters,
+                    sortParams.field,
+                    sortParams.order
+                );
+
+                res.json(result);
+            } else {
+                // Backward compatibility: return all documents without pagination
+                const documents = await DocumentService.getAllDocuments();
+                res.json(documents);
+            }
         } catch (error: any) {
             console.error('Get documents error:', error);
             res.status(500).json({ error: 'Failed to fetch documents' });

@@ -2,6 +2,7 @@ import { query } from '../db';
 import { Document, CreateDocumentDTO } from '../models/Document';
 import path from 'path';
 import fs from 'fs';
+import { PaginationParams, PaginatedResult, createPaginatedResult, buildPaginationClause, buildSortClause } from '../utils/pagination';
 
 export class DocumentService {
     // Get active documents only (not deleted)
@@ -10,6 +11,69 @@ export class DocumentService {
             "SELECT * FROM documents WHERE status = 'Active' OR status IS NULL ORDER BY uploaded_at DESC"
         );
         return result.rows.map(this.mapRowToDocument);
+    }
+
+    // Get documents with pagination
+    async getDocumentsPaginated(
+        paginationParams: PaginationParams,
+        filters: { category?: string; type?: string; search?: string },
+        sortField: string = 'uploaded_at',
+        sortOrder: 'ASC' | 'DESC' = 'DESC'
+    ): Promise<PaginatedResult<Document>> {
+        // Build WHERE clause for filters (only active documents)
+        const whereClauses: string[] = ["(status = 'Active' OR status IS NULL)"];
+        const params: any[] = [];
+        let paramCount = 0;
+
+        if (filters.category) {
+            paramCount++;
+            whereClauses.push(`category = $${paramCount}`);
+            params.push(filters.category);
+        }
+
+        if (filters.type) {
+            paramCount++;
+            whereClauses.push(`type = $${paramCount}`);
+            params.push(filters.type);
+        }
+
+        if (filters.search) {
+            paramCount++;
+            whereClauses.push(`(name ILIKE $${paramCount} OR category ILIKE $${paramCount})`);
+            params.push(`%${filters.search}%`);
+        }
+
+        const whereClause = `WHERE ${whereClauses.join(' AND ')}`;
+
+        // Field mapping for sorting
+        const fieldMapping: Record<string, string> = {
+            'created_at': 'uploaded_at',
+            'uploaded_at': 'uploaded_at',
+            'name': 'name',
+            'type': 'type',
+            'size': 'size',
+            'category': 'category',
+        };
+
+        // Get total count
+        const countResult = await query(
+            `SELECT COUNT(*) as total FROM documents ${whereClause}`,
+            params
+        );
+        const total = parseInt(countResult.rows[0].total);
+
+        // Get paginated data
+        const sortClause = buildSortClause(sortField, sortOrder, fieldMapping);
+        const paginationClause = buildPaginationClause(paginationParams);
+
+        const result = await query(
+            `SELECT * FROM documents ${whereClause} ${sortClause} ${paginationClause}`,
+            params
+        );
+
+        const data = result.rows.map(this.mapRowToDocument);
+
+        return createPaginatedResult(data, total, paginationParams);
     }
 
     // Get deleted documents (Trash)

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Users,
   TrendingUp,
@@ -18,7 +19,6 @@ import {
   Wallet,
   Plane,
   FileText,
-  DollarSign,
   Palmtree,
   MessageSquare,
   Trash2,
@@ -29,6 +29,7 @@ import {
 import { ResponsiveContainer, XAxis, YAxis, AreaChart, Area, Tooltip } from 'recharts';
 import { StatCard } from '../components/StatCard';
 import { Toast } from '../components/Toast';
+import { Avatar } from '../components/Avatar';
 import { AddEmployeeModal } from '../components/AddEmployeeModal';
 import { LeaveManagementModal } from '../components/LeaveManagementModal';
 // Removed constant imports - using API data
@@ -39,42 +40,73 @@ import {
   ChartDataPoint,
   OnboardingProgressSummary,
   UpcomingEvent,
-  AuditLogItem,
-  Announcement,
-  MyTeamHierarchy
 } from '../types';
-import { api, API_HOST } from '../lib/api';
+import {
+  useAllEmployees,
+  useAuditLogs,
+  useHeadcountStats,
+  useUpcomingEvents,
+  useAnnouncements,
+  useAttendanceToday,
+  useDashboardEmployeeStats,
+  useMyTeamHierarchy,
+  useNotes,
+  useAddNote,
+  useDeleteNote,
+  useToggleNotePin,
+  useClockIn,
+  useClockOut,
+  useAddEmployee
+} from '../hooks/queries';
+import { queryKeys } from '../lib/queryKeys';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   // useLeave hook handles fetching from API internally now
   const { requests, updateRequestStatus } = useLeave();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Filter requests for Admin (Pending only) and Employee (Own requests)
   const pendingRequests = requests.filter(r => r.status === 'Pending');
   const myRequests = requests.filter(r => r.employeeName === user?.name);
+
+  // ----- REACT QUERY HOOKS -----
+  const { data: allEmployees = [], isPending: isEmployeesLoading } = useAllEmployees();
+  const { data: auditLogsData = [] } = useAuditLogs();
+  const { data: headcountStats = [] } = useHeadcountStats();
+  const { data: eventsData = [] } = useUpcomingEvents();
+  const { data: announcementsData = [] } = useAnnouncements();
+  const isEmployee = user?.role === 'EMPLOYEE';
+  const { data: attendanceStatus } = useAttendanceToday(isEmployee);
+  const { data: employeeStatsData } = useDashboardEmployeeStats(isEmployee);
+  const { data: teamHierarchyData } = useMyTeamHierarchy(isEmployee);
+  const { data: notesData = [] } = useNotes();
+  const clockInMutation = useClockIn();
+  const clockOutMutation = useClockOut();
+  const addNoteMutation = useAddNote();
+  const deleteNoteMutation = useDeleteNote();
+  const togglePinMutation = useToggleNotePin();
+  const addEmployeeMutation = useAddEmployee();
+
+  // ----- DERIVED LOADING STATE -----
+  const isLoading = isEmployeesLoading;
+
+  // ----- DERIVED DATA -----
+  const employeeStats = employeeStatsData ?? { leaveBalance: 0, nextPayday: null, pendingReviews: 0, pendingSurveys: 0 };
+  const teamHierarchy = teamHierarchyData ?? null;
 
   // ----- ADMIN STATE -----
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [quickNote, setQuickNote] = useState('');
 
-  // ----- NOTES STATE -----
-  interface Note {
-    id: string;
-    content: string;
-    color: string;
-    pinned: boolean;
-    createdAt: string;
-    updatedAt: string;
-  }
-  const [notes, setNotes] = useState<Note[]>([]);
+  // ----- NOTES LOADING STATE -----
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
-  // ----- LOADING STATE -----
-  const [isLoading, setIsLoading] = useState(true);
+  // ----- ATTENDANCE LOADING STATE -----
+  const [isClockingIn, setIsClockingIn] = useState(false);
 
   // ----- TOAST STATE -----
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
@@ -87,58 +119,61 @@ export const Dashboard: React.FC = () => {
     setToast({ show: true, message, type });
   };
 
-  // ----- STATS STATE -----
-  const [activeEmployeesCount, setActiveEmployeesCount] = useState(0);
-  const [onLeaveCount, setOnLeaveCount] = useState(0);
-  const [newHiresCount, setNewHiresCount] = useState(0);
-  const [myTeam, setMyTeam] = useState<Employee[]>([]);
-  const [teamHierarchy, setTeamHierarchy] = useState<MyTeamHierarchy | null>(null);
+  // ----- COMPUTED STATS (useMemo) -----
+  const { activeEmployeesCount, onLeaveCount, newHiresCount, newHiresTrend, turnoverRate, turnoverTrend } = useMemo(() => {
+    const activeEmployees = allEmployees.filter((employee) => employee.status === 'Active');
+    const onLeaveEmployees = allEmployees.filter((employee) => employee.status === 'On Leave');
+    const terminatedEmployees = allEmployees.filter((employee) => employee.status === 'Terminated');
 
-  // ----- ATTENDANCE STATE -----
-  interface AttendanceStatus {
-    id?: string;
-    clockIn?: string;
-    clockOut?: string;
-    status?: string;
-  }
-  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus | null>(null);
-  const [isClockingIn, setIsClockingIn] = useState(false);
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
 
-  // ----- EMPLOYEE STATS STATE -----
-  interface EmployeeStats {
-    leaveBalance: number;
-    nextPayday: string | null;
-    pendingReviews: number;
-    pendingSurveys: number;
-  }
-  const [employeeStats, setEmployeeStats] = useState<EmployeeStats>({
-    leaveBalance: 0,
-    nextPayday: null,
-    pendingReviews: 0,
-    pendingSurveys: 0,
-  });
+    // Calculate new hires this month
+    const newJoinersThisMonth = allEmployees.filter(e => {
+      const joinDate = new Date(e.joinDate);
+      return joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear;
+    }).length;
 
-  // Fetch employee stats from API
-  const fetchEmployeeStats = async () => {
-    try {
-      const stats = await api.get<EmployeeStats>('/dashboard/employee-stats');
-      setEmployeeStats(stats);
-    } catch (error) {
-      console.error('Error fetching employee stats:', error);
-    }
-  };
+    // Calculate new hires last month for trend
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    const newJoinersLastMonth = allEmployees.filter(e => {
+      const joinDate = new Date(e.joinDate);
+      return joinDate.getMonth() === lastMonth && joinDate.getFullYear() === lastMonthYear;
+    }).length;
 
-  // Fetch my team hierarchy from API
-  const fetchMyTeamFromAPI = async () => {
-    try {
-      const hierarchy = await api.get<MyTeamHierarchy>('/dashboard/my-team-hierarchy');
-      setTeamHierarchy(hierarchy);
-      // Use direct reports if available (manager view), otherwise peers
-      const teamMembers = hierarchy.directReports.length > 0
-        ? hierarchy.directReports
-        : hierarchy.peers;
-      // Map TeamMember to Employee-compatible shape for rendering
-      setMyTeam(teamMembers.map(m => ({
+    // Calculate trend percentage for new hires
+    const hireTrend = newJoinersLastMonth > 0
+      ? ((newJoinersThisMonth - newJoinersLastMonth) / newJoinersLastMonth) * 100
+      : newJoinersThisMonth > 0 ? 100 : 0;
+
+    // Calculate turnover rate (terminated / total employees * 100)
+    const totalEmployees = allEmployees.length;
+    const turnoverRateCalc = totalEmployees > 0
+      ? (terminatedEmployees.length / totalEmployees) * 100
+      : 0;
+
+    const turnoverTrendCalc = terminatedEmployees.length > 0 ? turnoverRateCalc : 0;
+
+    return {
+      activeEmployeesCount: activeEmployees.length,
+      onLeaveCount: onLeaveEmployees.length,
+      newHiresCount: newJoinersThisMonth,
+      newHiresTrend: hireTrend,
+      turnoverRate: turnoverRateCalc,
+      turnoverTrend: turnoverTrendCalc,
+    };
+  }, [allEmployees]);
+
+  // ----- COMPUTED MY TEAM -----
+  const myTeam = useMemo<Employee[]>(() => {
+    // If we have team hierarchy data (employee view), use it
+    if (teamHierarchy) {
+      const teamMembers = teamHierarchy.directReports.length > 0
+        ? teamHierarchy.directReports
+        : teamHierarchy.peers;
+      return teamMembers.map(m => ({
         id: m.id,
         name: m.name,
         role: m.role,
@@ -150,23 +185,81 @@ export const Dashboard: React.FC = () => {
         joinDate: '',
         location: '',
         skills: [],
-      })));
-    } catch (error) {
-      console.error('Error fetching my team:', error);
+      }));
     }
-  };
 
-  // Fetch today's attendance status
-  const fetchAttendanceStatus = async () => {
-    try {
-      const status = await api.get<AttendanceStatus>('/attendance/today');
-      setAttendanceStatus(status);
-    } catch (error) {
-      console.error('Error fetching attendance:', error);
-      // If no attendance record for today, set status to null (not checked in yet)
-      setAttendanceStatus(null);
+    // Fallback: derive from allEmployees for employee role
+    if (user?.role === 'EMPLOYEE') {
+      const currentEmployee = allEmployees.find((employee) => employee.email === user?.email);
+      const department = currentEmployee?.department || 'Product';
+      return allEmployees.filter((employee) => employee.department === department && employee.id !== user?.id).slice(0, 3);
     }
-  };
+
+    return [];
+  }, [teamHierarchy, allEmployees, user?.role, user?.email, user?.id]);
+
+  // ----- COMPUTED HEADCOUNT DATA -----
+  const headcountData = useMemo<ChartDataPoint[]>(() => {
+    if (headcountStats && headcountStats.length > 0) {
+      return headcountStats;
+    }
+
+    // Generate headcount data from employees by join month
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const generatedData: ChartDataPoint[] = [];
+
+    // Generate data for last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const targetDate = new Date(currentYear, currentMonth - i, 1);
+      const targetMonth = targetDate.getMonth();
+      const targetYear = targetDate.getFullYear();
+      const thisMonthEnd = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+
+      const employeesUpToThisMonth = allEmployees.filter(e => {
+        if (!e.joinDate) return false;
+        const joinDate = new Date(e.joinDate);
+        if (isNaN(joinDate.getTime())) return false;
+        return joinDate <= thisMonthEnd && e.status !== 'Terminated';
+      }).length;
+
+      generatedData.push({
+        name: monthNames[targetMonth] ?? '',
+        value: employeesUpToThisMonth
+      });
+    }
+
+    return generatedData;
+  }, [allEmployees, headcountStats]);
+
+  // ----- COMPUTED ONBOARDING SUMMARY -----
+  const onboardingSummary = useMemo<OnboardingProgressSummary[]>(() => {
+    const onboarding = allEmployees
+      .filter(e => e.onboardingStatus === 'In Progress' || e.onboardingStatus === 'Not Started')
+      .map(e => ({
+        id: e.id,
+        name: e.name,
+        role: e.role,
+        progress: e.onboardingStatus === 'In Progress' ? 50 : 0,
+        avatar: e.avatar
+      }));
+    return onboarding.length ? onboarding : [];
+  }, [allEmployees]);
+
+  // ----- COMPUTED UPCOMING EVENTS -----
+  const upcomingEvents = useMemo<UpcomingEvent[]>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return eventsData.filter(event => {
+      const eventDate = new Date(event.date);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate >= today;
+    });
+  }, [eventsData]);
+
+  // ----- MUTATION HANDLERS -----
 
   // Handle clock in/out
   const handleClockAction = async () => {
@@ -176,23 +269,20 @@ export const Dashboard: React.FC = () => {
 
       if (isClockedIn) {
         // Clock out
-        await api.post('/attendance/clock-out', {});
+        await clockOutMutation.mutateAsync();
         showToast('Checked out successfully!', 'success');
       } else {
         // Clock in
-        await api.post('/attendance/clock-in', {});
+        await clockInMutation.mutateAsync();
         showToast('Checked in successfully!', 'success');
       }
-
-      // Refresh status
-      await fetchAttendanceStatus();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';
 
       // If already clocked in, refresh status to sync with server
       if (message.includes('Already clocked in') || message.includes('already checked in')) {
         showToast('You have already checked in today', 'info');
-        await fetchAttendanceStatus(); // Refresh to show correct status
+        queryClient.invalidateQueries({ queryKey: queryKeys.attendance.today() });
       } else {
         showToast(message, 'error');
       }
@@ -201,130 +291,14 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // ----- WIDGET STATE (Replacing Constants) -----
-  const [headcountData, setHeadcountData] = useState<ChartDataPoint[]>([]);
-  const [onboardingSummary, setOnboardingSummary] = useState<OnboardingProgressSummary[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-
-  // Fetch Data from API (Extracted as reusable function)
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const [employeesRaw, auditLogs, headcountStats, eventsRaw, announcements] = await Promise.all([
-        api.get<Employee[]>('/employees'),
-        api.get<AuditLogItem[]>('/audit-logs'),
-        api.get<ChartDataPoint[]>('/headcount-stats'),
-        api.get<UpcomingEvent[]>('/events'),
-        api.get<Announcement[]>('/announcements')
-      ]);
-
-      // Transform relative avatar URLs to absolute URLs
-      const employees = employeesRaw.map(emp => ({
-        ...emp,
-        avatar: emp.avatar && emp.avatar.startsWith('/')
-          ? `${API_HOST}${emp.avatar}`
-          : emp.avatar
-      }));
-
-      const events = eventsRaw.map(evt => ({
-        ...evt,
-        avatar: evt.avatar && evt.avatar.startsWith('/')
-          ? `${API_HOST}${evt.avatar}`
-          : evt.avatar
-      }));
-
-      // Stats
-      setActiveEmployeesCount(employees.filter((employee) => employee.status === 'Active').length);
-      setOnLeaveCount(employees.filter((employee) => employee.status === 'On Leave').length);
-
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      const currentYear = currentDate.getFullYear();
-
-      const newJoiners = employees.filter(e => {
-        const joinDate = new Date(e.joinDate);
-        return joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear;
-      }).length;
-      setNewHiresCount(newJoiners);
-
-      // My Team (if employee)
-      if (user?.role === 'EMPLOYEE') {
-        const currentEmployee = employees.find((employee) => employee.email === user?.email);
-        const department = currentEmployee?.department || 'Product';
-        const teamMembers = employees.filter((employee) => employee.department === department && employee.id !== user?.id).slice(0, 3);
-        setMyTeam(teamMembers);
-      }
-
-      // Onboarding Summary (Derived)
-      const onboarding = employees
-        .filter(e => e.onboardingStatus === 'In Progress' || e.onboardingStatus === 'Not Started')
-        .map(e => ({
-          id: e.id,
-          name: e.name,
-          role: e.role,
-          progress: e.onboardingStatus === 'In Progress' ? 50 : 0, // Simplified: In Progress = 50%, Not Started = 0%
-          avatar: e.avatar
-        }));
-      setOnboardingSummary(onboarding.length ? onboarding : []);
-
-      setAuditLogs(auditLogs);
-      setHeadcountData(headcountStats);
-      setUpcomingEvents(events);
-      setAnnouncements(announcements);
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [user?.role, user?.email, user?.id]);
-
-  // Fetch attendance status and employee stats on mount (for employees)
-  useEffect(() => {
-    if (user?.role === 'EMPLOYEE') {
-      fetchAttendanceStatus();
-      fetchEmployeeStats();
-      fetchMyTeamFromAPI();
-    }
-  }, [user?.role]);
-
-  // Fetch notes on mount (for all users)
-  useEffect(() => {
-    fetchNotes();
-  }, []);
-
-
   // ----- NOTES HANDLERS -----
-  const fetchNotes = async () => {
-    try {
-      const fetchedNotes = await api.get<Note[]>('/notes');
-      setNotes(fetchedNotes);
-      // If there are notes, show the most recent one in the textarea
-      if (fetchedNotes.length > 0) {
-        // Show pinned note first, or most recent
-        const pinnedNote = fetchedNotes.find(n => n.pinned);
-        setQuickNote(pinnedNote?.content || fetchedNotes[0].content);
-      }
-    } catch (error) {
-      console.error('Error fetching notes:', error);
-    }
-  };
-
   const handleSaveNote = async () => {
     if (!quickNote.trim()) return;
     setIsSavingNote(true);
     try {
-      await api.post('/notes', { content: quickNote.trim() });
+      await addNoteMutation.mutateAsync({ content: quickNote.trim() });
       showToast("Note saved successfully!", "success");
       setQuickNote('');
-      // Refresh notes list
-      fetchNotes();
     } catch (error) {
       console.error('Error saving note:', error);
       showToast("Failed to save note", "error");
@@ -336,8 +310,7 @@ export const Dashboard: React.FC = () => {
   const handleDeleteNote = async (noteId: string) => {
     setDeletingNoteId(noteId);
     try {
-      await api.delete(`/notes/${noteId}`);
-      fetchNotes();
+      await deleteNoteMutation.mutateAsync(noteId);
       showToast("Note deleted", "success");
     } catch (error) {
       console.error('Error deleting note:', error);
@@ -349,8 +322,7 @@ export const Dashboard: React.FC = () => {
 
   const handleTogglePin = async (noteId: string) => {
     try {
-      await api.post(`/notes/${noteId}/toggle-pin`, {});
-      fetchNotes();
+      await togglePinMutation.mutateAsync(noteId);
     } catch (error) {
       console.error('Error toggling pin:', error);
       showToast("Failed to pin note", "error");
@@ -388,13 +360,10 @@ export const Dashboard: React.FC = () => {
       };
 
       // Call API to add employee
-      await api.post('/employees', payload);
+      await addEmployeeMutation.mutateAsync(payload);
 
       // Success: Close modal
       setIsAddEmployeeModalOpen(false);
-
-      // Refetch dashboard data to show new employee
-      fetchData();
 
       // Show success message
       showToast(`Successfully added ${employeeData.name} to the system!`, 'success');
@@ -428,7 +397,7 @@ export const Dashboard: React.FC = () => {
   // EMPLOYEE DASHBOARD RENDER
   // =========================================================================
   if (user?.role === 'EMPLOYEE') {
-    // myTeam state is populated by effect
+    // myTeam state is populated by useMemo
 
     return (
       <>
@@ -480,7 +449,7 @@ export const Dashboard: React.FC = () => {
             {/* Check In/Out Button */}
             <button
               onClick={handleClockAction}
-              disabled={isClockingIn || (attendanceStatus?.clockIn && attendanceStatus?.clockOut)}
+              disabled={isClockingIn || !!(attendanceStatus?.clockIn && attendanceStatus?.clockOut)}
               className={`flex items-center gap-2 px-4 py-2 font-medium rounded-lg text-sm shadow-sm transition-all ${
                 attendanceStatus?.clockIn && !attendanceStatus?.clockOut
                   ? 'bg-accent-orange text-white hover:bg-accent-orange/90 hover:shadow-md'
@@ -545,18 +514,24 @@ export const Dashboard: React.FC = () => {
               <Plane size={20} className="sm:w-6 sm:h-6" />
             </div>
           </div>
-          <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between">
+          <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between relative opacity-60">
             <div>
-              <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium mb-1">Next Payday</p>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium">Next Payday</p>
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">WIP</span>
+              </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark">{employeeStats.nextPayday || '—'}</h3>
             </div>
             <div className="p-2 sm:p-3 bg-green-50 dark:bg-green-900/20 text-green-500 rounded-lg">
               <Wallet size={20} className="sm:w-6 sm:h-6" />
             </div>
           </div>
-          <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between">
+          <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between relative opacity-60">
             <div>
-              <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium mb-1">Pending Reviews</p>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium">Pending Reviews</p>
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">WIP</span>
+              </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark">{employeeStats.pendingReviews}</h3>
             </div>
             <div className="p-2 sm:p-3 bg-orange-50 dark:bg-orange-900/20 text-orange-500 rounded-lg">
@@ -634,7 +609,7 @@ export const Dashboard: React.FC = () => {
               {/* Team members */}
               {myTeam.map(teammate => (
                 <div key={teammate.id} className="flex items-center gap-3">
-                  <img src={teammate.avatar} alt={teammate.name} className="w-10 h-10 rounded-full object-cover" />
+                  <Avatar src={teammate.avatar} name={teammate.name} size="lg" />
                   <div>
                     <p className="text-sm font-medium text-text-light dark:text-text-dark">{teammate.name}</p>
                     <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{teammate.role}</p>
@@ -663,8 +638,8 @@ export const Dashboard: React.FC = () => {
               <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">View All</button>
             </div>
             <div className="p-4 space-y-3 flex-grow">
-              {announcements.length > 0 ? (
-                announcements.slice(0, 3).map(ann => (
+              {announcementsData.length > 0 ? (
+                announcementsData.slice(0, 3).map(ann => (
                   <div key={ann.id} className="p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark hover:border-primary/30 transition-colors">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide ${
@@ -709,14 +684,17 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Personal Notes</h2>
               </div>
-              {notes.length > 0 && (
-                <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{notes.length} saved</span>
+              {notesData.length > 0 && (
+                <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{notesData.length} saved</span>
               )}
             </div>
             <div className="p-4 flex-grow flex flex-col gap-3">
               {/* Note input */}
               <div className="relative">
+                <label htmlFor="employeeNote" className="sr-only">Personal Note</label>
                 <textarea
+                  id="employeeNote"
+                  name="employeeNote"
                   value={quickNote}
                   onChange={(e) => setQuickNote(e.target.value)}
                   placeholder="Write a note..."
@@ -736,11 +714,11 @@ export const Dashboard: React.FC = () => {
               </div>
 
               {/* Recent notes list */}
-              {notes.length > 0 && (
+              {notesData.length > 0 && (
                 <div className="flex-grow">
                   <p className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-2 uppercase tracking-wide">Recent</p>
                   <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
-                    {notes.slice(0, 5).map(note => (
+                    {notesData.slice(0, 5).map(note => (
                       <div
                         key={note.id}
                         className={`group flex items-start gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
@@ -793,7 +771,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
               )}
-              {notes.length === 0 && (
+              {notesData.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-4 text-text-muted-light dark:text-text-muted-dark">
                   <StickyNote size={24} className="mb-1.5 opacity-20" />
                   <p className="text-xs">No notes yet. Start writing!</p>
@@ -810,8 +788,6 @@ export const Dashboard: React.FC = () => {
   // =========================================================================
   // ADMIN DASHBOARD RENDER (Existing Logic)
   // =========================================================================
-
-  // State calculated in top-level effect
 
   // Show loading skeleton while fetching data
   if (isLoading) {
@@ -923,7 +899,7 @@ export const Dashboard: React.FC = () => {
           <StatCard
             title="New Hires (Month)"
             value={newHiresCount}
-            trend={newHiresCount > 0 ? 100 : 0}
+            trend={newHiresTrend}
             icon={<UserPlus size={22} />}
             color="green"
           />
@@ -931,8 +907,8 @@ export const Dashboard: React.FC = () => {
         <div onClick={() => navigate('/analytics')} className="cursor-pointer">
           <StatCard
             title="Turnover Rate"
-            value="2.1%"
-            trend={-0.4}
+            value={`${turnoverRate.toFixed(1)}%`}
+            trend={turnoverTrend}
             icon={<TrendingUp size={22} />}
             color="red"
           />
@@ -953,69 +929,84 @@ export const Dashboard: React.FC = () => {
             </div>
             <button className="text-text-muted-light hover:text-primary hidden md:block"><MoreHorizontal size={20} /></button>
           </div>
-          <div className="h-[200px] md:h-[250px] w-full flex-grow">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={headcountData}>
-                <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3498db" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3498db" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#a0aec0', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#a0aec0', fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                  cursor={{ stroke: '#3498db', strokeWidth: 1, strokeDasharray: '5 5' }}
-                />
-                <Area type="monotone" dataKey="value" stroke="#3498db" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="flex-grow w-full min-h-[200px]" style={{ minWidth: 300 }}>
+            {headcountData && headcountData.length > 0 && !isLoading ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={headcountData}>
+                  <defs>
+                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3498db" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3498db" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#a0aec0', fontSize: 12 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#a0aec0', fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                    cursor={{ stroke: '#3498db', strokeWidth: 1, strokeDasharray: '5 5' }}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#3498db" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-text-muted-light dark:text-text-muted-dark">
+                <Users size={40} className="mb-3 opacity-20" />
+                <p className="text-sm font-medium">No headcount data available</p>
+                <p className="text-xs mt-1 opacity-70">Data will appear once employee records are added</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Upcoming Birthdays / Events */}
-        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
+        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm h-fit">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
             <div className="flex items-center gap-2 md:gap-3">
               <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Events</h2>
             </div>
             <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">View All</button>
           </div>
-          <div className="p-3 md:p-4 flex-grow">
-            <ul className="space-y-4">
-              {upcomingEvents.slice(0, 3).map(event => (
-                <li key={event.id} className="flex items-center gap-4">
-                  {event.avatar ? (
-                    <img src={event.avatar} alt={event.title} className="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-background-dark" />
-                  ) : (
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${event.type === 'Meeting' ? 'bg-accent-teal/10 text-accent-teal' : 'bg-primary/10 text-primary'
-                      }`}>
-                      {event.type === 'Meeting' ? <CalendarIcon size={18} /> : <Utensils size={18} />}
+          <div className="p-3 md:p-4">
+            {upcomingEvents.length > 0 ? (
+              <ul className="space-y-4">
+                {upcomingEvents.slice(0, 3).map(event => (
+                  <li key={event.id} className="flex items-center gap-4">
+                    {event.avatar ? (
+                      <Avatar src={event.avatar} name={event.title} size="lg" className="ring-2 ring-white dark:ring-background-dark" />
+                    ) : (
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${event.type === 'Meeting' ? 'bg-accent-teal/10 text-accent-teal' : 'bg-primary/10 text-primary'
+                        }`}>
+                        {event.type === 'Meeting' ? <CalendarIcon size={18} /> : <Utensils size={18} />}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-sm text-text-light dark:text-text-dark leading-tight">{event.title}</p>
+                      <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5 flex items-center gap-1">
+                        {event.type === 'Birthday' && <Cake size={12} className="text-accent-red" />}
+                        {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
                     </div>
-                  )}
-                  <div>
-                    <p className="font-medium text-sm text-text-light dark:text-text-dark leading-tight">{event.title}</p>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5 flex items-center gap-1">
-                      {event.type === 'Birthday' && <Cake size={12} className="text-accent-red" />}
-                      {event.date}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-text-muted-light dark:text-text-muted-dark">
+                <CalendarIcon size={32} className="mb-2 opacity-20" />
+                <p className="text-sm">No upcoming events</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Onboarding Progress Widget */}
-        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
+        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm h-fit">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
             <div className="flex items-center gap-2 md:gap-3">
               <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Onboarding</h2>
             </div>
             <button onClick={() => navigate('/onboarding')} className="text-xs text-primary font-medium hover:underline">View All</button>
           </div>
-          <div className="p-3 md:p-4 flex-grow">
+          <div className="p-3 md:p-4 max-h-[400px] overflow-y-auto">
             <ul className="space-y-5">
               {onboardingSummary.map(item => (
                 <li key={item.id}>
@@ -1058,7 +1049,7 @@ export const Dashboard: React.FC = () => {
                         <tr key={req.id}>
                           <td className="py-3 pr-4">
                             <div className="flex items-center gap-3">
-                              <img src={req.avatar} alt={req.employeeName} className="w-8 h-8 rounded-full object-cover" />
+                              <Avatar src={req.avatar} name={req.employeeName} size="md" />
                               <span className="font-medium text-text-light dark:text-text-dark">{req.employeeName}</span>
                             </div>
                           </td>
@@ -1090,7 +1081,7 @@ export const Dashboard: React.FC = () => {
                   {pendingRequests.map(req => (
                     <div key={req.id} className="p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
                       <div className="flex items-center gap-3 mb-2">
-                        <img src={req.avatar} alt={req.employeeName} className="w-8 h-8 rounded-full object-cover" />
+                        <Avatar src={req.avatar} name={req.employeeName} size="md" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">{req.employeeName}</p>
                           <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{req.type} · {req.dates}</p>
@@ -1123,8 +1114,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Recent Activity, Notes & Announcements */}
-        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Recent Activity & Notes */}
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Recent Activity */}
           <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
             <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
@@ -1132,68 +1123,28 @@ export const Dashboard: React.FC = () => {
                 <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Recent Activity</h2>
               </div>
             </div>
-            <div className="p-4 space-y-4 max-h-[250px] overflow-y-auto">
-              {auditLogs.slice(0, 4).map(log => (
-                <div key={log.id} className="flex gap-3 items-start text-sm">
-                  <div className="mt-0.5 p-1.5 bg-background-light dark:bg-background-dark rounded-full border border-border-light dark:border-border-dark text-text-muted-light">
-                    <Activity size={14} />
-                  </div>
-                  <div>
-                    <p className="text-text-light dark:text-text-dark">
-                      <span className="font-medium">{log.user}</span> {log.action} <span className="font-medium">{log.target}</span>
-                    </p>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">{log.time}</p>
-                  </div>
-                </div>
-              ))}
-              <button onClick={() => navigate('/compliance')} className="w-full text-center text-xs text-primary mt-2 hover:underline">View Full Log</button>
-            </div>
-          </div>
-
-          {/* Latest Announcements */}
-          <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
-            <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-lg">
-                  <Megaphone size={16} />
-                </div>
-                <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Announcements</h2>
-              </div>
-              <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">View All</button>
-            </div>
-            <div className="p-4 space-y-3 max-h-[280px] overflow-y-auto">
-              {announcements.length > 0 ? (
-                announcements.slice(0, 3).map(ann => (
-                  <div key={ann.id} className="p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark hover:border-primary/30 transition-colors">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide ${
-                        ann.type === 'announcement' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                        ann.type === 'policy' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                        'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
-                      }`}>
-                        {ann.type}
-                      </span>
+            <div className="p-4 space-y-4 max-h-[280px] overflow-y-auto flex-grow">
+              {auditLogsData.length > 0 ? (
+                <>
+                  {auditLogsData.slice(0, 4).map(log => (
+                    <div key={log.id} className="flex gap-3 items-start text-sm">
+                      <div className="mt-0.5 p-1.5 bg-background-light dark:bg-background-dark rounded-full border border-border-light dark:border-border-dark text-text-muted-light">
+                        <Activity size={14} />
+                      </div>
+                      <div>
+                        <p className="text-text-light dark:text-text-dark">
+                          <span className="font-medium">{log.user}</span> {log.action} <span className="font-medium">{log.target}</span>
+                        </p>
+                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">{log.time}</p>
+                      </div>
                     </div>
-                    <p className="text-sm font-medium text-text-light dark:text-text-dark mb-0.5">{ann.title}</p>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark line-clamp-2 leading-relaxed">{ann.description}</p>
-                    <div className="flex items-center gap-2 mt-2 text-[10px] text-text-muted-light dark:text-text-muted-dark">
-                      {ann.author && (
-                        <span className="flex items-center gap-1">
-                          <Users size={10} />
-                          {ann.author}
-                        </span>
-                      )}
-                      {ann.author && ann.createdAt && <span>·</span>}
-                      {ann.createdAt && (
-                        <span>{new Date(ann.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                      )}
-                    </div>
-                  </div>
-                ))
+                  ))}
+                  <button onClick={() => navigate('/compliance')} className="w-full text-center text-xs text-primary mt-2 hover:underline">View Full Log</button>
+                </>
               ) : (
-                <div className="flex flex-col items-center justify-center py-6 text-text-muted-light dark:text-text-muted-dark">
-                  <Megaphone size={28} className="mb-2 opacity-20" />
-                  <p className="text-sm">No announcements yet</p>
+                <div className="flex flex-col items-center justify-center py-8 text-text-muted-light dark:text-text-muted-dark">
+                  <Activity size={32} className="mb-2 opacity-20" />
+                  <p className="text-sm">No recent activity</p>
                 </div>
               )}
             </div>
@@ -1208,13 +1159,16 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Notes</h2>
               </div>
-              {notes.length > 0 && (
-                <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark">{notes.length} saved</span>
+              {notesData.length > 0 && (
+                <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark">{notesData.length} saved</span>
               )}
             </div>
             <div className="p-4 flex-grow flex flex-col">
               <div className="relative">
+                <label htmlFor="adminNote" className="sr-only">Quick Note</label>
                 <textarea
+                  id="adminNote"
+                  name="adminNote"
                   value={quickNote}
                   onChange={(e) => setQuickNote(e.target.value)}
                   placeholder="Write a quick note..."
@@ -1232,11 +1186,11 @@ export const Dashboard: React.FC = () => {
                   </button>
                 </div>
               </div>
-              {notes.length > 0 && (
+              {notesData.length > 0 && (
                 <div className="mt-3 pt-2 border-t border-border-light dark:border-border-dark">
                   <p className="text-[10px] font-medium text-text-muted-light dark:text-text-muted-dark mb-1.5 uppercase tracking-wide">Recent</p>
                   <div className="space-y-1 max-h-20 overflow-y-auto">
-                    {notes.slice(0, 3).map(note => (
+                    {notesData.slice(0, 3).map(note => (
                       <div
                         key={note.id}
                         className={`group flex items-center gap-2 py-1 px-1 rounded cursor-pointer transition-colors ${

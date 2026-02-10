@@ -6,16 +6,15 @@ import {
   LogOut,
   User as UserIcon,
   Shield,
-  Lock,
-  Users,
   FileText,
   X,
   Menu,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useNotifications } from "../contexts/NotificationContext";
 import { useNavigate } from "react-router-dom";
-import { ChangePasswordModal } from "./ChangePasswordModal";
 import { api, API_HOST } from "../lib/api";
+import { Avatar } from "./Avatar";
 
 interface SearchResult {
   id: string;
@@ -32,62 +31,20 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { notifications, unreadCount, markAllAsRead, markAsRead } = useNotifications();
   const notificationRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  // Real notifications from API
-  interface NotificationItem {
-    id: string;
-    title: string;
-    message: string;
-    type: string;
-    read: boolean;
-    link?: string;
-    time: string;
-  }
-
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
-
-  // Fetch notifications from API
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      setIsLoadingNotifications(true);
-      try {
-        const data = await api.get<NotificationItem[]>("/notifications");
-        setNotifications(data);
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error);
-      } finally {
-        setIsLoadingNotifications(false);
-      }
-    };
-
-    fetchNotifications();
-    // Refresh notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Mark all notifications as read
   const handleMarkAllRead = async () => {
-    try {
-      await api.put("/notifications/mark-all-read", {});
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    } catch (error) {
-      console.error("Failed to mark notifications as read:", error);
-    }
+    await markAllAsRead();
   };
 
-  // View all notifications (navigate to notifications page or show toast)
   const handleViewAllNotifications = () => {
     setIsNotificationOpen(false);
-    // TODO: Replace with navigate('/notifications') when page exists
-    alert("Notifications page coming soon!");
+    navigate('/notifications');
   };
-  const navigate = useNavigate();
 
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -218,10 +175,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
   return (
     <>
-      <ChangePasswordModal
-        isOpen={isChangePasswordOpen}
-        onClose={() => setIsChangePasswordOpen(false)}
-      />
       <header className="h-16 bg-card-light dark:bg-card-dark border-b border-border-light dark:border-border-dark flex items-center justify-between px-4 md:px-8 sticky top-0 z-20 shadow-sm">
         {/* Mobile Menu Button */}
         <button
@@ -244,6 +197,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery && setShowResults(true)}
               placeholder="Search employees, documents, policies..."
+              autoComplete="off"
               className="w-full pl-10 pr-10 py-2 bg-background-light dark:bg-background-dark border border-transparent focus:border-primary/30 rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             />
             {searchQuery && (
@@ -273,19 +227,15 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                           onClick={() => handleResultClick(result)}
                           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-background-light dark:hover:bg-background-dark transition-colors text-left"
                         >
-                          {result.avatar ? (
-                            <img
+                          {result.type === "employee" ? (
+                            <Avatar
                               src={result.avatar}
-                              alt=""
-                              className="w-8 h-8 rounded-full object-cover"
+                              name={result.title}
+                              size="md"
                             />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                              {result.type === "employee" ? (
-                                <Users size={16} className="text-primary" />
-                              ) : (
-                                <FileText size={16} className="text-primary" />
-                              )}
+                              <FileText size={16} className="text-primary" />
                             </div>
                           )}
                           <div>
@@ -324,7 +274,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               className="relative p-2 rounded-full hover:bg-background-light dark:hover:bg-background-dark text-text-muted-light dark:text-text-muted-dark transition-colors"
             >
               <Bell size={20} />
-              {notifications.filter((n) => !n.read).length > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent-red rounded-full ring-2 ring-card-light dark:ring-card-dark"></span>
               )}
             </button>
@@ -348,6 +298,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     notifications.map((notif) => (
                       <div
                         key={notif.id}
+                        onClick={async () => {
+                          if (!notif.read) await markAsRead(notif.id);
+                          setIsNotificationOpen(false);
+                          if (notif.link) navigate(notif.link);
+                        }}
                         className={`px-4 py-3 hover:bg-background-light dark:hover:bg-background-dark cursor-pointer border-b border-border-light dark:border-border-dark last:border-0 ${!notif.read ? "bg-primary/5" : ""}`}
                       >
                         <div className="flex items-start gap-3">
@@ -393,10 +348,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-3 hover:bg-background-light dark:hover:bg-background-dark p-1.5 rounded-lg transition-colors"
             >
-              <img
-                src={user?.avatar || "https://ui-avatars.com/api/?name=User"}
-                alt="User"
-                className="w-8 h-8 rounded-full object-cover ring-2 ring-primary/20"
+              <Avatar
+                src={user?.avatar}
+                name={user?.name}
+                size="md"
+                className="ring-2 ring-primary/20"
               />
               <div className="text-left hidden sm:block">
                 <p className="text-sm font-semibold text-text-light dark:text-text-dark leading-none">
@@ -422,15 +378,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                   className="w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark flex items-center gap-2"
                 >
                   <UserIcon size={16} /> Profile
-                </button>
-                <button
-                  onClick={() => {
-                    setIsChangePasswordOpen(true);
-                    setIsProfileOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark flex items-center gap-2"
-                >
-                  <Lock size={16} /> Change Password
                 </button>
                 <div className="h-px bg-border-light dark:bg-border-dark my-1"></div>
                 <button
@@ -463,6 +410,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               onFocus={() => searchQuery && setShowResults(true)}
               placeholder="Search employees..."
               autoFocus
+              autoComplete="off"
               className="w-full pl-10 pr-10 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
             />
             <button
@@ -489,13 +437,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                           onClick={() => { handleResultClick(result); setIsMobileSearchOpen(false); }}
                           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-background-light dark:hover:bg-background-dark transition-colors text-left"
                         >
-                          {result.avatar ? (
-                            <img src={result.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Users size={16} className="text-primary" />
-                            </div>
-                          )}
+                          <Avatar
+                            src={result.avatar}
+                            name={result.title}
+                            size="md"
+                          />
                           <div>
                             <p className="text-sm font-medium text-text-light dark:text-text-dark">{result.title}</p>
                             <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{result.subtitle}</p>

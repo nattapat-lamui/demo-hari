@@ -1,9 +1,10 @@
 import { query } from '../db';
+import SystemConfigService from './SystemConfigService';
 
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001';
 
 function resolveAvatar(avatar: string | null, name: string): string {
-  if (!avatar) return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=128`;
+  if (!avatar || avatar.startsWith('blob:')) return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=128`;
   if (avatar.startsWith('/')) return `${BASE_URL}${avatar}`;
   return avatar;
 }
@@ -65,17 +66,25 @@ export class DashboardService {
    * Calculate leave balance for employee
    */
   private async getLeaveBalance(employeeId: string): Promise<number> {
-    // Total annual leave days (default 14)
-    const totalDays = 14;
+    // Get real leave quotas from system config
+    const leaveQuotas = await SystemConfigService.getLeaveQuotas();
+    const totalDays = leaveQuotas
+      .filter(q => q.total !== -1) // Exclude unlimited types
+      .reduce((sum, q) => sum + q.total, 0);
 
-    // Get used days from approved leave requests this year
+    // Get used days from approved leave requests this year (exclude unlimited types)
+    const limitedTypes = leaveQuotas.filter(q => q.total !== -1).map(q => q.type);
+    if (limitedTypes.length === 0) return 0;
+
+    const placeholders = limitedTypes.map((_, i) => `$${i + 2}`).join(', ');
     const result = await query(
       `SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
        FROM leave_requests
        WHERE employee_id = $1
        AND status = 'Approved'
+       AND leave_type IN (${placeholders})
        AND EXTRACT(YEAR FROM start_date) = EXTRACT(YEAR FROM CURRENT_DATE)`,
-      [employeeId]
+      [employeeId, ...limitedTypes]
     );
 
     const usedDays = parseInt(result.rows[0]?.used_days || '0', 10);

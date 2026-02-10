@@ -9,6 +9,10 @@
         "strict": true,
         "skipLibCheck": true
     },
+    "exclude": [
+        "src/**/__tests__",
+        "src/config/sentry.ts"
+    ],
     "ts-node": {
         "esm": false,
         "experimentalSpecifierResolution": "node"

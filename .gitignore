@@ -32,3 +32,18 @@ apps/api/uploads/
 
 # Debug files
 debug-*.js
+
+# Environment variables - NEVER COMMIT THESE!
+.env
+.env.*
+!.env.example
+*.env
+**/.env
+**/.env.*
+!**/.env.example
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+.env.*.local

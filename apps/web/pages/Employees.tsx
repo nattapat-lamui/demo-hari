@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Search, MoreHorizontal, Mail, MapPin, Eye, ChevronDown, User, Briefcase, Users, Calendar, Check, Circle, CheckCircle2, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, MoreHorizontal, Mail, MapPin, Eye, User, Briefcase, Users, Calendar, Check, Circle, CheckCircle2, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Employee } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { api, API_HOST } from '../lib/api';
+import { useEmployeeList, useAddEmployee } from '../hooks/queries';
 import { Toast } from '../components/Toast';
 import { Modal } from '../components/Modal';
 import { Dropdown, DropdownOption } from '../components/Dropdown';
+import { Avatar } from '../components/Avatar';
+import { Pagination } from '../components/Pagination';
 
 export const Employees: React.FC = () => {
   const { user } = useAuth();
@@ -20,13 +21,28 @@ export const Employees: React.FC = () => {
     setToast({ show: true, message, type });
   };
 
-  // Initialize state with mock data
-  const [employeesList, setEmployeesList] = useState<Employee[]>([]);
-
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const navigate = useNavigate();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+
+  // React Query
+  const { data: employeesResponse } = useEmployeeList({
+    page: currentPage,
+    limit: itemsPerPage,
+    department: departmentFilter,
+    status: statusFilter,
+    search: searchTerm,
+  });
+  const addEmployeeMutation = useAddEmployee();
+
+  const employeesList = employeesResponse?.data ?? [];
+  const totalItems = employeesResponse?.total ?? 0;
+  const totalPages = employeesResponse?.totalPages ?? 1;
 
   // Add Employee Form State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -41,10 +57,14 @@ export const Employees: React.FC = () => {
   // Extract unique departments for filter dropdown
   const departments: DropdownOption[] = [
     { value: 'All', label: 'All Departments' },
-    ...Array.from(new Set(employeesList.map(e => e.department))).map(dept => ({
-      value: dept,
-      label: dept
-    }))
+    { value: 'Engineering', label: 'Engineering' },
+    { value: 'Human Resources', label: 'Human Resources' },
+    { value: 'Marketing', label: 'Marketing' },
+    { value: 'Sales', label: 'Sales' },
+    { value: 'Finance', label: 'Finance' },
+    { value: 'Operations', label: 'Operations' },
+    { value: 'Product', label: 'Product' },
+    { value: 'Design', label: 'Design' },
   ];
   const statuses: DropdownOption[] = [
     { value: 'All', label: 'All Statuses' },
@@ -53,39 +73,21 @@ export const Employees: React.FC = () => {
     { value: 'Terminated', label: 'Terminated' }
   ];
 
-  const filteredEmployees = employeesList.filter(emp => {
-    const matchesSearch =
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (emp.skills && emp.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase())));
+  // Server-side filtering - no need for client-side filtering
+  // When filters change, reset to page 1
+  const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<string>>) => (value: string) => {
+    setter(value);
+    setCurrentPage(1);
+  };
 
-    const matchesDepartment = departmentFilter === 'All' || emp.department === departmentFilter;
-    const matchesStatus = statusFilter === 'All' || emp.status === statusFilter;
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
 
-    return matchesSearch && matchesDepartment && matchesStatus;
-  });
-
-  // Fetch employees from API
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  // ... (fetchEmployees)
-  const fetchEmployees = async () => {
-    try {
-      const data = await api.get<any[]>('/employees');
-      // Transform relative avatar URLs to absolute URLs
-      const employeesWithFullAvatars = data.map(emp => ({
-        ...emp,
-        avatar: emp.avatar && emp.avatar.startsWith('/')
-          ? `${API_HOST}${emp.avatar}`
-          : emp.avatar
-      }));
-      setEmployeesList(employeesWithFullAvatars);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-    }
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleAddEmployee = async (e: React.FormEvent) => {
@@ -96,18 +98,15 @@ export const Employees: React.FC = () => {
     }
 
     try {
-      const payload = {
+      await addEmployeeMutation.mutateAsync({
         name: newEmployee.name,
         role: newEmployee.role,
         department: newEmployee.department,
         email: newEmployee.email,
         joinDate: newEmployee.joinDate,
-        managerId: null
-      };
+        managerId: null,
+      });
 
-      await api.post('/employees', payload);
-
-      fetchEmployees(); // Re-fetch
       setIsAddModalOpen(false);
       setNewEmployee({ name: '', role: '', department: '', email: '', joinDate: '' });
       showToast(`${newEmployee.name} has been added successfully!`, 'success');
@@ -156,7 +155,7 @@ export const Employees: React.FC = () => {
               type="text"
               placeholder="Search by name, role, department, or skills..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
           </div>
@@ -166,14 +165,14 @@ export const Employees: React.FC = () => {
             <Dropdown
               options={departments}
               value={departmentFilter}
-              onChange={setDepartmentFilter}
+              onChange={handleFilterChange(setDepartmentFilter)}
               width="w-full md:w-48"
             />
 
             <Dropdown
               options={statuses}
               value={statusFilter}
-              onChange={setStatusFilter}
+              onChange={handleFilterChange(setStatusFilter)}
               width="w-full md:w-40"
             />
           </div>
@@ -193,7 +192,7 @@ export const Employees: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {filteredEmployees.map((emp) => (
+              {employeesList.map((emp) => (
                 <tr
                   key={emp.id}
                   className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group cursor-pointer"
@@ -201,7 +200,7 @@ export const Employees: React.FC = () => {
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <img src={emp.avatar} alt={emp.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-transparent group-hover:ring-primary/20 transition-all" />
+                      <Avatar src={emp.avatar} name={emp.name} size="lg" className="ring-2 ring-transparent group-hover:ring-primary/20 transition-all" />
                       <div>
                         <p className="font-semibold text-text-light dark:text-text-dark group-hover:text-primary transition-colors">{emp.name}</p>
                         <p className="text-xs text-text-muted-light dark:text-text-muted-dark flex items-center gap-1">
@@ -266,7 +265,7 @@ export const Employees: React.FC = () => {
 
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4 p-4">
-          {filteredEmployees.map((emp) => (
+          {employeesList.map((emp) => (
             <div
               key={emp.id}
               onClick={() => navigate(`/employees/${emp.id}`)}
@@ -274,7 +273,7 @@ export const Employees: React.FC = () => {
             >
               {/* Employee Info */}
               <div className="flex items-center gap-3 mb-3">
-                <img src={emp.avatar} alt={emp.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20" />
+                <Avatar src={emp.avatar} name={emp.name} size="xl" className="ring-2 ring-primary/20" />
                 <div className="flex-1">
                   <p className="font-semibold text-text-light dark:text-text-dark">{emp.name}</p>
                   <p className="text-xs text-text-muted-light dark:text-text-muted-dark flex items-center gap-1">
@@ -339,11 +338,16 @@ export const Employees: React.FC = () => {
         </div>
 
         {/* Empty State */}
-        {filteredEmployees.length === 0 && (
+        {employeesList.length === 0 && (
           <div className="p-12 text-center text-text-muted-light dark:text-text-muted-dark">
             <p>No employees found matching your filters.</p>
             <button
-              onClick={() => { setSearchTerm(''); setDepartmentFilter('All'); setStatusFilter('All'); }}
+              onClick={() => {
+                setSearchTerm('');
+                setDepartmentFilter('All');
+                setStatusFilter('All');
+                setCurrentPage(1);
+              }}
               className="mt-2 text-primary hover:underline text-sm"
             >
               Clear all filters
@@ -351,14 +355,18 @@ export const Employees: React.FC = () => {
           </div>
         )}
 
-        {/* Pagination Placeholder */}
-        <div className="p-4 border-t border-border-light dark:border-border-dark flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-text-muted-light dark:text-text-muted-dark">
-          <span>Showing <span className="font-medium text-text-light dark:text-text-dark">1</span> to <span className="font-medium text-text-light dark:text-text-dark">{filteredEmployees.length}</span> of <span className="font-medium text-text-light dark:text-text-dark">{filteredEmployees.length}</span> results</span>
-          <div className="flex gap-2">
-            <button className="px-3 py-1 border border-border-light dark:border-border-dark rounded hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">Previous</button>
-            <button className="px-3 py-1 border border-border-light dark:border-border-dark rounded hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">Next</button>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-border-light dark:border-border-dark">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+            />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Add Employee Modal */}

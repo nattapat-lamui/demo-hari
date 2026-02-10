@@ -117,12 +117,12 @@ export const TimeOff: React.FC = () => {
               <span className={`text-xs font-medium px-2 py-1 rounded 
                   ${balance.type === 'Vacation' ? 'bg-blue-50 dark:bg-blue-900/10 text-blue-600' :
                   balance.type === 'Sick Leave' ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-600' : 'bg-purple-50 dark:bg-purple-900/10 text-purple-600'}`}>
-                {balance.total === Infinity ? 'Unlimited' : `${balance.remaining} Days Left`}
+                {balance.total === -1 ? 'Unlimited' : `${balance.remaining} Days Left`}
               </span>
             </div>
             <h3 className="text-2xl font-bold text-text-light dark:text-text-dark">{balance.type}</h3>
             <p className="text-xs text-text-muted-light mt-1">
-              {balance.total === Infinity ? 'Requires Approval' : `Total ${balance.total} days / year`}
+              {balance.total === -1 ? 'Requires Approval' : `Total ${balance.total} days / year`}
             </p>
           </div>
         ))}

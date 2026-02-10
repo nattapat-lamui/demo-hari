@@ -82,7 +82,7 @@ describe('EmployeeService', () => {
       email: 'new@example.com',
       role: 'Designer',
       department: 'Design',
-      startDate: '2024-01-01',
+      joinDate: '2024-01-01',
       salary: 65000,
     };
 

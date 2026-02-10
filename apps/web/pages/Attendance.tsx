@@ -1,18 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, Calendar, TrendingUp, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, TrendingUp, AlertCircle, CheckCircle2, Briefcase } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { api } from '../lib/api';
-import { Dropdown } from '../components/Dropdown';
-
-interface AttendanceRecord {
-  id: string;
-  date: string;
-  clockIn: string | null;
-  clockOut: string | null;
-  totalHours: number | null;
-  status: 'Present' | 'Absent' | 'Late' | 'Half-day' | 'Remote';
-  notes: string | null;
-}
+import { useAttendanceRecords, useAttendanceSummary } from '../hooks/queries';
+import { Dropdown, DropdownOption } from '../components/Dropdown';
 
 interface AttendanceSummary {
   totalDays: number;
@@ -25,39 +15,19 @@ interface AttendanceSummary {
 
 const Attendance: React.FC = () => {
   const { user } = useAuth();
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [summary, setSummary] = useState<AttendanceSummary | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  useEffect(() => {
-    fetchAttendanceData();
-  }, [selectedMonth, selectedYear]);
-
-  const fetchAttendanceData = async () => {
-    try {
-      setLoading(true);
-      const startDate = new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0];
-      const endDate = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
-
-      // Fetch attendance records
-      const recordsData = await api.get<AttendanceRecord[]>(
-        `/attendance/employee/${user?.employeeId}?startDate=${startDate}&endDate=${endDate}`
-      );
-      setRecords(recordsData);
-
-      // Fetch summary
-      const summaryData = await api.get<AttendanceSummary>(
-        `/attendance/summary/${user?.employeeId}?startDate=${startDate}&endDate=${endDate}`
-      );
-      setSummary(summaryData);
-    } catch (error) {
-      console.error('Error fetching attendance:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: records = [], isPending: loading } = useAttendanceRecords(
+    user?.employeeId,
+    selectedMonth,
+    selectedYear,
+  );
+  const { data: summary } = useAttendanceSummary(
+    user?.employeeId,
+    selectedMonth,
+    selectedYear,
+  ) as { data: AttendanceSummary | undefined };
 
   const formatTime = (dateString: string | null) => {
     if (!dateString) return '-';
@@ -93,7 +63,7 @@ const Attendance: React.FC = () => {
     }
   };
 
-  const monthOptions = [
+  const monthOptions: DropdownOption[] = [
     { value: '0', label: 'January' },
     { value: '1', label: 'February' },
     { value: '2', label: 'March' },
@@ -105,13 +75,13 @@ const Attendance: React.FC = () => {
     { value: '8', label: 'September' },
     { value: '9', label: 'October' },
     { value: '10', label: 'November' },
-    { value: '11', label: 'December' },
+    { value: '11', label: 'December' }
   ];
 
-  const yearOptions = [
+  const yearOptions: DropdownOption[] = [
     { value: '2024', label: '2024' },
     { value: '2025', label: '2025' },
-    { value: '2026', label: '2026' },
+    { value: '2026', label: '2026' }
   ];
 
   return (
@@ -130,46 +100,46 @@ const Attendance: React.FC = () => {
         {/* Month/Year Selector */}
         <div className="flex gap-2 sm:gap-3">
           <Dropdown
-            value={String(selectedMonth)}
-            onChange={(value) => setSelectedMonth(Number(value))}
             options={monthOptions}
-            placeholder="Select month"
-            width="w-36"
+            value={String(selectedMonth)}
+            onChange={(val) => setSelectedMonth(Number(val))}
+            width="w-36 sm:w-40"
           />
           <Dropdown
-            value={String(selectedYear)}
-            onChange={(value) => setSelectedYear(Number(value))}
             options={yearOptions}
-            placeholder="Select year"
-            width="w-24"
+            value={String(selectedYear)}
+            onChange={(val) => setSelectedYear(Number(val))}
+            width="w-24 sm:w-28"
           />
         </div>
       </div>
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          {/* Total Working Days */}
+          <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
-                <Clock size={20} />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+                <Briefcase size={20} />
               </div>
-              <div>
-                <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Total Hours</p>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Working Days</p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-                  {Number(summary.totalHours || 0).toFixed(1)}h
+                  {summary.totalDays}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl">
+          {/* On-Time Days */}
+          <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
-                <Calendar size={20} />
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
+                <CheckCircle2 size={20} />
               </div>
-              <div>
-                <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Present Days</p>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">On-Time Days</p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
                   {summary.presentDays}
                 </p>
@@ -177,13 +147,14 @@ const Attendance: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl">
+          {/* Late Days */}
+          <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-lg">
                 <AlertCircle size={20} />
               </div>
-              <div>
-                <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Late Days</p>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Late Days</p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
                   {summary.lateDays}
                 </p>
@@ -191,13 +162,29 @@ const Attendance: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl">
+          {/* Total Hours */}
+          <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg">
+                <Clock size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Total Hours</p>
+                <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+                  {Number(summary.totalHours || 0).toFixed(1)}h
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Average Hours per Day */}
+          <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 rounded-lg">
                 <TrendingUp size={20} />
               </div>
-              <div>
-                <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Avg Hours/Day</p>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Avg Hours/Day</p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
                   {summary.totalDays > 0 ? (Number(summary.totalHours || 0) / summary.totalDays).toFixed(1) : '0'}h
                 </p>

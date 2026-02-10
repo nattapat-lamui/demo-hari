@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
+import { useEmployeeDetail } from '../hooks/queries';
 
 /**
  * Route name mapping configuration
@@ -15,6 +16,7 @@ const ROUTE_NAME_MAP: Record<string, string> = {
   'documents': 'Documents',
   'onboarding': 'Onboarding',
   'settings': 'Settings',
+  'notifications': 'Notifications',
   'help': 'Help & Support',
 };
 
@@ -45,30 +47,6 @@ const isEmployeeDetailPage = (
  */
 const formatPathSegment = (text: string): string => {
   return text.charAt(0).toUpperCase() + text.slice(1).replace(/-/g, ' ');
-};
-
-/**
- * Generates a human-readable breadcrumb name from a URL path segment
- * @param pathSegment - The URL segment to convert
- * @param segmentIndex - The position of this segment in the path array
- * @param allPathSegments - All path segments in the current URL
- * @returns A formatted, human-readable name for the breadcrumb
- */
-const getBreadcrumbDisplayName = (
-  pathSegment: string,
-  segmentIndex: number,
-  allPathSegments: string[]
-): string => {
-  const previousSegment = segmentIndex > 0 ? allPathSegments[segmentIndex - 1] : undefined;
-
-  // Handle special case: employee detail pages
-  if (isEmployeeDetailPage(previousSegment)) {
-    // TODO: In production, fetch actual employee name from API or Context
-    return 'Employee Details';
-  }
-
-  // Use mapped name if available, otherwise format the segment
-  return ROUTE_NAME_MAP[pathSegment] || formatPathSegment(pathSegment);
 };
 
 /**
@@ -146,6 +124,19 @@ export const Breadcrumbs: React.FC = () => {
 
   const isOnHomePage = pathSegments.length === 0;
 
+  // Detect employee detail page and fetch name via React Query
+  const employeeId = pathSegments[0] === 'employees' && pathSegments[1] ? pathSegments[1] : null;
+  const { data: employeeData } = useEmployeeDetail(employeeId ?? undefined);
+  const employeeName = employeeId ? (employeeData?.name ?? null) : null;
+
+  const getDisplayName = (pathSegment: string, segmentIndex: number) => {
+    const previousSegment = segmentIndex > 0 ? pathSegments[segmentIndex - 1] : undefined;
+    if (isEmployeeDetailPage(previousSegment)) {
+      return employeeName || 'Employee Details';
+    }
+    return ROUTE_NAME_MAP[pathSegment] || formatPathSegment(pathSegment);
+  };
+
   return (
     <nav
       className="flex items-center text-sm text-text-muted-light dark:text-text-muted-dark mb-6 animate-fade-in"
@@ -168,11 +159,7 @@ export const Breadcrumbs: React.FC = () => {
       {pathSegments.map((pathSegment, segmentIndex) => {
         const pathUrl = buildPathUrl(pathSegments, segmentIndex);
         const isLastItem = segmentIndex === pathSegments.length - 1;
-        const displayName = getBreadcrumbDisplayName(
-          pathSegment,
-          segmentIndex,
-          pathSegments
-        );
+        const displayName = getDisplayName(pathSegment, segmentIndex);
 
         return (
           <React.Fragment key={pathUrl}>
