@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Clock, TrendingUp, AlertCircle, CheckCircle2, Briefcase } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAttendanceRecords, useAttendanceSummary } from '../hooks/queries';
+import { formatTimeTH } from '../lib/date';
 import { Dropdown, DropdownOption } from '../components/Dropdown';
 
 interface AttendanceSummary {
@@ -28,14 +29,7 @@ const Attendance: React.FC = () => {
     selectedYear,
   ) as { data: AttendanceSummary | undefined };
 
-  const formatTime = (dateString: string | null) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
+  const formatTime = formatTimeTH;
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

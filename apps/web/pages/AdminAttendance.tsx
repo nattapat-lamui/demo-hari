@@ -24,6 +24,7 @@ import {
   useAdminDeleteAttendance,
   useAllEmployees,
 } from '../hooks/queries';
+import { formatTimeTH } from '../lib/date';
 import type { AdminAttendanceRecord, AdminAttendanceFilters, AttendanceStatus } from '../types';
 
 const ITEMS_PER_PAGE = 20;
@@ -67,14 +68,7 @@ const getStatusStyle = (status: string): { dot: string; badge: string } => {
   }
 };
 
-const formatTime = (dateString: string | null) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
-};
+const formatTime = formatTimeTH;
 
 const formatTotalHours = (record: AdminAttendanceRecord): { text: string; className: string } => {
   if (record.status === 'Absent') {
