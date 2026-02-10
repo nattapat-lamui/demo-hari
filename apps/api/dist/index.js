@@ -264,6 +264,41 @@ const runLightMigrations = () => __awaiter(void 0, void 0, void 0, function* () 
         // Fix: Absent records with clock_in were incorrectly migrated — recalculate
         yield (0, db_1.query)(`UPDATE attendance_records SET status = 'On-time' WHERE status = 'Absent' AND clock_in IS NOT NULL AND (clock_in AT TIME ZONE 'Asia/Bangkok')::time <= '09:00:00'::time`);
         yield (0, db_1.query)(`UPDATE attendance_records SET status = 'Late' WHERE status = 'Absent' AND clock_in IS NOT NULL`);
+        // One-time fix: Employee clock-in/out on UTC servers stored Bangkok time as UTC (+7h off).
+        // Uses tz_fixed column as idempotency guard so it only runs once per record.
+        yield (0, db_1.query)(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS tz_fixed BOOLEAN DEFAULT FALSE`);
+        const serverOffsetMin = new Date().getTimezoneOffset(); // 0 for UTC, -420 for Bangkok
+        if (serverOffsetMin === 0) {
+            // Case 1: Both clock_in & clock_out from old code (clock_out >= clock_in) → fix both
+            yield (0, db_1.query)(`
+        UPDATE attendance_records
+        SET clock_in  = clock_in  - interval '7 hours',
+            clock_out = clock_out - interval '7 hours',
+            tz_fixed  = TRUE
+        WHERE tz_fixed = FALSE AND modified_by IS NULL
+          AND clock_in IS NOT NULL AND clock_out IS NOT NULL AND clock_out >= clock_in
+      `);
+            // Case 2: Only clock_in, no clock_out yet → fix clock_in only
+            yield (0, db_1.query)(`
+        UPDATE attendance_records
+        SET clock_in = clock_in - interval '7 hours',
+            tz_fixed = TRUE
+        WHERE tz_fixed = FALSE AND modified_by IS NULL
+          AND clock_in IS NOT NULL AND clock_out IS NULL
+      `);
+            // Case 3: clock_in from old code, clock_out from new fixed code (clock_out < clock_in)
+            // Only fix clock_in, recalculate total_hours
+            yield (0, db_1.query)(`
+        UPDATE attendance_records
+        SET clock_in    = clock_in - interval '7 hours',
+            total_hours = ROUND(EXTRACT(EPOCH FROM (clock_out - (clock_in - interval '7 hours')))::numeric / 3600, 2),
+            tz_fixed    = TRUE
+        WHERE tz_fixed = FALSE AND modified_by IS NULL
+          AND clock_in IS NOT NULL AND clock_out IS NOT NULL AND clock_out < clock_in
+      `);
+        }
+        // Mark remaining records as processed (admin-created or non-UTC server records)
+        yield (0, db_1.query)(`UPDATE attendance_records SET tz_fixed = TRUE WHERE tz_fixed = FALSE`);
         yield (0, db_1.query)(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id) ON DELETE SET NULL`);
         yield (0, db_1.query)(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
         // Create upcoming_events table if it doesn't exist

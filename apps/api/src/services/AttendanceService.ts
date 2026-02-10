@@ -65,10 +65,10 @@ export class AttendanceService {
   async clockIn(data: ClockInData): Promise<AttendanceRecord> {
     const { employeeId, notes } = data;
 
-    // Use Thailand timezone (UTC+7)
-    const bangkokTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
-    const now = new Date(bangkokTime);
-    const today = now.toISOString().split('T')[0];
+    // Current moment in correct UTC
+    const now = new Date();
+    // Today's date in Bangkok timezone (YYYY-MM-DD) for the DB date column
+    const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
     // Check if already clocked in today
     const existing = await query(
@@ -80,9 +80,8 @@ export class AttendanceService {
       throw new Error('Already clocked in for today');
     }
 
-    // Determine if late (after 9:00 AM Thailand time)
-    const lateThreshold = new Date(now);
-    lateThreshold.setHours(9, 0, 0, 0);
+    // Determine if late (after 9:00 AM Bangkok = 02:00 AM UTC)
+    const lateThreshold = new Date(`${today}T09:00:00+07:00`);
     const status = now > lateThreshold ? 'Late' : 'On-time';
 
     if (existing.rows.length > 0) {
@@ -114,10 +113,10 @@ export class AttendanceService {
   async clockOut(data: ClockOutData): Promise<AttendanceRecord> {
     const { employeeId, notes } = data;
 
-    // Use Thailand timezone (UTC+7)
-    const bangkokTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
-    const now = new Date(bangkokTime);
-    const today = now.toISOString().split('T')[0];
+    // Current moment in correct UTC
+    const now = new Date();
+    // Today's date in Bangkok timezone (YYYY-MM-DD) for the DB date column
+    const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
     // Find today's attendance record
     const existing = await query(
@@ -182,9 +181,8 @@ export class AttendanceService {
    * Get today's attendance status for an employee
    */
   async getTodayStatus(employeeId: string): Promise<AttendanceRecord | null> {
-    // Use Thailand timezone (UTC+7)
-    const bangkokTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
-    const today = new Date(bangkokTime).toISOString().split('T')[0];
+    // Today's date in Bangkok timezone
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
     const result = await query(
       'SELECT * FROM attendance_records WHERE employee_id = $1 AND date = $2',
@@ -245,8 +243,8 @@ export class AttendanceService {
    * Get today's attendance snapshot counts for admin dashboard
    */
   async adminGetTodaySnapshot(): Promise<AttendanceSnapshot> {
-    const bangkokTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
-    const today = new Date(bangkokTime).toISOString().split('T')[0];
+    // Today's date in Bangkok timezone
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
     const result = await query(
       `SELECT
