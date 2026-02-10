@@ -455,7 +455,7 @@ export interface NotificationItem {
 // Admin Attendance Types
 // ============================================================================
 
-export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Half-day' | 'Remote';
+export type AttendanceStatus = 'On-time' | 'Late' | 'Absent';
 
 export interface AdminAttendanceRecord {
   id: string;
@@ -478,8 +478,6 @@ export interface AttendanceSnapshot {
   present: number;
   late: number;
   absent: number;
-  remote: number;
-  halfDay: number;
   total: number;
 }
 

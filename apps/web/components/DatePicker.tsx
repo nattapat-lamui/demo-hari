@@ -51,16 +51,21 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       const rect = buttonRef.current.getBoundingClientRect();
       const calendarWidth = 280;
       const calendarHeight = 340;
+      const edgePadding = 12; // min distance from viewport edges
 
       // Check if calendar would go off the right edge
       let left = rect.left + window.scrollX;
-      if (left + calendarWidth > window.innerWidth) {
+      if (left + calendarWidth > window.innerWidth - edgePadding) {
         left = rect.right + window.scrollX - calendarWidth;
+      }
+      // Clamp to never go past the left edge
+      if (left < edgePadding + window.scrollX) {
+        left = edgePadding + window.scrollX;
       }
 
       // Check if calendar would go off the bottom edge
       let top = rect.bottom + window.scrollY + 8;
-      if (rect.bottom + calendarHeight > window.innerHeight) {
+      if (rect.bottom + calendarHeight > window.innerHeight - edgePadding) {
         top = rect.top + window.scrollY - calendarHeight - 8;
       }
 
@@ -211,18 +216,20 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         </label>
       )}
 
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={handleToggle}
-        disabled={disabled}
-        className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark text-left flex items-center justify-between hover:border-primary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border-light dark:disabled:hover:border-border-dark"
-      >
-        <span className={value ? '' : 'text-text-muted-light dark:text-text-muted-dark'}>
-          {value ? formatDisplayDate(value) : placeholder}
-        </span>
-        <Calendar size={16} className="text-text-muted-light" />
-      </button>
+      <div className="relative">
+        <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark pointer-events-none" />
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={handleToggle}
+          disabled={disabled}
+          className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark text-left hover:border-primary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border-light dark:disabled:hover:border-border-dark"
+        >
+          <span className={value ? '' : 'text-text-muted-light dark:text-text-muted-dark'}>
+            {value ? formatDisplayDate(value) : placeholder}
+          </span>
+        </button>
+      </div>
 
       {/* Calendar - rendered via Portal */}
       {isOpen && menuPosition && createPortal(

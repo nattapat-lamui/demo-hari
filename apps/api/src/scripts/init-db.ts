@@ -316,7 +316,7 @@ CREATE TABLE attendance_records (
     clock_out TIMESTAMP WITH TIME ZONE,
     break_duration INT DEFAULT 0, -- in minutes
     total_hours DECIMAL(5,2),
-    status VARCHAR(20) DEFAULT 'Present', -- Present, Absent, Late, Half-day, Remote
+    status VARCHAR(20) DEFAULT 'On-time', -- On-time, Late, Absent
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

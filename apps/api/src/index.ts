@@ -269,6 +269,13 @@ const runLightMigrations = async () => {
     await query(`CREATE INDEX IF NOT EXISTS idx_attendance_date_status ON attendance_records(date DESC, status)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_attendance_date_range ON attendance_records(date DESC, employee_id)`);
 
+    // Migrate attendance status to ENUM: On-time, Late, Absent
+    await query(`UPDATE attendance_records SET status = 'On-time' WHERE status IN ('Present', 'Remote')`);
+    await query(`UPDATE attendance_records SET status = 'Absent' WHERE status = 'Half-day'`);
+    await query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_status_enum') THEN CREATE TYPE attendance_status_enum AS ENUM ('On-time', 'Late', 'Absent'); END IF; END $$`);
+    await query(`ALTER TABLE attendance_records ALTER COLUMN status SET DEFAULT 'On-time'`);
+    await query(`ALTER TABLE attendance_records ALTER COLUMN status TYPE attendance_status_enum USING status::attendance_status_enum`);
+
     await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id) ON DELETE SET NULL`);
     await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
 

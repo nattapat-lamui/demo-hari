@@ -8,7 +8,7 @@ export interface AttendanceRecord {
   clockOut: string | null;
   breakDuration: number;
   totalHours: number | null;
-  status: 'Present' | 'Absent' | 'Late' | 'Half-day' | 'Remote';
+  status: 'On-time' | 'Late' | 'Absent';
   notes: string | null;
   modifiedBy: string | null;
   createdAt: Date;
@@ -34,8 +34,6 @@ export interface AttendanceSnapshot {
   present: number;
   late: number;
   absent: number;
-  remote: number;
-  halfDay: number;
   total: number;
 }
 
@@ -84,7 +82,7 @@ export class AttendanceService {
     // Determine if late (after 9:00 AM Thailand time)
     const lateThreshold = new Date(now);
     lateThreshold.setHours(9, 0, 0, 0);
-    const status = now > lateThreshold ? 'Late' : 'Present';
+    const status = now > lateThreshold ? 'Late' : 'On-time';
 
     if (existing.rows.length > 0) {
       // Update existing record
@@ -139,8 +137,7 @@ export class AttendanceService {
     const totalMinutes = (now.getTime() - clockIn.getTime()) / 1000 / 60 - breakDuration;
     const totalHours = Math.round(totalMinutes / 60 * 100) / 100;
 
-    // Determine if half-day (less than 4 hours)
-    const status = totalHours < 4 ? 'Half-day' : existing.rows[0].status;
+    const status = existing.rows[0].status;
 
     const result = await query(
       `UPDATE attendance_records
@@ -212,16 +209,14 @@ export class AttendanceService {
     presentDays: number;
     absentDays: number;
     lateDays: number;
-    remoteDays: number;
     totalHours: number;
   }> {
     const result = await query(
       `SELECT
         COUNT(*) as total_days,
-        COUNT(*) FILTER (WHERE status = 'Present') as present_days,
+        COUNT(*) FILTER (WHERE status = 'On-time') as present_days,
         COUNT(*) FILTER (WHERE status = 'Absent') as absent_days,
         COUNT(*) FILTER (WHERE status = 'Late') as late_days,
-        COUNT(*) FILTER (WHERE status = 'Remote') as remote_days,
         COALESCE(SUM(total_hours), 0) as total_hours
        FROM attendance_records
        WHERE employee_id = $1 AND date BETWEEN $2 AND $3`,
@@ -234,7 +229,6 @@ export class AttendanceService {
       presentDays: parseInt(row.present_days, 10),
       absentDays: parseInt(row.absent_days, 10),
       lateDays: parseInt(row.late_days, 10),
-      remoteDays: parseInt(row.remote_days, 10),
       totalHours: parseFloat(row.total_hours),
     };
   }
@@ -252,11 +246,9 @@ export class AttendanceService {
 
     const result = await query(
       `SELECT
-        COUNT(*) FILTER (WHERE status = 'Present') AS present,
+        COUNT(*) FILTER (WHERE status = 'On-time') AS present,
         COUNT(*) FILTER (WHERE status = 'Late') AS late,
         COUNT(*) FILTER (WHERE status = 'Absent') AS absent,
-        COUNT(*) FILTER (WHERE status = 'Remote') AS remote,
-        COUNT(*) FILTER (WHERE status = 'Half-day') AS half_day,
         (SELECT COUNT(*) FROM employees WHERE status = 'Active') AS total
        FROM attendance_records
        WHERE date = $1`,
@@ -268,8 +260,6 @@ export class AttendanceService {
       present: parseInt(row.present, 10),
       late: parseInt(row.late, 10),
       absent: parseInt(row.absent, 10),
-      remote: parseInt(row.remote, 10),
-      halfDay: parseInt(row.half_day, 10),
       total: parseInt(row.total, 10),
     };
   }
@@ -375,7 +365,7 @@ export class AttendanceService {
          modified_by = $8,
          updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [employeeId, date, clockIn || null, clockOut || null, totalHours, status || 'Present', notes || null, modifiedBy]
+      [employeeId, date, clockIn || null, clockOut || null, totalHours, status || 'On-time', notes || null, modifiedBy]
     );
 
     return this.mapRowToAttendance(result.rows[0]);

@@ -4,11 +4,12 @@ import {
   Clock,
   AlertCircle,
   XCircle,
-  Monitor,
   Plus,
   Pencil,
   Trash2,
   Search,
+  MoreVertical,
+  Download,
 } from 'lucide-react';
 import { Dropdown, DropdownOption } from '../components/Dropdown';
 import { DatePicker } from '../components/DatePicker';
@@ -44,27 +45,21 @@ const DEPARTMENTS: DropdownOption[] = [
 
 const STATUS_FILTER_OPTIONS: DropdownOption[] = [
   { value: 'All', label: 'All Statuses' },
-  { value: 'Present', label: 'Present' },
+  { value: 'On-time', label: 'On-time' },
   { value: 'Late', label: 'Late' },
   { value: 'Absent', label: 'Absent' },
-  { value: 'Half-day', label: 'Half-day' },
-  { value: 'Remote', label: 'Remote' },
 ];
 
-const getStatusColor = (status: string) => {
+const getStatusStyle = (status: string): { dot: string; badge: string } => {
   switch (status) {
-    case 'Present':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+    case 'On-time':
+      return { dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 ring-green-200 dark:bg-green-900/20 dark:text-green-400 dark:ring-green-800' };
     case 'Late':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
+      return { dot: 'bg-yellow-500', badge: 'bg-yellow-50 text-yellow-700 ring-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:ring-yellow-800' };
     case 'Absent':
-      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-    case 'Half-day':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-    case 'Remote':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+      return { dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800' };
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
+      return { dot: 'bg-gray-500', badge: 'bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:ring-gray-800' };
   }
 };
 
@@ -77,12 +72,18 @@ const formatTime = (dateString: string | null) => {
   });
 };
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
+const formatTotalHours = (record: AdminAttendanceRecord): { text: string; className: string } => {
+  if (record.status === 'Absent') {
+    return { text: 'Absent', className: 'text-red-500 dark:text-red-400' };
+  }
+  if (record.clockIn && record.clockOut) {
+    const hours = record.totalHours != null ? Number(record.totalHours).toFixed(1) : '-';
+    return { text: `${hours}h`, className: 'text-text-light dark:text-text-dark' };
+  }
+  if (record.clockIn && !record.clockOut) {
+    return { text: 'Working...', className: 'text-green-600 dark:text-green-400' };
+  }
+  return { text: '-', className: 'text-text-muted-light dark:text-text-muted-dark' };
 };
 
 const AdminAttendance: React.FC = () => {
@@ -93,14 +94,14 @@ const AdminAttendance: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [department, setDepartment] = useState('All');
   const [status, setStatus] = useState('All');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [page, setPage] = useState(1);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<AdminAttendanceRecord | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
 
   // Debounce search
   useEffect(() => {
@@ -114,14 +115,14 @@ const AdminAttendance: React.FC = () => {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [department, status, startDate, endDate]);
+  }, [department, status, selectedDate]);
 
   const filters: AdminAttendanceFilters = {
     search: debouncedSearch || undefined,
     department: department !== 'All' ? department : undefined,
     status: status !== 'All' ? status : undefined,
-    startDate: startDate || undefined,
-    endDate: endDate || undefined,
+    startDate: selectedDate,
+    endDate: selectedDate,
     page,
     limit: ITEMS_PER_PAGE,
   };
@@ -189,6 +190,35 @@ const AdminAttendance: React.FC = () => {
     [deleteMutation, showToast],
   );
 
+  const exportToCSV = useCallback(() => {
+    if (records.length === 0) {
+      showToast('No records to export', 'error');
+      return;
+    }
+
+    const headers = ['Employee', 'Department', 'Check In', 'Check Out', 'Total Hours', 'Status'];
+    const rows = records.map((r) => [
+      r.employeeName,
+      r.employeeDepartment,
+      r.clockIn ? formatTime(r.clockIn) : '-',
+      r.clockOut ? formatTime(r.clockOut) : '-',
+      r.totalHours != null ? Number(r.totalHours).toFixed(1) : '-',
+      r.status,
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `attendance_${selectedDate}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [records, selectedDate, showToast]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -212,7 +242,7 @@ const AdminAttendance: React.FC = () => {
 
       {/* Snapshot Cards */}
       {snapshot && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <SnapshotCard
             icon={<Users size={20} />}
             label="Total Employees"
@@ -221,7 +251,7 @@ const AdminAttendance: React.FC = () => {
           />
           <SnapshotCard
             icon={<Clock size={20} />}
-            label="Present"
+            label="On-time"
             value={snapshot.present}
             iconColor="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
           />
@@ -237,81 +267,56 @@ const AdminAttendance: React.FC = () => {
             value={snapshot.absent}
             iconColor="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
           />
-          <SnapshotCard
-            icon={<Monitor size={20} />}
-            label="Remote"
-            value={snapshot.remote}
-            iconColor="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-          />
-          <SnapshotCard
-            icon={<Clock size={20} />}
-            label="Half-day"
-            value={snapshot.halfDay}
-            iconColor="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
-          />
         </div>
       )}
 
-      {/* Filter Bar */}
-      <div className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* Search */}
-          <div className="relative">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"
-            />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search employee..."
-              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-
-          {/* Department Filter */}
-          <Dropdown
-            options={DEPARTMENTS}
-            value={department}
-            onChange={setDepartment}
-            width="w-full"
-          />
-
-          {/* Status Filter */}
-          <Dropdown
-            options={STATUS_FILTER_OPTIONS}
-            value={status}
-            onChange={setStatus}
-            width="w-full"
-          />
-
-          {/* Start Date */}
-          <DatePicker
-            value={startDate}
-            onChange={setStartDate}
-            placeholder="Start date"
-          />
-
-          {/* End Date */}
-          <DatePicker
-            value={endDate}
-            onChange={setEndDate}
-            placeholder="End date"
-          />
-        </div>
-      </div>
-
       {/* Records Table */}
       <div className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden">
+        {/* Toolbar: Search + Filters | Date + Export */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-6 py-4 border-b border-border-light dark:border-border-dark">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative sm:w-56">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"
+              />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search employee..."
+                className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+            <Dropdown
+              options={DEPARTMENTS}
+              value={department}
+              onChange={setDepartment}
+              width="w-full sm:w-40"
+            />
+            <Dropdown
+              options={STATUS_FILTER_OPTIONS}
+              value={status}
+              onChange={setStatus}
+              width="w-full sm:w-36"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <DatePicker value={selectedDate} onChange={setSelectedDate} placeholder="Select date" />
+            <button
+              onClick={exportToCSV}
+              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium shadow-sm whitespace-nowrap"
+            >
+              <Download size={16} />
+              <span>Export</span>
+            </button>
+          </div>
+        </div>
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-border-light dark:border-border-dark">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Date
-                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
                   Employee
                 </th>
@@ -319,13 +324,13 @@ const AdminAttendance: React.FC = () => {
                   Department
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Clock In
+                  Check In
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Clock Out
+                  Check Out
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Hours
+                  Total Hours
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
                   Status
@@ -338,22 +343,19 @@ const AdminAttendance: React.FC = () => {
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
+                  <td colSpan={7} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
                     Loading attendance records...
                   </td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
+                  <td colSpan={7} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
                     No attendance records found
                   </td>
                 </tr>
               ) : (
                 records.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                      {formatDate(record.date)}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         {record.employeeAvatar ? (
@@ -381,46 +383,68 @@ const AdminAttendance: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
                       {formatTime(record.clockOut)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                      {record.totalHours != null ? `${Number(record.totalHours).toFixed(1)}h` : '-'}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {(() => {
+                        const { text, className } = formatTotalHours(record);
+                        return <span className={className}>{text}</span>;
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>
-                        {record.status}
-                      </span>
+                      {(() => {
+                        const s = getStatusStyle(record.status);
+                        return (
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                            {record.status}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="relative inline-block">
                         <button
-                          onClick={() => handleOpenEdit(record)}
-                          className="p-1.5 text-text-muted-light hover:text-primary dark:text-text-muted-dark dark:hover:text-primary rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                          title="Edit record"
+                          onClick={() => setActionMenuId(actionMenuId === record.id ? null : record.id)}
+                          className="p-1.5 text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
-                          <Pencil size={16} />
+                          <MoreVertical size={16} />
                         </button>
-                        {deleteConfirmId === record.id ? (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleDelete(record.id)}
-                              className="px-2 py-1 text-xs font-medium text-white bg-red-500 rounded hover:bg-red-600 transition-colors"
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(null)}
-                              className="px-2 py-1 text-xs font-medium text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark transition-colors"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteConfirmId(record.id)}
-                            className="p-1.5 text-text-muted-light hover:text-red-500 dark:text-text-muted-dark dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                            title="Delete record"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                        {actionMenuId === record.id && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setActionMenuId(null)} />
+                            <div className="absolute right-0 top-full mt-1 w-36 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-lg z-20 py-1">
+                              <button
+                                onClick={() => { handleOpenEdit(record); setActionMenuId(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                              >
+                                <Pencil size={14} />
+                                Edit
+                              </button>
+                              {deleteConfirmId === record.id ? (
+                                <div className="flex items-center gap-1 px-3 py-2">
+                                  <button
+                                    onClick={() => handleDelete(record.id)}
+                                    className="px-2 py-1 text-xs font-medium text-white bg-red-500 rounded hover:bg-red-600 transition-colors"
+                                  >
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => { setDeleteConfirmId(null); setActionMenuId(null); }}
+                                    className="px-2 py-1 text-xs font-medium text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setDeleteConfirmId(record.id)}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                          </>
                         )}
                       </div>
                     </td>
@@ -470,29 +494,32 @@ const AdminAttendance: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>
-                      {record.status}
-                    </span>
+                    {(() => {
+                      const s = getStatusStyle(record.status);
+                      return (
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                          {record.status}
+                        </span>
+                      );
+                    })()}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 text-xs mb-3">
+                  <div className="grid grid-cols-3 gap-2 text-xs mb-3">
                     <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">Date</p>
-                      <p className="font-medium text-text-light dark:text-text-dark">{formatDate(record.date)}</p>
-                    </div>
-                    <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">In</p>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">Check In</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockIn)}</p>
                     </div>
                     <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">Out</p>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">Check Out</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockOut)}</p>
                     </div>
                     <div>
                       <p className="text-text-muted-light dark:text-text-muted-dark">Hours</p>
-                      <p className="font-medium text-text-light dark:text-text-dark">
-                        {record.totalHours != null ? `${Number(record.totalHours).toFixed(1)}h` : '-'}
-                      </p>
+                      {(() => {
+                        const { text, className } = formatTotalHours(record);
+                        return <p className={`font-medium ${className}`}>{text}</p>;
+                      })()}
                     </div>
                   </div>
 

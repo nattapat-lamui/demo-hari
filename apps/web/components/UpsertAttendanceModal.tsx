@@ -21,11 +21,9 @@ interface UpsertAttendanceModalProps {
 }
 
 const STATUS_OPTIONS: DropdownOption[] = [
-  { value: 'Present', label: 'Present' },
+  { value: 'On-time', label: 'On-time' },
   { value: 'Late', label: 'Late' },
   { value: 'Absent', label: 'Absent' },
-  { value: 'Half-day', label: 'Half-day' },
-  { value: 'Remote', label: 'Remote' },
 ];
 
 export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
@@ -40,7 +38,7 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
   const [date, setDate] = useState('');
   const [clockIn, setClockIn] = useState('');
   const [clockOut, setClockOut] = useState('');
-  const [status, setStatus] = useState<AttendanceStatus>('Present');
+  const [status, setStatus] = useState<AttendanceStatus>('On-time');
   const [notes, setNotes] = useState('');
 
   const isEditing = !!editingRecord;
@@ -58,7 +56,7 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
       setDate('');
       setClockIn('');
       setClockOut('');
-      setStatus('Present');
+      setStatus('On-time');
       setNotes('');
     }
   }, [editingRecord, isOpen]);
