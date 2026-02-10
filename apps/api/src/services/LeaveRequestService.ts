@@ -106,11 +106,34 @@ export class LeaveRequestService {
     async createLeaveRequest(requestData: CreateLeaveRequestDTO): Promise<LeaveRequest> {
         const { employeeId, type, startDate, endDate, reason } = requestData;
 
-        // Calculate days (for notification only)
+        // Calculate days
         const start = new Date(startDate);
         const end = new Date(endDate);
         const diffTime = Math.abs(end.getTime() - start.getTime());
         const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        // Validate leave quota for limited types (Vacation, Sick Leave)
+        const leaveQuotas = await SystemConfigService.getLeaveQuotas();
+        const quota = leaveQuotas.find(q => q.type === type);
+        if (quota && quota.total !== -1) {
+            const usedResult = await query(
+                `SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
+                 FROM leave_requests
+                 WHERE employee_id = $1 AND leave_type = $2 AND status IN ('Approved', 'Pending')`,
+                [employeeId, type]
+            );
+            const usedDays = parseInt(usedResult.rows[0]?.used_days || '0', 10);
+            const remaining = quota.total - usedDays;
+            if (days > remaining) {
+                const err: any = new Error(
+                    remaining <= 0
+                        ? `You have no remaining ${type} days. (${usedDays}/${quota.total} used)`
+                        : `Insufficient ${type} balance. You have ${remaining} day(s) remaining but requested ${days}.`
+                );
+                err.statusCode = 400;
+                throw err;
+            }
+        }
 
         // Format dates string (for notification only)
         const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };

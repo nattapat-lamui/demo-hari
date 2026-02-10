@@ -28,7 +28,6 @@ DROP TABLE IF EXISTS documents CASCADE;
 DROP TABLE IF EXISTS employee_training CASCADE;
 DROP TABLE IF EXISTS training_modules CASCADE;
 DROP TABLE IF EXISTS tasks CASCADE;
-DROP TABLE IF EXISTS leave_balances CASCADE;
 DROP TABLE IF EXISTS leave_requests CASCADE;
 DROP TABLE IF EXISTS contacts CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
@@ -85,18 +84,7 @@ CREATE TABLE leave_requests (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Leave Balances
-CREATE TABLE leave_balances (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    employee_id UUID REFERENCES employees(id),
-    year INT NOT NULL,
-    leave_type VARCHAR(50) NOT NULL,
-    quota_days INT DEFAULT 0,
-    used_days DECIMAL(5,2) DEFAULT 0,
-    CONSTRAINT unique_balance UNIQUE (employee_id, year, leave_type)
-);
-
--- 4. Tasks (Onboarding)
+-- 3. Tasks (Onboarding)
 CREATE TABLE tasks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(255) NOT NULL,
@@ -278,10 +266,6 @@ CREATE INDEX idx_leave_requests_employee_id ON leave_requests(employee_id);
 CREATE INDEX idx_leave_requests_status ON leave_requests(status);
 CREATE INDEX idx_leave_requests_start_date ON leave_requests(start_date);
 CREATE INDEX idx_leave_requests_created_at ON leave_requests(created_at DESC);
-
--- Leave balances indexes
-CREATE INDEX idx_leave_balances_employee_id ON leave_balances(employee_id);
-CREATE INDEX idx_leave_balances_year ON leave_balances(year);
 
 -- Documents indexes
 CREATE INDEX idx_documents_employee_id ON documents(employee_id);

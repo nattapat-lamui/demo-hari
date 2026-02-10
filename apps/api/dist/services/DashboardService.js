@@ -50,25 +50,31 @@ class DashboardService {
      */
     getLeaveBalance(employeeId) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
             // Get real leave quotas from system config
             const leaveQuotas = yield SystemConfigService_1.default.getLeaveQuotas();
-            const totalDays = leaveQuotas
-                .filter(q => q.total !== -1) // Exclude unlimited types
-                .reduce((sum, q) => sum + q.total, 0);
-            // Get used days from approved leave requests this year (exclude unlimited types)
-            const limitedTypes = leaveQuotas.filter(q => q.total !== -1).map(q => q.type);
-            if (limitedTypes.length === 0)
+            const limitedQuotas = leaveQuotas.filter(q => q.total !== -1);
+            if (limitedQuotas.length === 0)
                 return 0;
+            // Get used days per leave type from approved requests this year
+            const limitedTypes = limitedQuotas.map(q => q.type);
             const placeholders = limitedTypes.map((_, i) => `$${i + 2}`).join(', ');
-            const result = yield (0, db_1.query)(`SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
+            const result = yield (0, db_1.query)(`SELECT leave_type,
+              COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
        FROM leave_requests
        WHERE employee_id = $1
        AND status = 'Approved'
        AND leave_type IN (${placeholders})
-       AND EXTRACT(YEAR FROM start_date) = EXTRACT(YEAR FROM CURRENT_DATE)`, [employeeId, ...limitedTypes]);
-            const usedDays = parseInt(((_a = result.rows[0]) === null || _a === void 0 ? void 0 : _a.used_days) || '0', 10);
-            return Math.max(0, totalDays - usedDays);
+       AND EXTRACT(YEAR FROM start_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+       GROUP BY leave_type`, [employeeId, ...limitedTypes]);
+            const usedByType = {};
+            for (const row of result.rows) {
+                usedByType[row.leave_type] = parseInt(row.used_days || '0', 10);
+            }
+            // Sum remaining per type (clamped to 0) to avoid over-used types producing negative totals
+            return limitedQuotas.reduce((sum, q) => {
+                const used = usedByType[q.type] || 0;
+                return sum + Math.max(0, q.total - used);
+            }, 0);
         });
     }
     /**

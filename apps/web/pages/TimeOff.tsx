@@ -1,271 +1,299 @@
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Calendar, Clock, CheckCircle2, XCircle, AlertCircle, Plus } from 'lucide-react';
-import { useLeave } from '../contexts/LeaveContext';
+import React, { useState, useMemo } from 'react';
+import { Calendar, Clock, AlertCircle, Plus, CheckCircle2, XCircle, Building2, Briefcase, IdCard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { LeaveRequest } from '../types';
-import { Toast } from '../components/Toast';
-import { DatePicker } from '../components/DatePicker';
-import { Dropdown } from '../components/Dropdown';
+import { useToast } from '../contexts/ToastContext';
+import { useLeaveRequests, useLeaveBalance, useAddLeaveRequest, useEmployeeDetail } from '../hooks/queries';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { LeaveCalendar } from '../components/LeaveCalendar';
+import { RequestTimeOffModal } from '../components/RequestTimeOffModal';
+import type { LeaveBalance } from '../types';
 
+// ---------------------------------------------------------------------------
+// Circular Progress Ring
+// ---------------------------------------------------------------------------
+const ProgressRing: React.FC<{
+  remaining: number;
+  total: number;
+  color: string;
+}> = ({ remaining, total, color }) => {
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  const percent = total > 0 ? Math.min(Math.max(remaining, 0) / total, 1) : 0;
+  const offset = circumference * (1 - percent);
+
+  return (
+    <div className="relative w-28 h-28 mx-auto">
+      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+        <circle
+          cx="50" cy="50" r={radius}
+          fill="none"
+          className="stroke-gray-200 dark:stroke-gray-700"
+          strokeWidth="7"
+        />
+        <circle
+          cx="50" cy="50" r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth="7"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          className="transition-all duration-700"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold text-text-light dark:text-text-dark">
+          {Math.max(remaining, 0)}
+        </span>
+        <span className="text-[10px] font-semibold tracking-widest text-text-muted-light dark:text-text-muted-dark uppercase">
+          left
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Leave Balance Card config
+// ---------------------------------------------------------------------------
+interface CardConfig {
+  type: string;
+  label: string;
+  color: string;
+  borderColor: string;
+}
+
+const LEAVE_CARDS: CardConfig[] = [
+  { type: 'Vacation',      label: 'Annual Leave',    color: '#3B82F6', borderColor: 'border-l-blue-500' },
+  { type: 'Sick Leave',    label: 'Sick Leave',      color: '#14B8A6', borderColor: 'border-l-teal-500' },
+  { type: 'Personal Day',  label: 'Personal Leave',  color: '#8B5CF6', borderColor: 'border-l-violet-500' },
+];
+
+// ---------------------------------------------------------------------------
+// Page Component
+// ---------------------------------------------------------------------------
 export const TimeOff: React.FC = () => {
   const { user } = useAuth();
-  const { requests, addRequest, getLeaveBalance } = useLeave();
+  const { showToast } = useToast();
+  const { data: allRequests = [], isPending } = useLeaveRequests();
+  const { data: balances = [] } = useLeaveBalance(user?.employeeId);
+  const { data: empDetail } = useEmployeeDetail(user?.employeeId);
+  const addMutation = useAddLeaveRequest();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
-    show: false, message: '', type: 'success'
-  });
-  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
-    setToast({ show: true, message, type });
-  };
+  const myRequests = useMemo(
+    () => allRequests.filter((r) => r.employeeId === user?.employeeId),
+    [allRequests, user?.employeeId],
+  );
+  const teamRequests = useMemo(
+    () => allRequests.filter((r) => r.employeeId !== user?.employeeId),
+    [allRequests, user?.employeeId],
+  );
 
-  /* eslint-disable react-hooks/exhaustive-deps */
-  // Disabling exhaustive-deps because getLeaveBalance dependency might cause loops if not memoized,
-  // but usually it's stable in context. Safer to include it or suppress.
+  // Last 10 requests sorted by startDate desc
+  const recentHistory = useMemo(
+    () =>
+      [...myRequests]
+        .sort((a, b) => (b.startDate ?? '').localeCompare(a.startDate ?? ''))
+        .slice(0, 10),
+    [myRequests],
+  );
 
-  const [balances, setBalances] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (user?.id) {
-      getLeaveBalance(user.id).then(setBalances);
+  // Pending days per leave type
+  const pendingByType = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const r of myRequests) {
+      if (r.status === 'Pending') {
+        map[r.type] = (map[r.type] || 0) + (r.days || 1);
+      }
     }
-  }, [user?.id]);
+    return map;
+  }, [myRequests]);
 
-  // Filter requests for the current user
-  const myRequests = requests.filter(r => r.employeeName === user?.name);
-
-  const [leaveForm, setLeaveForm] = useState({
-    type: 'Vacation',
-    startDate: '',
-    endDate: '',
-    reason: ''
-  });
-
-  const handleSubmit = () => {
-    if (!leaveForm.startDate || !leaveForm.endDate) {
-      showToast("Please select both start and end dates.", "warning");
-      return;
-    }
-
-    const start = new Date(leaveForm.startDate);
-    const end = new Date(leaveForm.endDate);
-
-    if (end < start) {
-      showToast("End date must be after start date.", "warning");
-      return;
-    }
-
-    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    const dateString = `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
-
-    // Calculate days
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-    const newRequest: LeaveRequest = {
-      id: Date.now().toString(),
-      employeeId: user?.id || '',
-      employeeName: user?.name || 'Unknown',
-      type: leaveForm.type,
-      dates: dateString,
-      days: diffDays,
-      status: 'Pending',
-      avatar: user?.avatar || '',
-      // Pass extra fields for API
-      // @ts-ignore
-      startDate: leaveForm.startDate,
-      // @ts-ignore
-      endDate: leaveForm.endDate,
-      // @ts-ignore
-      reason: leaveForm.reason
-    };
-
-    addRequest(newRequest);
+  const handleSubmit = async (data: { type: string; startDate: string; endDate: string; reason: string }) => {
+    await addMutation.mutateAsync({
+      employeeId: user?.employeeId,
+      type: data.type,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      reason: data.reason,
+    });
+    showToast('Leave request submitted!', 'success');
     setIsModalOpen(false);
-    setLeaveForm({ type: 'Vacation', startDate: '', endDate: '', reason: '' });
-    showToast(`Leave request submitted for ${diffDays} day(s)!`, 'success');
   };
+
+  const getBalance = (type: string): LeaveBalance | undefined => balances.find((b) => b.type === type);
+
+  if (isPending) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark">Time Off</h1>
-          <p className="text-sm sm:text-base text-text-muted-light dark:text-text-muted-dark">Manage your leave requests and view balance history.</p>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg shadow-sm hover:bg-primary/90 transition-colors w-full sm:w-auto"
-        >
-          <Plus size={18} /> New Request
-        </button>
-      </div>
-
-      {/* Balances */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-        {balances.map((balance) => (
-          <div key={balance.type} className="p-6 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-2 rounded-lg 
-                  ${balance.type === 'Vacation' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600' :
-                  balance.type === 'Sick Leave' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-600' : 'bg-purple-100 dark:bg-purple-900/20 text-purple-600'}`}>
-                {balance.type === 'Vacation' ? <Calendar size={24} /> :
-                  balance.type === 'Sick Leave' ? <AlertCircle size={24} /> : <Clock size={24} />}
-              </div>
-              <span className={`text-xs font-medium px-2 py-1 rounded 
-                  ${balance.type === 'Vacation' ? 'bg-blue-50 dark:bg-blue-900/10 text-blue-600' :
-                  balance.type === 'Sick Leave' ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-600' : 'bg-purple-50 dark:bg-purple-900/10 text-purple-600'}`}>
-                {balance.total === -1 ? 'Unlimited' : `${balance.remaining} Days Left`}
-              </span>
+      {/* ========== Profile Header Card ========== */}
+      <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-5 md:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              <img
+                src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}`}
+                alt={user?.name}
+                className="w-14 h-14 rounded-full object-cover border-2 border-border-light dark:border-border-dark"
+              />
+              <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-accent-green border-2 border-card-light dark:border-card-dark" />
             </div>
-            <h3 className="text-2xl font-bold text-text-light dark:text-text-dark">{balance.type}</h3>
-            <p className="text-xs text-text-muted-light mt-1">
-              {balance.total === -1 ? 'Requires Approval' : `Total ${balance.total} days / year`}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* History Table */}
-      <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Request History</h2>
-        </div>
-
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800/50 text-xs uppercase text-text-muted-light font-semibold">
-              <tr>
-                <th className="px-6 py-4">Type</th>
-                <th className="px-6 py-4">Dates</th>
-                <th className="px-6 py-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {myRequests.length > 0 ? (
-                myRequests.map((req) => (
-                  <tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                    <td className="px-6 py-4 font-medium text-text-light dark:text-text-dark">{req.type}</td>
-                    <td className="px-6 py-4 text-text-muted-light dark:text-text-muted-dark">{req.dates}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${req.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' :
-                        req.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                          'bg-yellow-50 text-yellow-700 border-yellow-200'
-                        }`}>
-                        {req.status === 'Approved' && <CheckCircle2 size={12} />}
-                        {req.status === 'Rejected' && <XCircle size={12} />}
-                        {req.status === 'Pending' && <Clock size={12} />}
-                        {req.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center text-text-muted-light">No leave history found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden p-4 space-y-3">
-          {myRequests.length > 0 ? (
-            myRequests.map((req) => (
-              <div key={req.id} className="bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark p-4 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    {req.type === 'Vacation' ? <Calendar size={20} className="text-blue-600" /> :
-                      req.type === 'Sick Leave' ? <AlertCircle size={20} className="text-orange-600" /> :
-                        <Clock size={20} className="text-purple-600" />}
-                    <h3 className="font-medium text-text-light dark:text-text-dark">{req.type}</h3>
-                  </div>
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${req.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' :
-                    req.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                      'bg-yellow-50 text-yellow-700 border-yellow-200'
-                    }`}>
-                    {req.status === 'Approved' && <CheckCircle2 size={12} />}
-                    {req.status === 'Rejected' && <XCircle size={12} />}
-                    {req.status === 'Pending' && <Clock size={12} />}
-                    {req.status}
+            {/* Info */}
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark">
+                {user?.name || 'Employee'}
+              </h1>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">
+                {empDetail?.department && (
+                  <span className="flex items-center gap-1">
+                    <Building2 size={14} /> {empDetail.department}
                   </span>
-                </div>
-                <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                  <span className="font-medium">Dates:</span> {req.dates}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="px-6 py-8 text-center text-text-muted-light">No leave history found.</div>
-          )}
-        </div>
-      </div>
-
-      {/* Modal */}
-      {isModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-md animate-in fade-in zoom-in duration-200">
-            <div className="p-6 space-y-4">
-              <h3 className="font-bold text-lg text-text-light dark:text-text-dark mb-4">Request Time Off</h3>
-              <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Type</label>
-                <Dropdown
-                  value={leaveForm.type}
-                  onChange={(value) => setLeaveForm({ ...leaveForm, type: value })}
-                  options={[
-                    { value: 'Vacation', label: 'Vacation' },
-                    { value: 'Sick Leave', label: 'Sick Leave' },
-                    { value: 'Personal Day', label: 'Personal Day' }
-                  ]}
-                  placeholder="Select leave type"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <DatePicker
-                  label="Start Date"
-                  value={leaveForm.startDate}
-                  onChange={(date) => setLeaveForm({ ...leaveForm, startDate: date })}
-                  placeholder="Select start date"
-                />
-                <DatePicker
-                  label="End Date"
-                  value={leaveForm.endDate}
-                  onChange={(date) => setLeaveForm({ ...leaveForm, endDate: date })}
-                  placeholder="Select end date"
-                  minDate={leaveForm.startDate}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Reason</label>
-                <textarea
-                  rows={3}
-                  value={leaveForm.reason}
-                  onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm resize-none text-text-light dark:text-text-dark"
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm text-text-muted-light hover:text-text-light dark:hover:text-text-dark transition-colors">Cancel</button>
-                <button onClick={handleSubmit} className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">Submit</button>
+                )}
+                {user?.jobTitle && (
+                  <span className="flex items-center gap-1">
+                    <Briefcase size={14} /> {user.jobTitle}
+                  </span>
+                )}
               </div>
             </div>
           </div>
-        </div>,
-        document.body
-      )}
 
-      {/* Toast Notification */}
-      {toast.show && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(prev => ({ ...prev, show: false }))}
-        />
-      )}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg shadow-sm hover:bg-primary/90 transition-colors w-full sm:w-auto"
+          >
+            <Plus size={18} /> Request Leave
+          </button>
+        </div>
+      </div>
+
+      {/* ========== Balance Cards ========== */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {LEAVE_CARDS.map((card) => {
+          const bal = getBalance(card.type);
+          const isUnlimited = !bal || bal.total === -1;
+          const remaining = bal ? bal.remaining : 0;
+          const total = bal ? bal.total : 0;
+          const used = bal ? bal.used : 0;
+          const pending = pendingByType[card.type] || 0;
+
+          return (
+            <div
+              key={card.type}
+              className={`bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm border-l-4 ${card.borderColor} p-5`}
+            >
+              {/* Card header */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-text-light dark:text-text-dark">{card.label}</h3>
+                {!isUnlimited && (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    Allowance: {total} days
+                  </span>
+                )}
+              </div>
+
+              {/* Ring or Contact Manager */}
+              {isUnlimited ? (
+                <div className="flex flex-col items-center justify-center h-28 text-center">
+                  <IdCard size={28} className="text-text-muted-light dark:text-text-muted-dark mb-2" />
+                  <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Contact Manager</p>
+                </div>
+              ) : (
+                <ProgressRing remaining={remaining} total={total} color={card.color} />
+              )}
+
+              {/* Bottom stats */}
+              <div className="flex justify-around mt-4 pt-3 border-t border-border-light dark:border-border-dark text-center">
+                <div>
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark">Used</p>
+                  <p className="text-lg font-bold text-text-light dark:text-text-dark">{used}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark">Pending</p>
+                  <p className="text-lg font-bold text-text-light dark:text-text-dark">{pending}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ========== Calendar + History ========== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <LeaveCalendar userLeaves={myRequests} teamLeaves={teamRequests} />
+
+        {/* My Leave History */}
+        <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+          <div className="p-4 md:p-6 border-b border-border-light dark:border-border-dark">
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">My Leave History</h2>
+          </div>
+
+          <div className="p-4 md:p-6 space-y-3">
+            {recentHistory.length > 0 ? (
+              recentHistory.map((req) => {
+                const days = req.days ?? 1;
+                return (
+                  <div
+                    key={req.id}
+                    className="flex items-center justify-between gap-3 p-3 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`p-2 rounded-lg shrink-0 ${
+                        req.type === 'Vacation' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600' :
+                        req.type === 'Sick Leave' ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' :
+                        'bg-violet-100 dark:bg-violet-900/20 text-violet-600'
+                      }`}>
+                        {req.type === 'Vacation' ? <Calendar size={16} /> :
+                         req.type === 'Sick Leave' ? <AlertCircle size={16} /> :
+                         <Clock size={16} />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">{req.type}</p>
+                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                          {req.dates} &middot; {days} day{days !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${
+                      req.status === 'Approved' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700' :
+                      req.status === 'Rejected' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700' :
+                      'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700'
+                    }`}>
+                      {req.status === 'Approved' && <CheckCircle2 size={12} />}
+                      {req.status === 'Rejected' && <XCircle size={12} />}
+                      {req.status === 'Pending' && <Clock size={12} />}
+                      {req.status}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-text-muted-light dark:text-text-muted-dark text-sm">
+                No leave requests yet.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Request Time Off Modal */}
+      <RequestTimeOffModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleSubmit}
+        isPending={addMutation.isPending}
+      />
     </div>
   );
 };
