@@ -50,8 +50,7 @@ const STATUS_FILTER_OPTIONS: DropdownOption[] = [
   { value: 'Present', label: 'Present Today' },
   { value: 'Active', label: 'Active Now' },
   { value: 'Checked Out', label: 'Checked Out' },
-  { value: 'On-Leave', label: 'On Leave' },
-  { value: 'Not In', label: 'Not In' },
+  { value: 'Not In', label: 'Not In / On-Leave' },
 ];
 
 const getStatusStyle = (status: AdminDisplayStatus | string): { dot: string; badge: string } => {
@@ -63,9 +62,7 @@ const getStatusStyle = (status: AdminDisplayStatus | string): { dot: string; bad
     case 'On-Leave':
       return { dot: 'bg-purple-500', badge: 'bg-purple-50 text-purple-700 ring-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:ring-purple-800' };
     case 'Not In':
-      return { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:ring-amber-800' };
-    case 'Absent':
-      return { dot: 'bg-red-400', badge: 'bg-red-50 text-red-600 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800' };
+      return { dot: 'bg-orange-400', badge: 'bg-orange-50 text-orange-700 ring-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:ring-orange-800' };
     default:
       return { dot: 'bg-gray-500', badge: 'bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:ring-gray-800' };
   }
@@ -274,9 +271,9 @@ const AdminAttendance: React.FC = () => {
           />
           <SnapshotCard
             icon={<UserX size={20} />}
-            label="Not In"
+            label="Not In / On-Leave"
             value={snapshot.absentOrLeave}
-            iconColor="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+            iconColor="bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
             filterValue="Not In"
             activeFilter={status}
             onClick={handleCardClick}

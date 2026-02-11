@@ -209,8 +209,7 @@ class AttendanceService {
                         conditions.push("((ar.id IS NULL AND lr.id IS NULL) OR (ar.id IS NOT NULL AND (ar.status = 'Absent' OR (ar.clock_in IS NULL AND ar.status != 'On-leave'))))");
                         break;
                     case 'Not In':
-                    case 'Absent / On-Leave':
-                        conditions.push('ar.clock_in IS NULL');
+                        conditions.push("(ar.clock_in IS NULL OR ar.status = 'On-leave' OR (ar.id IS NULL AND lr.id IS NOT NULL))");
                         break;
                     default:
                         conditions.push(`ar.status = $${paramIndex++}`);
@@ -251,23 +250,12 @@ class AttendanceService {
         END,
         e.name ASC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}`, [...params, limit, offset]);
-            // Determine whether "no check-in" means "Not In" (still early) or "Absent" (past noon)
-            const now = new Date();
-            const todayBangkok = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-            const isTargetToday = targetDate === todayBangkok;
-            const bangkokHour = isTargetToday
-                ? parseInt(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok', hour: '2-digit', hour12: false }))
-                : 24; // past date → always counts as "Absent"
-            const notInStatus = bangkokHour < 12 ? 'Not In' : 'Absent';
             const data = dataResult.rows.map((row) => {
                 const hasRecord = row.ar_id != null;
                 const isOnLeave = row.is_on_leave === true || (hasRecord && row.ar_status === 'On-leave');
                 let displayStatus;
                 if (hasRecord && row.ar_status === 'On-leave') {
                     displayStatus = 'On-Leave';
-                }
-                else if (hasRecord && row.ar_status === 'Absent') {
-                    displayStatus = notInStatus;
                 }
                 else if (hasRecord && row.clock_in && !row.clock_out) {
                     displayStatus = 'Active';
@@ -279,7 +267,7 @@ class AttendanceService {
                     displayStatus = 'On-Leave';
                 }
                 else {
-                    displayStatus = notInStatus;
+                    displayStatus = 'Not In';
                 }
                 return {
                     id: row.ar_id || `absent-${row.employee_id}`,

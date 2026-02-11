@@ -24,7 +24,7 @@ export interface AdminAttendanceFilters {
   limit?: number;
 }
 
-export type AdminDisplayStatus = 'Active' | 'Checked Out' | 'On-Leave' | 'Not In' | 'Absent';
+export type AdminDisplayStatus = 'Active' | 'Checked Out' | 'On-Leave' | 'Not In';
 
 export interface AdminAttendanceRecord extends AttendanceRecord {
   employeeName: string;
@@ -327,8 +327,7 @@ export class AttendanceService {
           conditions.push("((ar.id IS NULL AND lr.id IS NULL) OR (ar.id IS NOT NULL AND (ar.status = 'Absent' OR (ar.clock_in IS NULL AND ar.status != 'On-leave'))))");
           break;
         case 'Not In':
-        case 'Absent / On-Leave':
-          conditions.push('ar.clock_in IS NULL');
+          conditions.push("(ar.clock_in IS NULL OR ar.status = 'On-leave' OR (ar.id IS NULL AND lr.id IS NOT NULL))");
           break;
         default:
           conditions.push(`ar.status = $${paramIndex++}`);
@@ -380,15 +379,6 @@ export class AttendanceService {
       [...params, limit, offset]
     );
 
-    // Determine whether "no check-in" means "Not In" (still early) or "Absent" (past noon)
-    const now = new Date();
-    const todayBangkok = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-    const isTargetToday = targetDate === todayBangkok;
-    const bangkokHour = isTargetToday
-      ? parseInt(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok', hour: '2-digit', hour12: false }))
-      : 24; // past date → always counts as "Absent"
-    const notInStatus: AdminDisplayStatus = bangkokHour < 12 ? 'Not In' : 'Absent';
-
     const data = dataResult.rows.map((row: Record<string, unknown>): AdminAttendanceRecord => {
       const hasRecord = row.ar_id != null;
       const isOnLeave = row.is_on_leave === true || (hasRecord && row.ar_status === 'On-leave');
@@ -396,8 +386,6 @@ export class AttendanceService {
       let displayStatus: AdminDisplayStatus;
       if (hasRecord && row.ar_status === 'On-leave') {
         displayStatus = 'On-Leave';
-      } else if (hasRecord && row.ar_status === 'Absent') {
-        displayStatus = notInStatus;
       } else if (hasRecord && row.clock_in && !row.clock_out) {
         displayStatus = 'Active';
       } else if (hasRecord && row.clock_in && row.clock_out) {
@@ -405,7 +393,7 @@ export class AttendanceService {
       } else if (isOnLeave) {
         displayStatus = 'On-Leave';
       } else {
-        displayStatus = notInStatus;
+        displayStatus = 'Not In';
       }
 
       return {

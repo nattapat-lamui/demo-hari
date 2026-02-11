@@ -463,7 +463,7 @@ export interface NotificationItem {
 
 export type AttendanceStatus = 'On-time' | 'Late' | 'Absent' | 'On-leave';
 
-export type AdminDisplayStatus = 'Active' | 'Checked Out' | 'On-Leave' | 'Not In' | 'Absent';
+export type AdminDisplayStatus = 'Active' | 'Checked Out' | 'On-Leave' | 'Not In';
 
 export interface AdminAttendanceRecord {
   id: string;
