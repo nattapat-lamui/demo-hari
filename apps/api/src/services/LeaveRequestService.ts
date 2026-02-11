@@ -184,11 +184,11 @@ export class LeaveRequestService {
     }
 
     async updateLeaveRequestStatus(id: string, updateData: UpdateLeaveRequestDTO): Promise<LeaveRequest> {
-        const { status } = updateData;
+        const { status, rejectionReason, approverEmployeeId } = updateData;
 
         const result = await query(
-            `UPDATE leave_requests SET status = $1 WHERE id = $2 RETURNING *`,
-            [status, id]
+            `UPDATE leave_requests SET status = $1, rejection_reason = $2, approver_id = $3 WHERE id = $4 RETURNING *`,
+            [status, rejectionReason || null, approverEmployeeId || null, id]
         );
 
         if (result.rows.length === 0) {
@@ -209,12 +209,13 @@ export class LeaveRequestService {
                 const employee = employeeResult.rows[0];
                 const isApproved = status === 'Approved';
 
+                const reasonSuffix = rejectionReason ? ` Reason: ${rejectionReason}` : '';
                 await NotificationService.create({
                     user_id: employee.user_id,
                     title: `Leave Request ${status}`,
                     message: isApproved
                         ? `Your ${leaveRequest.type} leave request has been approved.`
-                        : `Your ${leaveRequest.type} leave request has been ${status.toLowerCase()}.`,
+                        : `Your ${leaveRequest.type} leave request has been rejected.${reasonSuffix}`,
                     type: isApproved ? 'success' : 'warning',
                     link: '/time-off',
                 });
@@ -224,6 +225,34 @@ export class LeaveRequestService {
         }
 
         return leaveRequest;
+    }
+
+    async cancelLeaveRequest(id: string, employeeId: string): Promise<void> {
+        // Verify request exists and belongs to the employee
+        const existing = await query(
+            'SELECT id, employee_id, status FROM leave_requests WHERE id = $1',
+            [id]
+        );
+
+        if (existing.rows.length === 0) {
+            const err: any = new Error('Leave request not found');
+            err.statusCode = 404;
+            throw err;
+        }
+
+        if (existing.rows[0].employee_id !== employeeId) {
+            const err: any = new Error('You can only cancel your own leave requests');
+            err.statusCode = 403;
+            throw err;
+        }
+
+        if (existing.rows[0].status !== 'Pending') {
+            const err: any = new Error('Only pending leave requests can be cancelled');
+            err.statusCode = 400;
+            throw err;
+        }
+
+        await query('DELETE FROM leave_requests WHERE id = $1', [id]);
     }
 
     async deleteLeaveRequest(id: string): Promise<void> {
@@ -278,6 +307,8 @@ export class LeaveRequestService {
             handoverEmployeeName: row.handover_employee_name || undefined,
             handoverNotes: row.handover_notes || undefined,
             medicalCertificatePath: row.medical_certificate_path || undefined,
+            rejectionReason: row.rejection_reason || undefined,
+            approverEmployeeId: row.approver_id || undefined,
         };
     }
 }

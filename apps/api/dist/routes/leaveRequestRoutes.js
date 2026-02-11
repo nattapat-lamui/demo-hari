@@ -49,6 +49,8 @@ router.get('/', (0, cache_1.cacheMiddleware)(), LeaveRequestController_1.default
 router.post('/', security_1.apiLimiter, upload.single('medicalCertificate'), security_1.validateLeaveRequest, security_1.validateRequest, (0, cache_1.invalidateCache)('/api/leave-requests'), LeaveRequestController_1.default.createLeaveRequest.bind(LeaveRequestController_1.default));
 // PATCH /api/leave-requests/:id - Update leave request status (HR_ADMIN only - for approval/rejection)
 router.patch('/:id', auth_1.requireAdmin, security_1.apiLimiter, (0, cache_1.invalidateCache)('/api/leave-requests'), LeaveRequestController_1.default.updateLeaveRequest.bind(LeaveRequestController_1.default));
+// POST /api/leave-requests/:id/cancel - Cancel own pending leave request (any authenticated user)
+router.post('/:id/cancel', security_1.apiLimiter, (0, cache_1.invalidateCache)('/api/leave-requests'), LeaveRequestController_1.default.cancelLeaveRequest.bind(LeaveRequestController_1.default));
 // DELETE /api/leave-requests/:id - Delete leave request (HR_ADMIN only)
 router.delete('/:id', auth_1.requireAdmin, security_1.apiLimiter, (0, cache_1.invalidateCache)('/api/leave-requests'), LeaveRequestController_1.default.deleteLeaveRequest.bind(LeaveRequestController_1.default));
 // GET /api/leave-balances/:employeeId - Get leave balances for employee (any authenticated user) - cached for 60s

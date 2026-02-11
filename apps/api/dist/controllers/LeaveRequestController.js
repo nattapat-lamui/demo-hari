@@ -82,14 +82,20 @@ class LeaveRequestController {
     }
     updateLeaveRequest(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const { id } = req.params;
-                const { status } = req.body;
+                const { status, rejectionReason } = req.body;
                 if (!status || !['Pending', 'Approved', 'Rejected'].includes(status)) {
                     res.status(400).json({ error: 'Invalid status' });
                     return;
                 }
-                const leaveRequest = yield LeaveRequestService_1.default.updateLeaveRequestStatus(id, { status });
+                const approverEmployeeId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a.employeeId) || undefined;
+                const leaveRequest = yield LeaveRequestService_1.default.updateLeaveRequestStatus(id, {
+                    status,
+                    rejectionReason: status === 'Rejected' ? rejectionReason : undefined,
+                    approverEmployeeId,
+                });
                 // Emit real-time event
                 (0, socket_1.emitLeaveRequestUpdated)(leaveRequest);
                 res.json(leaveRequest);
@@ -122,6 +128,28 @@ class LeaveRequestController {
                 else {
                     res.status(500).json({ error: 'Failed to delete leave request' });
                 }
+            }
+        });
+    }
+    cancelLeaveRequest(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const { id } = req.params;
+                const employeeId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.employeeId;
+                if (!employeeId) {
+                    res.status(401).json({ error: 'Unauthorized' });
+                    return;
+                }
+                yield LeaveRequestService_1.default.cancelLeaveRequest(id, employeeId);
+                // Emit real-time event
+                (0, socket_1.emitLeaveRequestDeleted)(id);
+                res.json({ message: 'Leave request cancelled successfully' });
+            }
+            catch (error) {
+                console.error('Cancel leave request error:', error);
+                const statusCode = error.statusCode || 500;
+                res.status(statusCode).json({ error: error.message || 'Failed to cancel leave request' });
             }
         });
     }

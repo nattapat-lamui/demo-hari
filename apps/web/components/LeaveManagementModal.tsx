@@ -12,6 +12,7 @@ interface LeaveManagementModalProps {
   pendingRequests: LeaveRequest[];
   onApprove: (requestId: string) => void;
   onDecline: (requestId: string) => void;
+  onRowClick?: (request: LeaveRequest) => void;
 }
 
 /**
@@ -30,7 +31,8 @@ export const LeaveManagementModal: React.FC<LeaveManagementModalProps> = ({
   onClose,
   pendingRequests,
   onApprove,
-  onDecline
+  onDecline,
+  onRowClick,
 }) => {
   return (
     <Modal
@@ -52,7 +54,7 @@ export const LeaveManagementModal: React.FC<LeaveManagementModalProps> = ({
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {pendingRequests.map((request) => (
-                <tr key={request.id}>
+                <tr key={request.id} onClick={() => onRowClick?.(request)} className={onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors' : ''}>
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
                       <img
@@ -74,7 +76,7 @@ export const LeaveManagementModal: React.FC<LeaveManagementModalProps> = ({
                   <td className="py-4 px-6 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => onApprove(request.id)}
+                        onClick={(e) => { e.stopPropagation(); onApprove(request.id); }}
                         className="p-2 text-accent-green bg-accent-green/10 rounded-full hover:bg-accent-green/20 transition-colors"
                         title="Approve"
                         aria-label={`Approve leave request for ${request.employeeName}`}
@@ -82,7 +84,7 @@ export const LeaveManagementModal: React.FC<LeaveManagementModalProps> = ({
                         <Check size={16} />
                       </button>
                       <button
-                        onClick={() => onDecline(request.id)}
+                        onClick={(e) => { e.stopPropagation(); onDecline(request.id); }}
                         className="p-2 text-accent-red bg-accent-red/10 rounded-full hover:bg-accent-red/20 transition-colors"
                         title="Decline"
                         aria-label={`Decline leave request for ${request.employeeName}`}

@@ -95,6 +95,8 @@ export interface LeaveRequest {
   handoverEmployeeName?: string;
   handoverNotes?: string;
   medicalCertificatePath?: string;
+  rejectionReason?: string;
+  approverEmployeeId?: string;
 }
 
 export interface LeaveBalance {

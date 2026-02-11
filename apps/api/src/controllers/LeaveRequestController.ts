@@ -86,14 +86,19 @@ export class LeaveRequestController {
     async updateLeaveRequest(req: Request, res: Response): Promise<void> {
         try {
             const { id } = req.params;
-            const { status } = req.body;
+            const { status, rejectionReason } = req.body;
 
             if (!status || !['Pending', 'Approved', 'Rejected'].includes(status)) {
                 res.status(400).json({ error: 'Invalid status' });
                 return;
             }
 
-            const leaveRequest = await LeaveRequestService.updateLeaveRequestStatus(id, { status });
+            const approverEmployeeId = (req as any).user?.employeeId || undefined;
+            const leaveRequest = await LeaveRequestService.updateLeaveRequestStatus(id, {
+                status,
+                rejectionReason: status === 'Rejected' ? rejectionReason : undefined,
+                approverEmployeeId,
+            });
 
             // Emit real-time event
             emitLeaveRequestUpdated(leaveRequest);
@@ -125,6 +130,29 @@ export class LeaveRequestController {
             } else {
                 res.status(500).json({ error: 'Failed to delete leave request' });
             }
+        }
+    }
+
+    async cancelLeaveRequest(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const employeeId = (req as any).user?.employeeId;
+
+            if (!employeeId) {
+                res.status(401).json({ error: 'Unauthorized' });
+                return;
+            }
+
+            await LeaveRequestService.cancelLeaveRequest(id, employeeId);
+
+            // Emit real-time event
+            emitLeaveRequestDeleted(id);
+
+            res.json({ message: 'Leave request cancelled successfully' });
+        } catch (error: any) {
+            console.error('Cancel leave request error:', error);
+            const statusCode = error.statusCode || 500;
+            res.status(statusCode).json({ error: error.message || 'Failed to cancel leave request' });
         }
     }
 

@@ -161,8 +161,8 @@ class LeaveRequestService {
     updateLeaveRequestStatus(id, updateData) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
-            const { status } = updateData;
-            const result = yield (0, db_1.query)(`UPDATE leave_requests SET status = $1 WHERE id = $2 RETURNING *`, [status, id]);
+            const { status, rejectionReason, approverEmployeeId } = updateData;
+            const result = yield (0, db_1.query)(`UPDATE leave_requests SET status = $1, rejection_reason = $2, approver_id = $3 WHERE id = $4 RETURNING *`, [status, rejectionReason || null, approverEmployeeId || null, id]);
             if (result.rows.length === 0) {
                 throw new Error('Leave request not found');
             }
@@ -174,12 +174,13 @@ class LeaveRequestService {
                 if ((_a = employeeResult.rows[0]) === null || _a === void 0 ? void 0 : _a.user_id) {
                     const employee = employeeResult.rows[0];
                     const isApproved = status === 'Approved';
+                    const reasonSuffix = rejectionReason ? ` Reason: ${rejectionReason}` : '';
                     yield NotificationService_1.default.create({
                         user_id: employee.user_id,
                         title: `Leave Request ${status}`,
                         message: isApproved
                             ? `Your ${leaveRequest.type} leave request has been approved.`
-                            : `Your ${leaveRequest.type} leave request has been ${status.toLowerCase()}.`,
+                            : `Your ${leaveRequest.type} leave request has been rejected.${reasonSuffix}`,
                         type: isApproved ? 'success' : 'warning',
                         link: '/time-off',
                     });
@@ -189,6 +190,28 @@ class LeaveRequestService {
                 console.error('Failed to send leave status notification:', notifError);
             }
             return leaveRequest;
+        });
+    }
+    cancelLeaveRequest(id, employeeId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Verify request exists and belongs to the employee
+            const existing = yield (0, db_1.query)('SELECT id, employee_id, status FROM leave_requests WHERE id = $1', [id]);
+            if (existing.rows.length === 0) {
+                const err = new Error('Leave request not found');
+                err.statusCode = 404;
+                throw err;
+            }
+            if (existing.rows[0].employee_id !== employeeId) {
+                const err = new Error('You can only cancel your own leave requests');
+                err.statusCode = 403;
+                throw err;
+            }
+            if (existing.rows[0].status !== 'Pending') {
+                const err = new Error('Only pending leave requests can be cancelled');
+                err.statusCode = 400;
+                throw err;
+            }
+            yield (0, db_1.query)('DELETE FROM leave_requests WHERE id = $1', [id]);
         });
     }
     deleteLeaveRequest(id) {
@@ -239,6 +262,8 @@ class LeaveRequestService {
             handoverEmployeeName: row.handover_employee_name || undefined,
             handoverNotes: row.handover_notes || undefined,
             medicalCertificatePath: row.medical_certificate_path || undefined,
+            rejectionReason: row.rejection_reason || undefined,
+            approverEmployeeId: row.approver_id || undefined,
         };
     }
 }

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, AlertCircle, Plus, CheckCircle2, XCircle, Building2, Briefcase, IdCard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { useLeaveRequests, useLeaveBalance, useAddLeaveRequestWithFile, useEmployeeDetail } from '../hooks/queries';
+import { useLeaveRequests, useLeaveBalance, useAddLeaveRequestWithFile, useEmployeeDetail, useCancelLeaveRequest } from '../hooks/queries';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { LeaveCalendar } from '../components/LeaveCalendar';
 import { RequestTimeOffModal } from '../components/RequestTimeOffModal';
@@ -79,8 +79,10 @@ export const TimeOff: React.FC = () => {
   const { data: balances = [] } = useLeaveBalance(user?.employeeId);
   const { data: empDetail } = useEmployeeDetail(user?.employeeId);
   const addMutation = useAddLeaveRequestWithFile();
+  const cancelMutation = useCancelLeaveRequest();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const myRequests = useMemo(
     () => allRequests.filter((r) => r.employeeId === user?.employeeId),
@@ -115,6 +117,19 @@ export const TimeOff: React.FC = () => {
     await addMutation.mutateAsync(formData);
     showToast('Leave request submitted!', 'success');
     setIsModalOpen(false);
+  };
+
+  const handleCancel = async (id: string) => {
+    if (!confirm('Are you sure you want to cancel this leave request?')) return;
+    setCancellingId(id);
+    try {
+      await cancelMutation.mutateAsync(id);
+      showToast('Leave request cancelled', 'success');
+    } catch (error: any) {
+      showToast(error?.message || 'Failed to cancel leave request', 'error');
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   const getBalance = (type: string): LeaveBalance | undefined => balances.find((b) => b.type === type);
@@ -239,36 +254,56 @@ export const TimeOff: React.FC = () => {
                 return (
                   <div
                     key={req.id}
-                    className="flex items-center justify-between gap-3 p-3 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark"
+                    className="p-3 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`p-2 rounded-lg shrink-0 ${
-                        req.type === 'Vacation' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600' :
-                        req.type === 'Sick Leave' ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' :
-                        'bg-violet-100 dark:bg-violet-900/20 text-violet-600'
-                      }`}>
-                        {req.type === 'Vacation' ? <Calendar size={16} /> :
-                         req.type === 'Sick Leave' ? <AlertCircle size={16} /> :
-                         <Clock size={16} />}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`p-2 rounded-lg shrink-0 ${
+                          req.type === 'Vacation' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600' :
+                          req.type === 'Sick Leave' ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' :
+                          'bg-violet-100 dark:bg-violet-900/20 text-violet-600'
+                        }`}>
+                          {req.type === 'Vacation' ? <Calendar size={16} /> :
+                           req.type === 'Sick Leave' ? <AlertCircle size={16} /> :
+                           <Clock size={16} />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">{req.type}</p>
+                          <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {req.dates} &middot; {days} day{days !== 1 ? 's' : ''}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">{req.type}</p>
-                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                          {req.dates} &middot; {days} day{days !== 1 ? 's' : ''}
-                        </p>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {req.status === 'Pending' && (
+                          <button
+                            onClick={() => handleCancel(req.id)}
+                            disabled={cancellingId === req.id}
+                            className="px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-40"
+                          >
+                            {cancellingId === req.id ? 'Cancelling...' : 'Cancel'}
+                          </button>
+                        )}
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${
+                          req.status === 'Approved' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700' :
+                          req.status === 'Rejected' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700' :
+                          'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700'
+                        }`}>
+                          {req.status === 'Approved' && <CheckCircle2 size={12} />}
+                          {req.status === 'Rejected' && <XCircle size={12} />}
+                          {req.status === 'Pending' && <Clock size={12} />}
+                          {req.status}
+                        </span>
                       </div>
                     </div>
 
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${
-                      req.status === 'Approved' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700' :
-                      req.status === 'Rejected' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700' :
-                      'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700'
-                    }`}>
-                      {req.status === 'Approved' && <CheckCircle2 size={12} />}
-                      {req.status === 'Rejected' && <XCircle size={12} />}
-                      {req.status === 'Pending' && <Clock size={12} />}
-                      {req.status}
-                    </span>
+                    {/* Rejection reason */}
+                    {req.status === 'Rejected' && req.rejectionReason && (
+                      <p className="mt-2 ml-11 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded px-2 py-1 border border-red-100 dark:border-red-800">
+                        Reason: {req.rejectionReason}
+                      </p>
+                    )}
                   </div>
                 );
               })

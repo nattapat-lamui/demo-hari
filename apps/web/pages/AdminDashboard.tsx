@@ -24,12 +24,15 @@ import { Toast } from '../components/Toast';
 import { Avatar } from '../components/Avatar';
 import { AddEmployeeModal } from '../components/AddEmployeeModal';
 import { LeaveManagementModal } from '../components/LeaveManagementModal';
+import { LeaveDetailModal } from '../components/LeaveDetailModal';
+import { RejectReasonDialog } from '../components/RejectReasonDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useLeave } from '../contexts/LeaveContext';
-import {
+import type {
   ChartDataPoint,
   OnboardingProgressSummary,
   UpcomingEvent,
+  LeaveRequest,
 } from '../types';
 import {
   useAllEmployees,
@@ -67,6 +70,8 @@ export const AdminDashboard: React.FC = () => {
   // ----- STATE -----
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+  const [detailRequest, setDetailRequest] = useState<LeaveRequest | null>(null);
+  const [rejectingRequest, setRejectingRequest] = useState<LeaveRequest | null>(null);
   const [quickNote, setQuickNote] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
@@ -191,6 +196,23 @@ export const AdminDashboard: React.FC = () => {
   const handleDeclineLeave = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     updateRequestStatus(id, 'Rejected');
+  };
+
+  const handleDetailApprove = (id: string) => {
+    updateRequestStatus(id, 'Approved');
+    setDetailRequest(null);
+  };
+
+  const handleDetailReject = (request: LeaveRequest) => {
+    setRejectingRequest(request);
+  };
+
+  const handleConfirmReject = (reason: string) => {
+    if (rejectingRequest) {
+      updateRequestStatus(rejectingRequest.id, 'Rejected', reason);
+      setRejectingRequest(null);
+      setDetailRequest(null);
+    }
   };
 
   const handleAddEmployee = async (employeeData: {
@@ -525,7 +547,7 @@ export const AdminDashboard: React.FC = () => {
                   <table className="w-full text-left text-sm">
                     <tbody className="divide-y divide-border-light dark:divide-border-dark">
                       {pendingRequests.map(req => (
-                        <tr key={req.id}>
+                        <tr key={req.id} onClick={() => setDetailRequest(req)} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                           <td className="py-3 pr-4">
                             <div className="flex items-center gap-3">
                               <Avatar src={req.avatar} name={req.employeeName} size="md" />
@@ -558,7 +580,7 @@ export const AdminDashboard: React.FC = () => {
                 {/* Mobile cards */}
                 <div className="md:hidden space-y-3">
                   {pendingRequests.map(req => (
-                    <div key={req.id} className="p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
+                    <div key={req.id} onClick={() => setDetailRequest(req)} className="p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark cursor-pointer hover:border-primary/50 transition-colors">
                       <div className="flex items-center gap-3 mb-2">
                         <Avatar src={req.avatar} name={req.employeeName} size="md" />
                         <div className="flex-1 min-w-0">
@@ -733,6 +755,24 @@ export const AdminDashboard: React.FC = () => {
         pendingRequests={pendingRequests}
         onApprove={handleApproveLeave}
         onDecline={handleDeclineLeave}
+        onRowClick={setDetailRequest}
+      />
+
+      {/* Leave Detail Modal */}
+      <LeaveDetailModal
+        isOpen={!!detailRequest}
+        onClose={() => setDetailRequest(null)}
+        request={detailRequest}
+        onApprove={handleDetailApprove}
+        onReject={handleDetailReject}
+      />
+
+      {/* Reject Reason Dialog */}
+      <RejectReasonDialog
+        isOpen={!!rejectingRequest}
+        onClose={() => setRejectingRequest(null)}
+        onConfirm={handleConfirmReject}
+        employeeName={rejectingRequest?.employeeName}
       />
 
       </div>

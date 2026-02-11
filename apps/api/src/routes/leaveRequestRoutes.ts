@@ -59,6 +59,9 @@ router.post(
 // PATCH /api/leave-requests/:id - Update leave request status (HR_ADMIN only - for approval/rejection)
 router.patch('/:id', requireAdmin, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.updateLeaveRequest.bind(LeaveRequestController));
 
+// POST /api/leave-requests/:id/cancel - Cancel own pending leave request (any authenticated user)
+router.post('/:id/cancel', apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.cancelLeaveRequest.bind(LeaveRequestController));
+
 // DELETE /api/leave-requests/:id - Delete leave request (HR_ADMIN only)
 router.delete('/:id', requireAdmin, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.deleteLeaveRequest.bind(LeaveRequestController));
 

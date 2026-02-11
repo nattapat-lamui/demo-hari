@@ -264,6 +264,9 @@ app.post(
 // Lightweight migrations (safe to run multiple times)
 const runLightMigrations = async () => {
   try {
+    // Leave requests: add rejection_reason column
+    await query(`ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS rejection_reason TEXT`);
+
     // Admin attendance: add modified_by column + indexes
     await query(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS modified_by UUID REFERENCES users(id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_attendance_date_status ON attendance_records(date DESC, status)`);

@@ -10,7 +10,7 @@ import { api } from '../lib/api';
 interface LeaveContextType {
   requests: LeaveRequest[];
   addRequest: (request: LeaveRequest) => Promise<void>;
-  updateRequestStatus: (id: string, status: 'Approved' | 'Rejected') => Promise<void>;
+  updateRequestStatus: (id: string, status: 'Approved' | 'Rejected', rejectionReason?: string) => Promise<void>;
   getLeaveBalance: (employeeId: string) => Promise<LeaveBalance[]>;
   refetchRequests: () => Promise<void>;
 }
@@ -39,9 +39,9 @@ export const LeaveProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [addMutation]);
 
-  const updateRequestStatus = useCallback(async (id: string, status: 'Approved' | 'Rejected') => {
+  const updateRequestStatus = useCallback(async (id: string, status: 'Approved' | 'Rejected', rejectionReason?: string) => {
     try {
-      await updateStatusMutation.mutateAsync({ id, status });
+      await updateStatusMutation.mutateAsync({ id, status, rejectionReason });
       // Socket handles real-time update
     } catch (e) {
       console.error(e);

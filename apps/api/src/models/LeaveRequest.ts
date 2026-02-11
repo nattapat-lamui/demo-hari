@@ -14,6 +14,8 @@ export interface LeaveRequest {
     handoverEmployeeName?: string;
     handoverNotes?: string;
     medicalCertificatePath?: string;
+    rejectionReason?: string;
+    approverEmployeeId?: string;
 }
 
 export interface CreateLeaveRequestDTO {
@@ -30,4 +32,6 @@ export interface CreateLeaveRequestDTO {
 
 export interface UpdateLeaveRequestDTO {
     status: 'Pending' | 'Approved' | 'Rejected';
+    rejectionReason?: string;
+    approverEmployeeId?: string;
 }

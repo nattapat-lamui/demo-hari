@@ -502,9 +502,20 @@ export const useAddLeaveRequestWithFile = () => {
 
 export const useUpdateLeaveStatus = () => {
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'Approved' | 'Rejected' }) =>
-      api.patch(`/leave-requests/${id}`, { status }),
+    mutationFn: ({ id, status, rejectionReason }: { id: string; status: 'Approved' | 'Rejected'; rejectionReason?: string }) =>
+      api.patch(`/leave-requests/${id}`, { status, rejectionReason }),
     // Socket handles real-time update
+  });
+};
+
+export const useCancelLeaveRequest = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post(`/leave-requests/${id}/cancel`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.leaveRequests.all });
+      qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
+    },
   });
 };
 

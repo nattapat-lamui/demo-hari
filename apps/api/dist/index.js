@@ -243,6 +243,8 @@ app.post("/api/system/seed", auth_1.authenticateToken, auth_1.requireAdmin, (req
 const runLightMigrations = () => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
+        // Leave requests: add rejection_reason column
+        yield (0, db_1.query)(`ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS rejection_reason TEXT`);
         // Admin attendance: add modified_by column + indexes
         yield (0, db_1.query)(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS modified_by UUID REFERENCES users(id)`);
         yield (0, db_1.query)(`CREATE INDEX IF NOT EXISTS idx_attendance_date_status ON attendance_records(date DESC, status)`);

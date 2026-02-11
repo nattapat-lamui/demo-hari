@@ -126,6 +126,10 @@ CREATE TABLE leave_requests (
     reason TEXT,
     status VARCHAR(20) DEFAULT 'Pending',
     approver_id UUID REFERENCES employees(id),
+    rejection_reason TEXT,
+    handover_employee_id UUID REFERENCES employees(id),
+    handover_notes TEXT,
+    medical_certificate_path TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
