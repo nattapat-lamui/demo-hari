@@ -61,6 +61,12 @@ const Surveys = lazy(() =>
 const Attendance = lazy(() => import("./pages/Attendance"));
 const AdminAttendance = lazy(() => import("./pages/AdminAttendance"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const LeaveRequestForm = lazy(() =>
+  import("./pages/LeaveRequestForm").then((m) => ({ default: m.LeaveRequestForm })),
+);
+const AdminLeaveRequests = lazy(() =>
+  import("./pages/AdminLeaveRequests").then((m) => ({ default: m.AdminLeaveRequests })),
+);
 
 // Loading component
 const PageLoader = () => (
@@ -103,6 +109,9 @@ const App: React.FC = () => {
                     <Route path="attendance" element={<Attendance />} />
                     <Route path="admin-attendance" element={<AdminAttendance />} />
                     <Route path="time-off" element={<TimeOff />} />
+                    <Route path="time-off/request" element={<LeaveRequestForm />} />
+                    <Route path="time-off/request/:id" element={<LeaveRequestForm />} />
+                    <Route path="leave-requests" element={<AdminLeaveRequests />} />
                     <Route path="expenses" element={<Expenses />} />
                     <Route path="surveys" element={<Surveys />} />
                     <Route path="wellbeing" element={<Wellbeing />} />

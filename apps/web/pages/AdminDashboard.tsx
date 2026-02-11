@@ -23,7 +23,6 @@ import { StatCard } from '../components/StatCard';
 import { Toast } from '../components/Toast';
 import { Avatar } from '../components/Avatar';
 import { AddEmployeeModal } from '../components/AddEmployeeModal';
-import { LeaveManagementModal } from '../components/LeaveManagementModal';
 import { LeaveDetailModal } from '../components/LeaveDetailModal';
 import { RejectReasonDialog } from '../components/RejectReasonDialog';
 import { useAuth } from '../contexts/AuthContext';
@@ -69,7 +68,7 @@ export const AdminDashboard: React.FC = () => {
 
   // ----- STATE -----
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
-  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+
   const [detailRequest, setDetailRequest] = useState<LeaveRequest | null>(null);
   const [rejectingRequest, setRejectingRequest] = useState<LeaveRequest | null>(null);
   const [quickNote, setQuickNote] = useState('');
@@ -352,14 +351,6 @@ export const AdminDashboard: React.FC = () => {
           <p className="text-sm sm:text-base text-text-muted-light dark:text-text-muted-dark mt-1">Welcome back, {user?.name?.split(' ')[0]}. Here's what's happening today.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => setIsLeaveModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark font-medium rounded-lg text-sm border border-border-light dark:border-border-dark shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            <CheckCircle2 size={18} className="text-accent-green" />
-            Approve Leave
-            {pendingRequests.length > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full">{pendingRequests.length}</span>}
-          </button>
           <button
             onClick={() => navigate('/onboarding')}
             className="flex items-center gap-2 px-4 py-2.5 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark font-medium rounded-lg text-sm border border-border-light dark:border-border-dark shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -746,16 +737,6 @@ export const AdminDashboard: React.FC = () => {
         isOpen={isAddEmployeeModalOpen}
         onClose={() => setIsAddEmployeeModalOpen(false)}
         onSubmit={handleAddEmployee}
-      />
-
-      {/* Leave Management Modal (Admin View of Requests) */}
-      <LeaveManagementModal
-        isOpen={isLeaveModalOpen}
-        onClose={() => setIsLeaveModalOpen(false)}
-        pendingRequests={pendingRequests}
-        onApprove={handleApproveLeave}
-        onDecline={handleDeclineLeave}
-        onRowClick={setDetailRequest}
       />
 
       {/* Leave Detail Modal */}

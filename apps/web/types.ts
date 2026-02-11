@@ -89,7 +89,7 @@ export interface LeaveRequest {
   endDate: string; // ISO date string
   reason?: string;
   days: number;
-  status: 'Pending' | 'Approved' | 'Rejected';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Cancel Requested';
   avatar: string;
   handoverEmployeeId?: string;
   handoverEmployeeName?: string;
@@ -97,6 +97,7 @@ export interface LeaveRequest {
   medicalCertificatePath?: string;
   rejectionReason?: string;
   approverEmployeeId?: string;
+  updatedAt?: string;
 }
 
 export interface LeaveBalance {

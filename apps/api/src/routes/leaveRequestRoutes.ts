@@ -56,11 +56,23 @@ router.post(
     LeaveRequestController.createLeaveRequest.bind(LeaveRequestController)
 );
 
+// PUT /api/leave-requests/:id - Edit own leave request (any authenticated user)
+router.put(
+    '/:id',
+    apiLimiter,
+    upload.single('medicalCertificate'),
+    invalidateCache('/api/leave-requests'),
+    LeaveRequestController.editLeaveRequest.bind(LeaveRequestController)
+);
+
 // PATCH /api/leave-requests/:id - Update leave request status (HR_ADMIN only - for approval/rejection)
 router.patch('/:id', requireAdmin, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.updateLeaveRequest.bind(LeaveRequestController));
 
-// POST /api/leave-requests/:id/cancel - Cancel own pending leave request (any authenticated user)
+// POST /api/leave-requests/:id/cancel - Cancel own leave request (any authenticated user)
 router.post('/:id/cancel', apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.cancelLeaveRequest.bind(LeaveRequestController));
+
+// POST /api/leave-requests/:id/cancel-decision - Approve/reject cancel request (HR_ADMIN only)
+router.post('/:id/cancel-decision', requireAdmin, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.handleCancelDecision.bind(LeaveRequestController));
 
 // DELETE /api/leave-requests/:id - Delete leave request (HR_ADMIN only)
 router.delete('/:id', requireAdmin, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.deleteLeaveRequest.bind(LeaveRequestController));

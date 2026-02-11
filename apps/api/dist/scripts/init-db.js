@@ -130,8 +130,30 @@ CREATE TABLE leave_requests (
     handover_employee_id UUID REFERENCES employees(id),
     handover_notes TEXT,
     medical_certificate_path TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Leave Request Audit History
+CREATE TABLE leave_request_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    leave_request_id UUID NOT NULL REFERENCES leave_requests(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL,
+    leave_type VARCHAR(50) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    reason TEXT,
+    status VARCHAR(20) NOT NULL,
+    approver_id UUID,
+    rejection_reason TEXT,
+    handover_employee_id UUID,
+    handover_notes TEXT,
+    medical_certificate_path TEXT,
+    change_type VARCHAR(20) NOT NULL,
+    changed_by UUID NOT NULL,
+    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_lrh_leave_request_id ON leave_request_history(leave_request_id);
 
 -- 3. Tasks (Onboarding)
 CREATE TABLE tasks (

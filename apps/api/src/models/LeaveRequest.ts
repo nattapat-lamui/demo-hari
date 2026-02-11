@@ -8,7 +8,7 @@ export interface LeaveRequest {
     dates: string;
     days: number;
     reason?: string;
-    status: 'Pending' | 'Approved' | 'Rejected';
+    status: 'Pending' | 'Approved' | 'Rejected' | 'Cancel Requested';
     avatar?: string;
     handoverEmployeeId?: string;
     handoverEmployeeName?: string;
@@ -16,6 +16,7 @@ export interface LeaveRequest {
     medicalCertificatePath?: string;
     rejectionReason?: string;
     approverEmployeeId?: string;
+    updatedAt?: string;
 }
 
 export interface CreateLeaveRequestDTO {
@@ -34,4 +35,14 @@ export interface UpdateLeaveRequestDTO {
     status: 'Pending' | 'Approved' | 'Rejected';
     rejectionReason?: string;
     approverEmployeeId?: string;
+}
+
+export interface EditLeaveRequestDTO {
+    type: string;
+    startDate: string;
+    endDate: string;
+    reason?: string;
+    handoverEmployeeId?: string;
+    handoverNotes?: string;
+    medicalCertificatePath?: string;
 }

@@ -9,6 +9,7 @@ export const queryKeys = {
   leaveRequests: {
     all: ['leaveRequests'] as const,
     list: () => [...queryKeys.leaveRequests.all, 'list'] as const,
+    detail: (id: string) => [...queryKeys.leaveRequests.all, 'detail', id] as const,
   },
   leaveBalances: {
     all: ['leaveBalances'] as const,

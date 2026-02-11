@@ -404,6 +404,32 @@ const runLightMigrations = async () => {
         ADD COLUMN IF NOT EXISTS handover_notes TEXT,
         ADD COLUMN IF NOT EXISTS medical_certificate_path VARCHAR(500)
     `);
+
+    // Leave requests: add updated_at column
+    await query(`ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`);
+
+    // Leave request audit history table
+    await query(`
+      CREATE TABLE IF NOT EXISTS leave_request_history (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        leave_request_id UUID NOT NULL REFERENCES leave_requests(id) ON DELETE CASCADE,
+        employee_id UUID NOT NULL,
+        leave_type VARCHAR(50) NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        reason TEXT,
+        status VARCHAR(20) NOT NULL,
+        approver_id UUID,
+        rejection_reason TEXT,
+        handover_employee_id UUID,
+        handover_notes TEXT,
+        medical_certificate_path TEXT,
+        change_type VARCHAR(20) NOT NULL,
+        changed_by UUID NOT NULL,
+        changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_lrh_leave_request_id ON leave_request_history(leave_request_id)`);
   } catch (err) {
     // Table may not exist yet — ignore
   }

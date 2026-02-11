@@ -4,13 +4,8 @@ import { emitLeaveRequestCreated, emitLeaveRequestUpdated, emitLeaveRequestDelet
 import { getPaginationParams, getSortParams } from '../utils/pagination';
 
 export class LeaveRequestController {
-    /**
-     * Get all leave requests with optional pagination
-     * Query params: page, limit, status, employeeId, type, sortBy, sortOrder
-     */
     async getAllLeaveRequests(req: Request, res: Response): Promise<void> {
         try {
-            // Check if pagination is requested
             const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
 
             if (usePagination) {
@@ -37,7 +32,6 @@ export class LeaveRequestController {
 
                 res.json(result);
             } else {
-                // Backward compatibility: return all requests without pagination
                 const requests = await LeaveRequestService.getAllLeaveRequests();
                 res.json(requests);
             }
@@ -51,13 +45,11 @@ export class LeaveRequestController {
         try {
             const requestData = req.body;
 
-            // Validate required fields
             if (!requestData.employeeId || !requestData.type || !requestData.startDate || !requestData.endDate) {
                 res.status(400).json({ error: 'Missing required fields' });
                 return;
             }
 
-            // Validate dates
             const start = new Date(requestData.startDate);
             const end = new Date(requestData.endDate);
 
@@ -66,20 +58,58 @@ export class LeaveRequestController {
                 return;
             }
 
-            // Handle file upload (multer populates req.file for multipart)
             if (req.file) {
                 requestData.medicalCertificatePath = `/uploads/medical-certs/${req.file.filename}`;
             }
 
             const leaveRequest = await LeaveRequestService.createLeaveRequest(requestData);
 
-            // Emit real-time event
             emitLeaveRequestCreated(leaveRequest);
 
             res.status(201).json(leaveRequest);
         } catch (error: any) {
             console.error('Create leave request error:', error);
             res.status(400).json({ error: error.message || 'Failed to create leave request' });
+        }
+    }
+
+    async editLeaveRequest(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const employeeId = (req as any).user?.employeeId;
+
+            if (!employeeId) {
+                res.status(401).json({ error: 'Unauthorized' });
+                return;
+            }
+
+            const editData = req.body;
+
+            if (!editData.type || !editData.startDate || !editData.endDate) {
+                res.status(400).json({ error: 'Missing required fields' });
+                return;
+            }
+
+            const start = new Date(editData.startDate);
+            const end = new Date(editData.endDate);
+            if (end < start) {
+                res.status(400).json({ error: 'End date must be after start date' });
+                return;
+            }
+
+            if (req.file) {
+                editData.medicalCertificatePath = `/uploads/medical-certs/${req.file.filename}`;
+            }
+
+            const leaveRequest = await LeaveRequestService.editLeaveRequest(id, employeeId, editData);
+
+            emitLeaveRequestUpdated(leaveRequest);
+
+            res.json(leaveRequest);
+        } catch (error: any) {
+            console.error('Edit leave request error:', error);
+            const statusCode = error.statusCode || 400;
+            res.status(statusCode).json({ error: error.message || 'Failed to edit leave request' });
         }
     }
 
@@ -100,7 +130,6 @@ export class LeaveRequestController {
                 approverEmployeeId,
             });
 
-            // Emit real-time event
             emitLeaveRequestUpdated(leaveRequest);
 
             res.json(leaveRequest);
@@ -119,7 +148,6 @@ export class LeaveRequestController {
             const { id } = req.params;
             await LeaveRequestService.deleteLeaveRequest(id);
 
-            // Emit real-time event
             emitLeaveRequestDeleted(id);
 
             res.json({ message: 'Leave request deleted successfully' });
@@ -143,16 +171,57 @@ export class LeaveRequestController {
                 return;
             }
 
-            await LeaveRequestService.cancelLeaveRequest(id, employeeId);
+            const result = await LeaveRequestService.cancelLeaveRequest(id, employeeId);
 
-            // Emit real-time event
-            emitLeaveRequestDeleted(id);
-
-            res.json({ message: 'Leave request cancelled successfully' });
+            if (result.action === 'deleted') {
+                emitLeaveRequestDeleted(id);
+                res.json({ message: 'Leave request cancelled successfully', action: 'deleted' });
+            } else {
+                // cancel_requested
+                if (result.leaveRequest) {
+                    emitLeaveRequestUpdated(result.leaveRequest);
+                }
+                res.json({ message: 'Leave cancellation requested. Awaiting manager confirmation.', action: 'cancel_requested' });
+            }
         } catch (error: any) {
             console.error('Cancel leave request error:', error);
             const statusCode = error.statusCode || 500;
             res.status(statusCode).json({ error: error.message || 'Failed to cancel leave request' });
+        }
+    }
+
+    async handleCancelDecision(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const { decision } = req.body;
+            const approverEmployeeId = (req as any).user?.employeeId;
+
+            if (!approverEmployeeId) {
+                res.status(401).json({ error: 'Unauthorized' });
+                return;
+            }
+
+            if (!decision || !['approve_cancel', 'reject_cancel'].includes(decision)) {
+                res.status(400).json({ error: 'Invalid decision. Must be "approve_cancel" or "reject_cancel".' });
+                return;
+            }
+
+            const result = await LeaveRequestService.handleCancelDecision(id, decision, approverEmployeeId);
+
+            if (result.action === 'deleted') {
+                emitLeaveRequestDeleted(id);
+                res.json({ message: 'Leave cancellation approved. Request has been deleted.' });
+            } else {
+                // reverted
+                if (result.leaveRequest) {
+                    emitLeaveRequestUpdated(result.leaveRequest);
+                }
+                res.json({ message: 'Leave cancellation rejected. Request reverted to Approved.' });
+            }
+        } catch (error: any) {
+            console.error('Handle cancel decision error:', error);
+            const statusCode = error.statusCode || 500;
+            res.status(statusCode).json({ error: error.message || 'Failed to handle cancel decision' });
         }
     }
 

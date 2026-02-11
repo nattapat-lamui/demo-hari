@@ -16,6 +16,7 @@ exports.LeaveRequestService = void 0;
 const db_1 = require("../db");
 const SystemConfigService_1 = __importDefault(require("./SystemConfigService"));
 const NotificationService_1 = __importDefault(require("./NotificationService"));
+const transaction_1 = require("../utils/transaction");
 const pagination_1 = require("../utils/pagination");
 const BASE_SELECT = `
     SELECT lr.*, e.avatar, e.name as employee_name,
@@ -37,7 +38,6 @@ class LeaveRequestService {
     }
     getLeaveRequestsPaginated(paginationParams_1, filters_1) {
         return __awaiter(this, arguments, void 0, function* (paginationParams, filters, sortField = 'created_at', sortOrder = 'DESC') {
-            // Build WHERE clause for filters
             const whereClauses = [];
             const params = [];
             let paramCount = 0;
@@ -57,7 +57,6 @@ class LeaveRequestService {
                 params.push(filters.type);
             }
             const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-            // Field mapping for sorting
             const fieldMapping = {
                 'created_at': 'lr.created_at',
                 'start_date': 'lr.start_date',
@@ -65,12 +64,10 @@ class LeaveRequestService {
                 'status': 'lr.status',
                 'type': 'lr.leave_type',
             };
-            // Get total count
             const countResult = yield (0, db_1.query)(`SELECT COUNT(*) as total
              FROM leave_requests lr
              ${whereClause}`, params);
             const total = parseInt(countResult.rows[0].total);
-            // Get paginated data
             const sortClause = (0, pagination_1.buildSortClause)(sortField, sortOrder, fieldMapping);
             const paginationClause = (0, pagination_1.buildPaginationClause)(paginationParams);
             const result = yield (0, db_1.query)(`SELECT lr.*, e.avatar, e.name as employee_name,
@@ -135,6 +132,8 @@ class LeaveRequestService {
             const result = yield (0, db_1.query)(`INSERT INTO leave_requests (employee_id, leave_type, start_date, end_date, reason, status, handover_employee_id, handover_notes, medical_certificate_path)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING *`, [employeeId, type, startDate, endDate, reason || '', 'Pending', handoverEmployeeId || null, handoverNotes || null, medicalCertificatePath || null]);
+            // Snapshot to history
+            yield this.snapshotToHistory(result.rows[0].id, 'created', employeeId);
             // Get employee info (avatar and name)
             const employeeResult = yield (0, db_1.query)('SELECT avatar, name FROM employees WHERE id = $1', [employeeId]);
             const avatar = (_b = employeeResult.rows[0]) === null || _b === void 0 ? void 0 : _b.avatar;
@@ -145,7 +144,7 @@ class LeaveRequestService {
                     title: 'New Leave Request',
                     message: `${employeeName} has submitted a ${type} leave request (${dates}).`,
                     type: 'leave',
-                    link: '/time-off',
+                    link: '/leave-requests',
                 });
             }
             catch (notifError) {
@@ -153,23 +152,126 @@ class LeaveRequestService {
             }
             return Object.assign(Object.assign({}, this.mapRowToLeaveRequest(result.rows[0])), { avatar,
                 employeeName,
-                // Add computed fields
                 dates,
                 days });
+        });
+    }
+    editLeaveRequest(id, employeeId, editData) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return (0, transaction_1.withTransaction)(() => __awaiter(this, void 0, void 0, function* () {
+                var _a, _b;
+                // Fetch existing request
+                const existing = yield (0, db_1.query)('SELECT * FROM leave_requests WHERE id = $1', [id]);
+                if (existing.rows.length === 0) {
+                    const err = new Error('Leave request not found');
+                    err.statusCode = 404;
+                    throw err;
+                }
+                const row = existing.rows[0];
+                if (row.employee_id !== employeeId) {
+                    const err = new Error('You can only edit your own leave requests');
+                    err.statusCode = 403;
+                    throw err;
+                }
+                if (!['Pending', 'Approved'].includes(row.status)) {
+                    const err = new Error('Only Pending or Approved leave requests can be edited');
+                    err.statusCode = 400;
+                    throw err;
+                }
+                // Guard: cannot edit started/past leaves
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const startDate = new Date(row.start_date);
+                startDate.setHours(0, 0, 0, 0);
+                if (startDate <= today) {
+                    const err = new Error('Cannot edit leaves that have already started or are in the past');
+                    err.statusCode = 400;
+                    throw err;
+                }
+                // Calculate new days
+                const newStart = new Date(editData.startDate);
+                const newEnd = new Date(editData.endDate);
+                const newDays = Math.ceil(Math.abs(newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                // Re-validate quota (exclude current request from used-days count)
+                const leaveQuotas = yield SystemConfigService_1.default.getLeaveQuotas();
+                const quota = leaveQuotas.find(q => q.type === editData.type);
+                if (quota && quota.total !== -1) {
+                    const usedResult = yield (0, db_1.query)(`SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
+                     FROM leave_requests
+                     WHERE employee_id = $1 AND leave_type = $2 AND status IN ('Approved', 'Pending') AND id != $3`, [employeeId, editData.type, id]);
+                    const usedDays = parseInt(((_a = usedResult.rows[0]) === null || _a === void 0 ? void 0 : _a.used_days) || '0', 10);
+                    const remaining = quota.total - usedDays;
+                    if (newDays > remaining) {
+                        const err = new Error(remaining <= 0
+                            ? `You have no remaining ${editData.type} days. (${usedDays}/${quota.total} used)`
+                            : `Insufficient ${editData.type} balance. You have ${remaining} day(s) remaining but requested ${newDays}.`);
+                        err.statusCode = 400;
+                        throw err;
+                    }
+                }
+                // Re-validate medical cert if Sick Leave >= 3 days
+                const medCertPath = editData.medicalCertificatePath || row.medical_certificate_path;
+                if (editData.type === 'Sick Leave' && newDays >= 3 && !medCertPath) {
+                    const err = new Error('A medical certificate is required for sick leave of 3 or more days.');
+                    err.statusCode = 400;
+                    throw err;
+                }
+                // Snapshot current state to history before editing
+                yield this.snapshotToHistory(id, 'edited', employeeId);
+                // If was Approved, reset to Pending
+                const newStatus = row.status === 'Approved' ? 'Pending' : row.status;
+                // Update
+                yield (0, db_1.query)(`UPDATE leave_requests
+                 SET leave_type = $1, start_date = $2, end_date = $3, reason = $4,
+                     handover_employee_id = $5, handover_notes = $6, medical_certificate_path = $7,
+                     status = $8, updated_at = NOW()
+                 WHERE id = $9
+                 RETURNING *`, [
+                    editData.type,
+                    editData.startDate,
+                    editData.endDate,
+                    editData.reason || '',
+                    editData.handoverEmployeeId || null,
+                    editData.handoverNotes || null,
+                    editData.medicalCertificatePath || medCertPath || null,
+                    newStatus,
+                    id,
+                ]);
+                const leaveRequest = yield this.getLeaveRequestById(id);
+                if (!leaveRequest) {
+                    throw new Error('Failed to retrieve updated leave request');
+                }
+                // Notify admins
+                try {
+                    const employeeResult = yield (0, db_1.query)('SELECT name FROM employees WHERE id = $1', [employeeId]);
+                    const employeeName = ((_b = employeeResult.rows[0]) === null || _b === void 0 ? void 0 : _b.name) || 'Unknown';
+                    yield NotificationService_1.default.notifyAdmins({
+                        title: 'Leave Request Edited',
+                        message: `${employeeName} has edited their ${editData.type} leave request.${row.status === 'Approved' ? ' Status reset to Pending.' : ''}`,
+                        type: 'leave',
+                        link: '/leave-requests',
+                    });
+                }
+                catch (notifError) {
+                    console.error('Failed to notify admins about leave edit:', notifError);
+                }
+                return leaveRequest;
+            }));
         });
     }
     updateLeaveRequestStatus(id, updateData) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
             const { status, rejectionReason, approverEmployeeId } = updateData;
-            const result = yield (0, db_1.query)(`UPDATE leave_requests SET status = $1, rejection_reason = $2, approver_id = $3 WHERE id = $4 RETURNING *`, [status, rejectionReason || null, approverEmployeeId || null, id]);
+            // Snapshot before status change
+            yield this.snapshotToHistory(id, 'status_change', approverEmployeeId || 'system');
+            const result = yield (0, db_1.query)(`UPDATE leave_requests SET status = $1, rejection_reason = $2, approver_id = $3, updated_at = NOW() WHERE id = $4 RETURNING *`, [status, rejectionReason || null, approverEmployeeId || null, id]);
             if (result.rows.length === 0) {
                 throw new Error('Leave request not found');
             }
             const leaveRequest = this.mapRowToLeaveRequest(result.rows[0]);
             // Send notification to employee about status change
             try {
-                // Get employee's user_id
                 const employeeResult = yield (0, db_1.query)('SELECT user_id, name FROM employees WHERE id = $1', [leaveRequest.employeeId]);
                 if ((_a = employeeResult.rows[0]) === null || _a === void 0 ? void 0 : _a.user_id) {
                     const employee = employeeResult.rows[0];
@@ -194,24 +296,120 @@ class LeaveRequestService {
     }
     cancelLeaveRequest(id, employeeId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Verify request exists and belongs to the employee
-            const existing = yield (0, db_1.query)('SELECT id, employee_id, status FROM leave_requests WHERE id = $1', [id]);
+            var _a;
+            const existing = yield (0, db_1.query)(`${BASE_SELECT}
+             WHERE lr.id = $1`, [id]);
             if (existing.rows.length === 0) {
                 const err = new Error('Leave request not found');
                 err.statusCode = 404;
                 throw err;
             }
-            if (existing.rows[0].employee_id !== employeeId) {
+            const row = existing.rows[0];
+            if (row.employee_id !== employeeId) {
                 const err = new Error('You can only cancel your own leave requests');
                 err.statusCode = 403;
                 throw err;
             }
-            if (existing.rows[0].status !== 'Pending') {
-                const err = new Error('Only pending leave requests can be cancelled');
+            const status = row.status;
+            if (status === 'Pending') {
+                // Snapshot then delete
+                yield this.snapshotToHistory(id, 'cancel_requested', employeeId);
+                yield (0, db_1.query)('DELETE FROM leave_requests WHERE id = $1', [id]);
+                return { action: 'deleted' };
+            }
+            if (status === 'Approved') {
+                // Guard: cannot cancel started/past leaves
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const startDate = new Date(row.start_date);
+                startDate.setHours(0, 0, 0, 0);
+                if (startDate <= today) {
+                    const err = new Error('Cannot cancel leaves that have already started or are in the past');
+                    err.statusCode = 400;
+                    throw err;
+                }
+                // Snapshot then set to Cancel Requested
+                yield this.snapshotToHistory(id, 'cancel_requested', employeeId);
+                yield (0, db_1.query)(`UPDATE leave_requests SET status = 'Cancel Requested', updated_at = NOW() WHERE id = $1`, [id]);
+                const leaveRequest = yield this.getLeaveRequestById(id);
+                // Notify admins
+                try {
+                    const employeeResult = yield (0, db_1.query)('SELECT name FROM employees WHERE id = $1', [employeeId]);
+                    const employeeName = ((_a = employeeResult.rows[0]) === null || _a === void 0 ? void 0 : _a.name) || 'Unknown';
+                    yield NotificationService_1.default.notifyAdmins({
+                        title: 'Leave Cancellation Requested',
+                        message: `${employeeName} has requested to cancel their approved ${row.leave_type} leave.`,
+                        type: 'leave',
+                        link: '/leave-requests',
+                    });
+                }
+                catch (notifError) {
+                    console.error('Failed to notify admins about cancel request:', notifError);
+                }
+                return { action: 'cancel_requested', leaveRequest: leaveRequest || undefined };
+            }
+            // Rejected or Cancel Requested
+            const err = new Error(`Cannot cancel a leave request with status "${status}"`);
+            err.statusCode = 400;
+            throw err;
+        });
+    }
+    handleCancelDecision(id, decision, approverEmployeeId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
+            const existing = yield (0, db_1.query)('SELECT * FROM leave_requests WHERE id = $1', [id]);
+            if (existing.rows.length === 0) {
+                const err = new Error('Leave request not found');
+                err.statusCode = 404;
+                throw err;
+            }
+            const row = existing.rows[0];
+            if (row.status !== 'Cancel Requested') {
+                const err = new Error('This leave request is not in Cancel Requested status');
                 err.statusCode = 400;
                 throw err;
             }
-            yield (0, db_1.query)('DELETE FROM leave_requests WHERE id = $1', [id]);
+            yield this.snapshotToHistory(id, 'status_change', approverEmployeeId);
+            if (decision === 'approve_cancel') {
+                yield (0, db_1.query)('DELETE FROM leave_requests WHERE id = $1', [id]);
+                // Notify employee
+                try {
+                    const employeeResult = yield (0, db_1.query)('SELECT user_id, name FROM employees WHERE id = $1', [row.employee_id]);
+                    if ((_a = employeeResult.rows[0]) === null || _a === void 0 ? void 0 : _a.user_id) {
+                        yield NotificationService_1.default.create({
+                            user_id: employeeResult.rows[0].user_id,
+                            title: 'Leave Cancellation Approved',
+                            message: `Your ${row.leave_type} leave cancellation has been approved.`,
+                            type: 'success',
+                            link: '/time-off',
+                        });
+                    }
+                }
+                catch (notifError) {
+                    console.error('Failed to notify employee about cancel approval:', notifError);
+                }
+                return { action: 'deleted' };
+            }
+            // reject_cancel: revert to Approved
+            yield (0, db_1.query)(`UPDATE leave_requests SET status = 'Approved', updated_at = NOW() WHERE id = $1`, [id]);
+            const leaveRequest = yield this.getLeaveRequestById(id);
+            // Notify employee
+            try {
+                const employeeResult = yield (0, db_1.query)('SELECT user_id, name FROM employees WHERE id = $1', [row.employee_id]);
+                if ((_b = employeeResult.rows[0]) === null || _b === void 0 ? void 0 : _b.user_id) {
+                    yield NotificationService_1.default.create({
+                        user_id: employeeResult.rows[0].user_id,
+                        title: 'Leave Cancellation Rejected',
+                        message: `Your ${row.leave_type} leave cancellation has been rejected. Your leave remains approved.`,
+                        type: 'warning',
+                        link: '/time-off',
+                    });
+                }
+            }
+            catch (notifError) {
+                console.error('Failed to notify employee about cancel rejection:', notifError);
+            }
+            return { action: 'reverted', leaveRequest: leaveRequest || undefined };
         });
     }
     deleteLeaveRequest(id) {
@@ -224,8 +422,6 @@ class LeaveRequestService {
     }
     getLeaveBalances(employeeId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Get all leave requests for this employee
-            // Calculate days from start_date and end_date since 'days' column doesn't exist
             const result = yield (0, db_1.query)(`SELECT leave_type,
                     SUM((end_date::date - start_date::date) + 1) as used_days
              FROM leave_requests
@@ -235,14 +431,30 @@ class LeaveRequestService {
                 acc[row.leave_type] = parseInt(row.used_days);
                 return acc;
             }, {});
-            // Get leave quotas from database configuration
             const leaveQuotas = yield SystemConfigService_1.default.getLeaveQuotas();
             return leaveQuotas.map(({ type, total }) => ({
                 type,
-                total, // -1 means unlimited (JSON-safe, unlike Infinity)
+                total,
                 used: usedDays[type] || 0,
                 remaining: total === -1 ? -1 : Math.max(0, total - (usedDays[type] || 0)),
             }));
+        });
+    }
+    snapshotToHistory(leaveRequestId, changeType, changedBy) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                yield (0, db_1.query)(`INSERT INTO leave_request_history
+                    (leave_request_id, employee_id, leave_type, start_date, end_date, reason, status,
+                     approver_id, rejection_reason, handover_employee_id, handover_notes,
+                     medical_certificate_path, change_type, changed_by)
+                 SELECT id, employee_id, leave_type, start_date, end_date, reason, status,
+                        approver_id, rejection_reason, handover_employee_id, handover_notes,
+                        medical_certificate_path, $2, $3
+                 FROM leave_requests WHERE id = $1`, [leaveRequestId, changeType, changedBy]);
+            }
+            catch (err) {
+                console.error('Failed to snapshot leave request history:', err);
+            }
         });
     }
     mapRowToLeaveRequest(row) {
@@ -264,6 +476,7 @@ class LeaveRequestService {
             medicalCertificatePath: row.medical_certificate_path || undefined,
             rejectionReason: row.rejection_reason || undefined,
             approverEmployeeId: row.approver_id || undefined,
+            updatedAt: row.updated_at || undefined,
         };
     }
 }

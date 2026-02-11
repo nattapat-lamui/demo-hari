@@ -519,6 +519,47 @@ export const useCancelLeaveRequest = () => {
   });
 };
 
+export const useEditLeaveRequest = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, formData }: { id: string; formData: FormData }) => {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${BASE_URL}/leave-requests/${id}`, {
+        method: 'PUT',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || err.message || 'Failed to edit leave request');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.leaveRequests.all });
+      qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
+    },
+  });
+};
+
+export const useHandleCancelDecision = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, decision }: { id: string; decision: 'approve_cancel' | 'reject_cancel' }) =>
+      api.post(`/leave-requests/${id}/cancel-decision`, { decision }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.leaveRequests.all });
+      qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
+    },
+  });
+};
+
+export const useLeaveRequestById = (id: string | undefined) => {
+  const { data: allRequests = [] } = useLeaveRequests();
+  const request = id ? allRequests.find((r) => r.id === id) : undefined;
+  return { data: request, isPending: false };
+};
+
 export const useEmployeeSearch = (searchQuery: string) => {
   return useQuery({
     queryKey: [...queryKeys.employees.all, 'search', searchQuery] as const,

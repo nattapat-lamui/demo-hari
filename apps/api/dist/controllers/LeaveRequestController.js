@@ -17,14 +17,9 @@ const LeaveRequestService_1 = __importDefault(require("../services/LeaveRequestS
 const socket_1 = require("../socket");
 const pagination_1 = require("../utils/pagination");
 class LeaveRequestController {
-    /**
-     * Get all leave requests with optional pagination
-     * Query params: page, limit, status, employeeId, type, sortBy, sortOrder
-     */
     getAllLeaveRequests(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                // Check if pagination is requested
                 const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
                 if (usePagination) {
                     const paginationParams = (0, pagination_1.getPaginationParams)(req);
@@ -38,7 +33,6 @@ class LeaveRequestController {
                     res.json(result);
                 }
                 else {
-                    // Backward compatibility: return all requests without pagination
                     const requests = yield LeaveRequestService_1.default.getAllLeaveRequests();
                     res.json(requests);
                 }
@@ -53,30 +47,61 @@ class LeaveRequestController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const requestData = req.body;
-                // Validate required fields
                 if (!requestData.employeeId || !requestData.type || !requestData.startDate || !requestData.endDate) {
                     res.status(400).json({ error: 'Missing required fields' });
                     return;
                 }
-                // Validate dates
                 const start = new Date(requestData.startDate);
                 const end = new Date(requestData.endDate);
                 if (end < start) {
                     res.status(400).json({ error: 'End date must be after start date' });
                     return;
                 }
-                // Handle file upload (multer populates req.file for multipart)
                 if (req.file) {
                     requestData.medicalCertificatePath = `/uploads/medical-certs/${req.file.filename}`;
                 }
                 const leaveRequest = yield LeaveRequestService_1.default.createLeaveRequest(requestData);
-                // Emit real-time event
                 (0, socket_1.emitLeaveRequestCreated)(leaveRequest);
                 res.status(201).json(leaveRequest);
             }
             catch (error) {
                 console.error('Create leave request error:', error);
                 res.status(400).json({ error: error.message || 'Failed to create leave request' });
+            }
+        });
+    }
+    editLeaveRequest(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const { id } = req.params;
+                const employeeId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.employeeId;
+                if (!employeeId) {
+                    res.status(401).json({ error: 'Unauthorized' });
+                    return;
+                }
+                const editData = req.body;
+                if (!editData.type || !editData.startDate || !editData.endDate) {
+                    res.status(400).json({ error: 'Missing required fields' });
+                    return;
+                }
+                const start = new Date(editData.startDate);
+                const end = new Date(editData.endDate);
+                if (end < start) {
+                    res.status(400).json({ error: 'End date must be after start date' });
+                    return;
+                }
+                if (req.file) {
+                    editData.medicalCertificatePath = `/uploads/medical-certs/${req.file.filename}`;
+                }
+                const leaveRequest = yield LeaveRequestService_1.default.editLeaveRequest(id, employeeId, editData);
+                (0, socket_1.emitLeaveRequestUpdated)(leaveRequest);
+                res.json(leaveRequest);
+            }
+            catch (error) {
+                console.error('Edit leave request error:', error);
+                const statusCode = error.statusCode || 400;
+                res.status(statusCode).json({ error: error.message || 'Failed to edit leave request' });
             }
         });
     }
@@ -96,7 +121,6 @@ class LeaveRequestController {
                     rejectionReason: status === 'Rejected' ? rejectionReason : undefined,
                     approverEmployeeId,
                 });
-                // Emit real-time event
                 (0, socket_1.emitLeaveRequestUpdated)(leaveRequest);
                 res.json(leaveRequest);
             }
@@ -116,7 +140,6 @@ class LeaveRequestController {
             try {
                 const { id } = req.params;
                 yield LeaveRequestService_1.default.deleteLeaveRequest(id);
-                // Emit real-time event
                 (0, socket_1.emitLeaveRequestDeleted)(id);
                 res.json({ message: 'Leave request deleted successfully' });
             }
@@ -141,15 +164,58 @@ class LeaveRequestController {
                     res.status(401).json({ error: 'Unauthorized' });
                     return;
                 }
-                yield LeaveRequestService_1.default.cancelLeaveRequest(id, employeeId);
-                // Emit real-time event
-                (0, socket_1.emitLeaveRequestDeleted)(id);
-                res.json({ message: 'Leave request cancelled successfully' });
+                const result = yield LeaveRequestService_1.default.cancelLeaveRequest(id, employeeId);
+                if (result.action === 'deleted') {
+                    (0, socket_1.emitLeaveRequestDeleted)(id);
+                    res.json({ message: 'Leave request cancelled successfully', action: 'deleted' });
+                }
+                else {
+                    // cancel_requested
+                    if (result.leaveRequest) {
+                        (0, socket_1.emitLeaveRequestUpdated)(result.leaveRequest);
+                    }
+                    res.json({ message: 'Leave cancellation requested. Awaiting manager confirmation.', action: 'cancel_requested' });
+                }
             }
             catch (error) {
                 console.error('Cancel leave request error:', error);
                 const statusCode = error.statusCode || 500;
                 res.status(statusCode).json({ error: error.message || 'Failed to cancel leave request' });
+            }
+        });
+    }
+    handleCancelDecision(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const { id } = req.params;
+                const { decision } = req.body;
+                const approverEmployeeId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.employeeId;
+                if (!approverEmployeeId) {
+                    res.status(401).json({ error: 'Unauthorized' });
+                    return;
+                }
+                if (!decision || !['approve_cancel', 'reject_cancel'].includes(decision)) {
+                    res.status(400).json({ error: 'Invalid decision. Must be "approve_cancel" or "reject_cancel".' });
+                    return;
+                }
+                const result = yield LeaveRequestService_1.default.handleCancelDecision(id, decision, approverEmployeeId);
+                if (result.action === 'deleted') {
+                    (0, socket_1.emitLeaveRequestDeleted)(id);
+                    res.json({ message: 'Leave cancellation approved. Request has been deleted.' });
+                }
+                else {
+                    // reverted
+                    if (result.leaveRequest) {
+                        (0, socket_1.emitLeaveRequestUpdated)(result.leaveRequest);
+                    }
+                    res.json({ message: 'Leave cancellation rejected. Request reverted to Approved.' });
+                }
+            }
+            catch (error) {
+                console.error('Handle cancel decision error:', error);
+                const statusCode = error.statusCode || 500;
+                res.status(statusCode).json({ error: error.message || 'Failed to handle cancel decision' });
             }
         });
     }

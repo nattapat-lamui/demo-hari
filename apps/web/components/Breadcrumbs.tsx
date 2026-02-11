@@ -8,6 +8,9 @@ import { useEmployeeDetail } from '../hooks/queries';
  * Maps URL segments to human-readable display names
  */
 const ROUTE_NAME_MAP: Record<string, string> = {
+  'time-off': 'Time Off',
+  'request': 'Request Leave',
+  'leave-requests': 'Leave Requests',
   'wellbeing': 'Well-being',
   'employees': 'Employees',
   'org-chart': 'Org Chart',

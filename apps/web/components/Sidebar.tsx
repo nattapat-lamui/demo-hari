@@ -18,10 +18,15 @@ import {
   Clock
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLeaveRequests } from '../hooks/queries';
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const isAdmin = user?.role === 'HR_ADMIN';
+  const { data: leaveRequests = [] } = useLeaveRequests();
+  const hasPendingLeaves = isAdmin && leaveRequests.some(
+    (r) => r.status === 'Pending' || r.status === 'Cancel Requested',
+  );
 
   // Define nav items based on role
   const navItems = [
@@ -42,6 +47,7 @@ export const Sidebar: React.FC = () => {
     { icon: <ClipboardList size={20} />, label: 'Onboarding', path: '/onboarding', allowed: true },
 
     // Admin Specific
+    { icon: <Calendar size={20} />, label: 'Leave Requests', path: '/leave-requests', allowed: isAdmin },
     { icon: <ShieldCheck size={20} />, label: 'Compliance', path: '/compliance', allowed: isAdmin },
     { icon: <BarChart2 size={20} />, label: 'Analytics', path: '/analytics', allowed: isAdmin },
 
@@ -81,6 +87,9 @@ export const Sidebar: React.FC = () => {
           >
             {item.icon}
             <span className="text-sm font-medium">{item.label}</span>
+            {item.path === '/leave-requests' && hasPendingLeaves && (
+              <span className="w-2 h-2 rounded-full bg-red-500 ml-auto shrink-0" />
+            )}
           </NavLink>
         ))}
       </nav>

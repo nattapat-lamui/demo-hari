@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Calendar, Clock, AlertCircle, Plus, CheckCircle2, XCircle, Building2, Briefcase, IdCard } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Clock, AlertCircle, Plus, CheckCircle2, XCircle, Building2, Briefcase, IdCard, Pencil } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { useLeaveRequests, useLeaveBalance, useAddLeaveRequestWithFile, useEmployeeDetail, useCancelLeaveRequest } from '../hooks/queries';
+import { useLeaveRequests, useLeaveBalance, useEmployeeDetail, useCancelLeaveRequest } from '../hooks/queries';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { LeaveCalendar } from '../components/LeaveCalendar';
-import { RequestTimeOffModal } from '../components/RequestTimeOffModal';
-import type { LeaveBalance } from '../types';
+import { CancelLeaveModal } from '../components/CancelLeaveModal';
+import type { LeaveBalance, LeaveRequest } from '../types';
 
 // ---------------------------------------------------------------------------
 // Circular Progress Ring
@@ -70,19 +71,43 @@ const LEAVE_CARDS: CardConfig[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Check if a leave request is in the future (start date is after today) */
+function isFutureLeave(req: LeaveRequest): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(req.startDate);
+  start.setHours(0, 0, 0, 0);
+  return start > today;
+}
+
+/** Can edit: future + (Pending or Approved) */
+function canEdit(req: LeaveRequest): boolean {
+  return isFutureLeave(req) && (req.status === 'Pending' || req.status === 'Approved');
+}
+
+/** Can cancel: (Pending) or (Approved + future) */
+function canCancel(req: LeaveRequest): boolean {
+  if (req.status === 'Pending') return true;
+  if (req.status === 'Approved' && isFutureLeave(req)) return true;
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // Page Component
 // ---------------------------------------------------------------------------
 export const TimeOff: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast } = useToast();
   const { data: allRequests = [], isPending } = useLeaveRequests();
   const { data: balances = [] } = useLeaveBalance(user?.employeeId);
   const { data: empDetail } = useEmployeeDetail(user?.employeeId);
-  const addMutation = useAddLeaveRequestWithFile();
   const cancelMutation = useCancelLeaveRequest();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelModalRequest, setCancelModalRequest] = useState<LeaveRequest | null>(null);
 
   const myRequests = useMemo(
     () => allRequests.filter((r) => r.employeeId === user?.employeeId),
@@ -113,22 +138,20 @@ export const TimeOff: React.FC = () => {
     return map;
   }, [myRequests]);
 
-  const handleSubmit = async (formData: FormData) => {
-    await addMutation.mutateAsync(formData);
-    showToast('Leave request submitted!', 'success');
-    setIsModalOpen(false);
-  };
-
-  const handleCancel = async (id: string) => {
-    if (!confirm('Are you sure you want to cancel this leave request?')) return;
-    setCancellingId(id);
+  const handleCancelConfirm = async () => {
+    if (!cancelModalRequest) return;
     try {
-      await cancelMutation.mutateAsync(id);
-      showToast('Leave request cancelled', 'success');
+      await cancelMutation.mutateAsync(cancelModalRequest.id);
+      showToast(
+        cancelModalRequest.status === 'Approved'
+          ? 'Cancellation request submitted. Awaiting manager confirmation.'
+          : 'Leave request cancelled',
+        'success',
+      );
     } catch (error: any) {
       showToast(error?.message || 'Failed to cancel leave request', 'error');
     } finally {
-      setCancellingId(null);
+      setCancelModalRequest(null);
     }
   };
 
@@ -178,7 +201,7 @@ export const TimeOff: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => navigate('/time-off/request')}
             className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg shadow-sm hover:bg-primary/90 transition-colors w-full sm:w-auto"
           >
             <Plus size={18} /> Request Leave
@@ -276,23 +299,38 @@ export const TimeOff: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        {req.status === 'Pending' && (
+                        {/* Edit button */}
+                        {canEdit(req) && (
                           <button
-                            onClick={() => handleCancel(req.id)}
-                            disabled={cancellingId === req.id}
-                            className="px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-40"
+                            onClick={() => navigate(`/time-off/request/${req.id}`)}
+                            className="p-1.5 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                            title="Edit"
                           >
-                            {cancellingId === req.id ? 'Cancelling...' : 'Cancel'}
+                            <Pencil size={12} />
                           </button>
                         )}
+
+                        {/* Cancel button */}
+                        {canCancel(req) && (
+                          <button
+                            onClick={() => setCancelModalRequest(req)}
+                            className="px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        )}
+
+                        {/* Status badge */}
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${
                           req.status === 'Approved' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700' :
                           req.status === 'Rejected' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700' :
+                          req.status === 'Cancel Requested' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700' :
                           'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700'
                         }`}>
                           {req.status === 'Approved' && <CheckCircle2 size={12} />}
                           {req.status === 'Rejected' && <XCircle size={12} />}
                           {req.status === 'Pending' && <Clock size={12} />}
+                          {req.status === 'Cancel Requested' && <AlertCircle size={12} />}
                           {req.status}
                         </span>
                       </div>
@@ -316,13 +354,13 @@ export const TimeOff: React.FC = () => {
         </div>
       </div>
 
-      {/* Request Time Off Modal */}
-      <RequestTimeOffModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleSubmit}
-        isPending={addMutation.isPending}
-        employeeId={user?.employeeId || ''}
+      {/* Cancel Leave Modal */}
+      <CancelLeaveModal
+        isOpen={!!cancelModalRequest}
+        onClose={() => setCancelModalRequest(null)}
+        onConfirm={handleCancelConfirm}
+        request={cancelModalRequest}
+        isPending={cancelMutation.isPending}
       />
     </div>
   );

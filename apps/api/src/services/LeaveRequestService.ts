@@ -1,7 +1,8 @@
 import { query } from '../db';
-import { LeaveRequest, CreateLeaveRequestDTO, UpdateLeaveRequestDTO } from '../models/LeaveRequest';
+import { LeaveRequest, CreateLeaveRequestDTO, UpdateLeaveRequestDTO, EditLeaveRequestDTO } from '../models/LeaveRequest';
 import SystemConfigService from './SystemConfigService';
 import NotificationService from './NotificationService';
+import { withTransaction } from '../utils/transaction';
 import { PaginationParams, PaginatedResult, createPaginatedResult, buildPaginationClause, buildSortClause } from '../utils/pagination';
 
 const BASE_SELECT = `
@@ -28,7 +29,6 @@ export class LeaveRequestService {
         sortField: string = 'created_at',
         sortOrder: 'ASC' | 'DESC' = 'DESC'
     ): Promise<PaginatedResult<LeaveRequest>> {
-        // Build WHERE clause for filters
         const whereClauses: string[] = [];
         const params: any[] = [];
         let paramCount = 0;
@@ -53,7 +53,6 @@ export class LeaveRequestService {
 
         const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-        // Field mapping for sorting
         const fieldMapping: Record<string, string> = {
             'created_at': 'lr.created_at',
             'start_date': 'lr.start_date',
@@ -62,7 +61,6 @@ export class LeaveRequestService {
             'type': 'lr.leave_type',
         };
 
-        // Get total count
         const countResult = await query(
             `SELECT COUNT(*) as total
              FROM leave_requests lr
@@ -71,7 +69,6 @@ export class LeaveRequestService {
         );
         const total = parseInt(countResult.rows[0].total);
 
-        // Get paginated data
         const sortClause = buildSortClause(sortField, sortOrder, fieldMapping);
         const paginationClause = buildPaginationClause(paginationParams);
 
@@ -90,7 +87,6 @@ export class LeaveRequestService {
         );
 
         const data = result.rows.map(this.mapRowToLeaveRequest);
-
         return createPaginatedResult(data, total, paginationParams);
     }
 
@@ -156,6 +152,9 @@ export class LeaveRequestService {
             [employeeId, type, startDate, endDate, reason || '', 'Pending', handoverEmployeeId || null, handoverNotes || null, medicalCertificatePath || null]
         );
 
+        // Snapshot to history
+        await this.snapshotToHistory(result.rows[0].id, 'created', employeeId);
+
         // Get employee info (avatar and name)
         const employeeResult = await query('SELECT avatar, name FROM employees WHERE id = $1', [employeeId]);
         const avatar = employeeResult.rows[0]?.avatar;
@@ -167,7 +166,7 @@ export class LeaveRequestService {
                 title: 'New Leave Request',
                 message: `${employeeName} has submitted a ${type} leave request (${dates}).`,
                 type: 'leave',
-                link: '/time-off',
+                link: '/leave-requests',
             });
         } catch (notifError) {
             console.error('Failed to notify admins about leave request:', notifError);
@@ -177,17 +176,144 @@ export class LeaveRequestService {
             ...this.mapRowToLeaveRequest(result.rows[0]),
             avatar,
             employeeName,
-            // Add computed fields
             dates,
             days,
         };
     }
 
+    async editLeaveRequest(id: string, employeeId: string, editData: EditLeaveRequestDTO): Promise<LeaveRequest> {
+        return withTransaction(async () => {
+            // Fetch existing request
+            const existing = await query(
+                'SELECT * FROM leave_requests WHERE id = $1',
+                [id]
+            );
+
+            if (existing.rows.length === 0) {
+                const err: any = new Error('Leave request not found');
+                err.statusCode = 404;
+                throw err;
+            }
+
+            const row = existing.rows[0];
+
+            if (row.employee_id !== employeeId) {
+                const err: any = new Error('You can only edit your own leave requests');
+                err.statusCode = 403;
+                throw err;
+            }
+
+            if (!['Pending', 'Approved'].includes(row.status)) {
+                const err: any = new Error('Only Pending or Approved leave requests can be edited');
+                err.statusCode = 400;
+                throw err;
+            }
+
+            // Guard: cannot edit started/past leaves
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const startDate = new Date(row.start_date);
+            startDate.setHours(0, 0, 0, 0);
+            if (startDate <= today) {
+                const err: any = new Error('Cannot edit leaves that have already started or are in the past');
+                err.statusCode = 400;
+                throw err;
+            }
+
+            // Calculate new days
+            const newStart = new Date(editData.startDate);
+            const newEnd = new Date(editData.endDate);
+            const newDays = Math.ceil(Math.abs(newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+            // Re-validate quota (exclude current request from used-days count)
+            const leaveQuotas = await SystemConfigService.getLeaveQuotas();
+            const quota = leaveQuotas.find(q => q.type === editData.type);
+            if (quota && quota.total !== -1) {
+                const usedResult = await query(
+                    `SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
+                     FROM leave_requests
+                     WHERE employee_id = $1 AND leave_type = $2 AND status IN ('Approved', 'Pending') AND id != $3`,
+                    [employeeId, editData.type, id]
+                );
+                const usedDays = parseInt(usedResult.rows[0]?.used_days || '0', 10);
+                const remaining = quota.total - usedDays;
+                if (newDays > remaining) {
+                    const err: any = new Error(
+                        remaining <= 0
+                            ? `You have no remaining ${editData.type} days. (${usedDays}/${quota.total} used)`
+                            : `Insufficient ${editData.type} balance. You have ${remaining} day(s) remaining but requested ${newDays}.`
+                    );
+                    err.statusCode = 400;
+                    throw err;
+                }
+            }
+
+            // Re-validate medical cert if Sick Leave >= 3 days
+            const medCertPath = editData.medicalCertificatePath || row.medical_certificate_path;
+            if (editData.type === 'Sick Leave' && newDays >= 3 && !medCertPath) {
+                const err: any = new Error('A medical certificate is required for sick leave of 3 or more days.');
+                err.statusCode = 400;
+                throw err;
+            }
+
+            // Snapshot current state to history before editing
+            await this.snapshotToHistory(id, 'edited', employeeId);
+
+            // If was Approved, reset to Pending
+            const newStatus = row.status === 'Approved' ? 'Pending' : row.status;
+
+            // Update
+            await query(
+                `UPDATE leave_requests
+                 SET leave_type = $1, start_date = $2, end_date = $3, reason = $4,
+                     handover_employee_id = $5, handover_notes = $6, medical_certificate_path = $7,
+                     status = $8, updated_at = NOW()
+                 WHERE id = $9
+                 RETURNING *`,
+                [
+                    editData.type,
+                    editData.startDate,
+                    editData.endDate,
+                    editData.reason || '',
+                    editData.handoverEmployeeId || null,
+                    editData.handoverNotes || null,
+                    editData.medicalCertificatePath || medCertPath || null,
+                    newStatus,
+                    id,
+                ]
+            );
+
+            const leaveRequest = await this.getLeaveRequestById(id);
+            if (!leaveRequest) {
+                throw new Error('Failed to retrieve updated leave request');
+            }
+
+            // Notify admins
+            try {
+                const employeeResult = await query('SELECT name FROM employees WHERE id = $1', [employeeId]);
+                const employeeName = employeeResult.rows[0]?.name || 'Unknown';
+                await NotificationService.notifyAdmins({
+                    title: 'Leave Request Edited',
+                    message: `${employeeName} has edited their ${editData.type} leave request.${row.status === 'Approved' ? ' Status reset to Pending.' : ''}`,
+                    type: 'leave',
+                    link: '/leave-requests',
+                });
+            } catch (notifError) {
+                console.error('Failed to notify admins about leave edit:', notifError);
+            }
+
+            return leaveRequest;
+        });
+    }
+
     async updateLeaveRequestStatus(id: string, updateData: UpdateLeaveRequestDTO): Promise<LeaveRequest> {
         const { status, rejectionReason, approverEmployeeId } = updateData;
 
+        // Snapshot before status change
+        await this.snapshotToHistory(id, 'status_change', approverEmployeeId || 'system');
+
         const result = await query(
-            `UPDATE leave_requests SET status = $1, rejection_reason = $2, approver_id = $3 WHERE id = $4 RETURNING *`,
+            `UPDATE leave_requests SET status = $1, rejection_reason = $2, approver_id = $3, updated_at = NOW() WHERE id = $4 RETURNING *`,
             [status, rejectionReason || null, approverEmployeeId || null, id]
         );
 
@@ -199,7 +325,6 @@ export class LeaveRequestService {
 
         // Send notification to employee about status change
         try {
-            // Get employee's user_id
             const employeeResult = await query(
                 'SELECT user_id, name FROM employees WHERE id = $1',
                 [leaveRequest.employeeId]
@@ -227,10 +352,10 @@ export class LeaveRequestService {
         return leaveRequest;
     }
 
-    async cancelLeaveRequest(id: string, employeeId: string): Promise<void> {
-        // Verify request exists and belongs to the employee
+    async cancelLeaveRequest(id: string, employeeId: string): Promise<{ action: 'deleted' | 'cancel_requested'; leaveRequest?: LeaveRequest }> {
         const existing = await query(
-            'SELECT id, employee_id, status FROM leave_requests WHERE id = $1',
+            `${BASE_SELECT}
+             WHERE lr.id = $1`,
             [id]
         );
 
@@ -240,19 +365,142 @@ export class LeaveRequestService {
             throw err;
         }
 
-        if (existing.rows[0].employee_id !== employeeId) {
+        const row = existing.rows[0];
+
+        if (row.employee_id !== employeeId) {
             const err: any = new Error('You can only cancel your own leave requests');
             err.statusCode = 403;
             throw err;
         }
 
-        if (existing.rows[0].status !== 'Pending') {
-            const err: any = new Error('Only pending leave requests can be cancelled');
+        const status = row.status;
+
+        if (status === 'Pending') {
+            // Snapshot then delete
+            await this.snapshotToHistory(id, 'cancel_requested', employeeId);
+            await query('DELETE FROM leave_requests WHERE id = $1', [id]);
+            return { action: 'deleted' };
+        }
+
+        if (status === 'Approved') {
+            // Guard: cannot cancel started/past leaves
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const startDate = new Date(row.start_date);
+            startDate.setHours(0, 0, 0, 0);
+            if (startDate <= today) {
+                const err: any = new Error('Cannot cancel leaves that have already started or are in the past');
+                err.statusCode = 400;
+                throw err;
+            }
+
+            // Snapshot then set to Cancel Requested
+            await this.snapshotToHistory(id, 'cancel_requested', employeeId);
+            await query(
+                `UPDATE leave_requests SET status = 'Cancel Requested', updated_at = NOW() WHERE id = $1`,
+                [id]
+            );
+
+            const leaveRequest = await this.getLeaveRequestById(id);
+
+            // Notify admins
+            try {
+                const employeeResult = await query('SELECT name FROM employees WHERE id = $1', [employeeId]);
+                const employeeName = employeeResult.rows[0]?.name || 'Unknown';
+                await NotificationService.notifyAdmins({
+                    title: 'Leave Cancellation Requested',
+                    message: `${employeeName} has requested to cancel their approved ${row.leave_type} leave.`,
+                    type: 'leave',
+                    link: '/leave-requests',
+                });
+            } catch (notifError) {
+                console.error('Failed to notify admins about cancel request:', notifError);
+            }
+
+            return { action: 'cancel_requested', leaveRequest: leaveRequest || undefined };
+        }
+
+        // Rejected or Cancel Requested
+        const err: any = new Error(`Cannot cancel a leave request with status "${status}"`);
+        err.statusCode = 400;
+        throw err;
+    }
+
+    async handleCancelDecision(id: string, decision: 'approve_cancel' | 'reject_cancel', approverEmployeeId: string): Promise<{ action: string; leaveRequest?: LeaveRequest }> {
+        const existing = await query(
+            'SELECT * FROM leave_requests WHERE id = $1',
+            [id]
+        );
+
+        if (existing.rows.length === 0) {
+            const err: any = new Error('Leave request not found');
+            err.statusCode = 404;
+            throw err;
+        }
+
+        const row = existing.rows[0];
+
+        if (row.status !== 'Cancel Requested') {
+            const err: any = new Error('This leave request is not in Cancel Requested status');
             err.statusCode = 400;
             throw err;
         }
 
-        await query('DELETE FROM leave_requests WHERE id = $1', [id]);
+        await this.snapshotToHistory(id, 'status_change', approverEmployeeId);
+
+        if (decision === 'approve_cancel') {
+            await query('DELETE FROM leave_requests WHERE id = $1', [id]);
+
+            // Notify employee
+            try {
+                const employeeResult = await query(
+                    'SELECT user_id, name FROM employees WHERE id = $1',
+                    [row.employee_id]
+                );
+                if (employeeResult.rows[0]?.user_id) {
+                    await NotificationService.create({
+                        user_id: employeeResult.rows[0].user_id,
+                        title: 'Leave Cancellation Approved',
+                        message: `Your ${row.leave_type} leave cancellation has been approved.`,
+                        type: 'success',
+                        link: '/time-off',
+                    });
+                }
+            } catch (notifError) {
+                console.error('Failed to notify employee about cancel approval:', notifError);
+            }
+
+            return { action: 'deleted' };
+        }
+
+        // reject_cancel: revert to Approved
+        await query(
+            `UPDATE leave_requests SET status = 'Approved', updated_at = NOW() WHERE id = $1`,
+            [id]
+        );
+
+        const leaveRequest = await this.getLeaveRequestById(id);
+
+        // Notify employee
+        try {
+            const employeeResult = await query(
+                'SELECT user_id, name FROM employees WHERE id = $1',
+                [row.employee_id]
+            );
+            if (employeeResult.rows[0]?.user_id) {
+                await NotificationService.create({
+                    user_id: employeeResult.rows[0].user_id,
+                    title: 'Leave Cancellation Rejected',
+                    message: `Your ${row.leave_type} leave cancellation has been rejected. Your leave remains approved.`,
+                    type: 'warning',
+                    link: '/time-off',
+                });
+            }
+        } catch (notifError) {
+            console.error('Failed to notify employee about cancel rejection:', notifError);
+        }
+
+        return { action: 'reverted', leaveRequest: leaveRequest || undefined };
     }
 
     async deleteLeaveRequest(id: string): Promise<void> {
@@ -263,8 +511,6 @@ export class LeaveRequestService {
     }
 
     async getLeaveBalances(employeeId: string): Promise<any[]> {
-        // Get all leave requests for this employee
-        // Calculate days from start_date and end_date since 'days' column doesn't exist
         const result = await query(
             `SELECT leave_type,
                     SUM((end_date::date - start_date::date) + 1) as used_days
@@ -279,15 +525,32 @@ export class LeaveRequestService {
             return acc;
         }, {});
 
-        // Get leave quotas from database configuration
         const leaveQuotas = await SystemConfigService.getLeaveQuotas();
 
         return leaveQuotas.map(({ type, total }) => ({
             type,
-            total,  // -1 means unlimited (JSON-safe, unlike Infinity)
+            total,
             used: usedDays[type] || 0,
             remaining: total === -1 ? -1 : Math.max(0, total - (usedDays[type] || 0)),
         }));
+    }
+
+    private async snapshotToHistory(leaveRequestId: string, changeType: string, changedBy: string): Promise<void> {
+        try {
+            await query(
+                `INSERT INTO leave_request_history
+                    (leave_request_id, employee_id, leave_type, start_date, end_date, reason, status,
+                     approver_id, rejection_reason, handover_employee_id, handover_notes,
+                     medical_certificate_path, change_type, changed_by)
+                 SELECT id, employee_id, leave_type, start_date, end_date, reason, status,
+                        approver_id, rejection_reason, handover_employee_id, handover_notes,
+                        medical_certificate_path, $2, $3
+                 FROM leave_requests WHERE id = $1`,
+                [leaveRequestId, changeType, changedBy]
+            );
+        } catch (err) {
+            console.error('Failed to snapshot leave request history:', err);
+        }
     }
 
     private mapRowToLeaveRequest(row: any): LeaveRequest {
@@ -309,6 +572,7 @@ export class LeaveRequestService {
             medicalCertificatePath: row.medical_certificate_path || undefined,
             rejectionReason: row.rejection_reason || undefined,
             approverEmployeeId: row.approver_id || undefined,
+            updatedAt: row.updated_at || undefined,
         };
     }
 }
