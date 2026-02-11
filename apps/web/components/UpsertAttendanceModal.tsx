@@ -21,8 +21,6 @@ interface UpsertAttendanceModalProps {
 }
 
 const STATUS_OPTIONS: DropdownOption[] = [
-  { value: 'On-time', label: 'On-time' },
-  { value: 'Late', label: 'Late' },
   { value: 'Absent', label: 'Absent' },
   { value: 'On-leave', label: 'On-leave' },
 ];
@@ -39,7 +37,7 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
   const [date, setDate] = useState('');
   const [clockIn, setClockIn] = useState('');
   const [clockOut, setClockOut] = useState('');
-  const [status, setStatus] = useState<AttendanceStatus>('On-time');
+  const [status, setStatus] = useState<AttendanceStatus>('Absent');
   const [notes, setNotes] = useState('');
 
   const isEditing = !!editingRecord;
@@ -57,7 +55,7 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
       setDate('');
       setClockIn('');
       setClockOut('');
-      setStatus('On-time');
+      setStatus('Absent');
       setNotes('');
     }
   }, [editingRecord, isOpen]);
@@ -79,7 +77,8 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
       date: dateStr,
       clockIn: clockIn ? `${dateStr}T${clockIn}:00+07:00` : undefined,
       clockOut: clockOut ? `${dateStr}T${clockOut}:00+07:00` : undefined,
-      status,
+      // Only send status when no clock times (manual absence/leave entry)
+      status: clockIn ? undefined : status,
       notes: notes || undefined,
     });
   };
@@ -143,18 +142,20 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
           </div>
         </div>
 
-        {/* Status */}
-        <div>
-          <label className="text-sm font-medium text-text-light dark:text-text-dark mb-1 block">
-            Status
-          </label>
-          <Dropdown
-            options={STATUS_OPTIONS}
-            value={status}
-            onChange={(v) => setStatus(v as AttendanceStatus)}
-            width="w-full"
-          />
-        </div>
+        {/* Status — only show when no clock-in (manual absence/leave entry) */}
+        {!clockIn && (
+          <div>
+            <label className="text-sm font-medium text-text-light dark:text-text-dark mb-1 block">
+              Status
+            </label>
+            <Dropdown
+              options={STATUS_OPTIONS}
+              value={status}
+              onChange={(v) => setStatus(v as AttendanceStatus)}
+              width="w-full"
+            />
+          </div>
+        )}
 
         {/* Notes */}
         <div>

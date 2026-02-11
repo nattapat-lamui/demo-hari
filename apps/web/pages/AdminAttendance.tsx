@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users,
-  Clock,
-  AlertCircle,
-  XCircle,
-  CalendarX2,
+  UserCheck,
+  Activity,
+  LogOut,
+  UserX,
   Plus,
   Pencil,
   Trash2,
@@ -25,7 +25,7 @@ import {
   useAllEmployees,
 } from '../hooks/queries';
 import { formatTimeTH } from '../lib/date';
-import type { AdminAttendanceRecord, AdminAttendanceFilters, AttendanceStatus } from '../types';
+import type { AdminAttendanceRecord, AdminAttendanceFilters, AdminDisplayStatus, AttendanceStatus } from '../types';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -47,45 +47,31 @@ const DEPARTMENTS: DropdownOption[] = [
 
 const STATUS_FILTER_OPTIONS: DropdownOption[] = [
   { value: 'All', label: 'All Statuses' },
-  { value: 'On-time', label: 'On-time' },
-  { value: 'Late', label: 'Late' },
-  { value: 'Absent', label: 'Absent' },
-  { value: 'On-leave', label: 'On-leave' },
+  { value: 'Present', label: 'Present Today' },
+  { value: 'Active', label: 'Active Now' },
+  { value: 'Checked Out', label: 'Checked Out' },
+  { value: 'On-Leave', label: 'On Leave' },
+  { value: 'Not In', label: 'Not In' },
 ];
 
-const getStatusStyle = (status: string): { dot: string; badge: string } => {
+const getStatusStyle = (status: AdminDisplayStatus | string): { dot: string; badge: string } => {
   switch (status) {
-    case 'On-time':
+    case 'Active':
       return { dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 ring-green-200 dark:bg-green-900/20 dark:text-green-400 dark:ring-green-800' };
-    case 'Late':
-      return { dot: 'bg-yellow-500', badge: 'bg-yellow-50 text-yellow-700 ring-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:ring-yellow-800' };
-    case 'Absent':
-      return { dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800' };
-    case 'On-leave':
+    case 'Checked Out':
       return { dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:ring-blue-800' };
+    case 'On-Leave':
+      return { dot: 'bg-purple-500', badge: 'bg-purple-50 text-purple-700 ring-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:ring-purple-800' };
+    case 'Not In':
+      return { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:ring-amber-800' };
+    case 'Absent':
+      return { dot: 'bg-red-400', badge: 'bg-red-50 text-red-600 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800' };
     default:
       return { dot: 'bg-gray-500', badge: 'bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:ring-gray-800' };
   }
 };
 
 const formatTime = formatTimeTH;
-
-const formatTotalHours = (record: AdminAttendanceRecord): { text: string; className: string } => {
-  if (record.status === 'Absent') {
-    return { text: 'Absent', className: 'text-red-500 dark:text-red-400' };
-  }
-  if (record.status === 'On-leave') {
-    return { text: 'On-leave', className: 'text-blue-500 dark:text-blue-400' };
-  }
-  if (record.clockIn && record.clockOut) {
-    const hours = record.totalHours != null ? Number(record.totalHours).toFixed(1) : '-';
-    return { text: `${hours}h`, className: 'text-text-light dark:text-text-dark' };
-  }
-  if (record.clockIn && !record.clockOut) {
-    return { text: 'Working...', className: 'text-green-600 dark:text-green-400' };
-  }
-  return { text: '-', className: 'text-text-muted-light dark:text-text-muted-dark' };
-};
 
 const AdminAttendance: React.FC = () => {
   const { showToast } = useToast();
@@ -191,20 +177,23 @@ const AdminAttendance: React.FC = () => {
     [deleteMutation, showToast],
   );
 
+  const handleCardClick = useCallback((filterValue: string) => {
+    setStatus(filterValue);
+  }, []);
+
   const exportToCSV = useCallback(() => {
     if (records.length === 0) {
       showToast('No records to export', 'error');
       return;
     }
 
-    const headers = ['Employee', 'Department', 'Check In', 'Check Out', 'Total Hours', 'Status'];
+    const headers = ['Employee', 'Department', 'Check In', 'Check Out', 'Status'];
     const rows = records.map((r) => [
       r.employeeName,
       r.employeeDepartment,
       r.clockIn ? formatTime(r.clockIn) : '-',
       r.clockOut ? formatTime(r.clockOut) : '-',
-      r.totalHours != null ? Number(r.totalHours).toFixed(1) : '-',
-      r.status,
+      r.displayStatus || r.status,
     ]);
 
     const csvContent = [headers, ...rows]
@@ -220,13 +209,16 @@ const AdminAttendance: React.FC = () => {
     URL.revokeObjectURL(url);
   }, [records, selectedDate, showToast]);
 
+  const displayStatus = (record: AdminAttendanceRecord): string =>
+    record.displayStatus || record.status;
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">
-            Attendance Management
+            Admin Attendance Dashboard
           </h1>
           <p className="text-sm sm:text-base text-text-muted-light dark:text-text-muted-dark mt-1">
             Monitor and manage employee attendance records
@@ -241,38 +233,53 @@ const AdminAttendance: React.FC = () => {
         </button>
       </div>
 
-      {/* Snapshot Cards */}
+      {/* Snapshot Cards — click to filter */}
       {snapshot && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <SnapshotCard
             icon={<Users size={20} />}
             label="Total Employees"
             value={snapshot.total}
-            iconColor="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+            iconColor="bg-slate-100 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400"
+            filterValue="All"
+            activeFilter={status}
+            onClick={handleCardClick}
           />
           <SnapshotCard
-            icon={<Clock size={20} />}
-            label="On-time"
-            value={snapshot.present}
+            icon={<UserCheck size={20} />}
+            label="Present Today"
+            value={snapshot.presentToday}
+            iconColor="bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400"
+            filterValue="Present"
+            activeFilter={status}
+            onClick={handleCardClick}
+          />
+          <SnapshotCard
+            icon={<Activity size={20} />}
+            label="Active Now"
+            value={snapshot.activeNow}
             iconColor="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+            filterValue="Active"
+            activeFilter={status}
+            onClick={handleCardClick}
           />
           <SnapshotCard
-            icon={<AlertCircle size={20} />}
-            label="Late"
-            value={snapshot.late}
-            iconColor="bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
+            icon={<LogOut size={20} />}
+            label="Checked Out"
+            value={snapshot.checkedOut}
+            iconColor="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+            filterValue="Checked Out"
+            activeFilter={status}
+            onClick={handleCardClick}
           />
           <SnapshotCard
-            icon={<XCircle size={20} />}
-            label="Absent"
-            value={snapshot.absent}
+            icon={<UserX size={20} />}
+            label="Not In"
+            value={snapshot.absentOrLeave}
             iconColor="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
-          />
-          <SnapshotCard
-            icon={<CalendarX2 size={20} />}
-            label="On-leave"
-            value={snapshot.onLeave}
-            iconColor="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
+            filterValue="Not In"
+            activeFilter={status}
+            onClick={handleCardClick}
           />
         </div>
       )}
@@ -337,9 +344,6 @@ const AdminAttendance: React.FC = () => {
                   Check Out
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Total Hours
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
@@ -350,13 +354,13 @@ const AdminAttendance: React.FC = () => {
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
+                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
                     Loading attendance records...
                   </td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
+                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
                     No attendance records found
                   </td>
                 </tr>
@@ -390,19 +394,14 @@ const AdminAttendance: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
                       {formatTime(record.clockOut)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {(() => {
-                        const { text, className } = formatTotalHours(record);
-                        return <span className={className}>{text}</span>;
-                      })()}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {(() => {
-                        const s = getStatusStyle(record.status);
+                        const ds = displayStatus(record);
+                        const s = getStatusStyle(ds);
                         return (
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                            {record.status}
+                            {ds}
                           </span>
                         );
                       })()}
@@ -502,17 +501,18 @@ const AdminAttendance: React.FC = () => {
                       </div>
                     </div>
                     {(() => {
-                      const s = getStatusStyle(record.status);
+                      const ds = displayStatus(record);
+                      const s = getStatusStyle(ds);
                       return (
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                          {record.status}
+                          {ds}
                         </span>
                       );
                     })()}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-xs mb-3">
+                  <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                     <div>
                       <p className="text-text-muted-light dark:text-text-muted-dark">Check In</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockIn)}</p>
@@ -520,13 +520,6 @@ const AdminAttendance: React.FC = () => {
                     <div>
                       <p className="text-text-muted-light dark:text-text-muted-dark">Check Out</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockOut)}</p>
-                    </div>
-                    <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">Hours</p>
-                      {(() => {
-                        const { text, className } = formatTotalHours(record);
-                        return <p className={`font-medium ${className}`}>{text}</p>;
-                      })()}
                     </div>
                   </div>
 
@@ -605,18 +598,35 @@ interface SnapshotCardProps {
   label: string;
   value: number;
   iconColor: string;
+  subtitle?: string;
+  filterValue: string;
+  activeFilter: string;
+  onClick: (filterValue: string) => void;
 }
 
-const SnapshotCard: React.FC<SnapshotCardProps> = ({ icon, label, value, iconColor }) => (
-  <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl hover:shadow-md transition-shadow">
-    <div className="flex items-center gap-3">
-      <div className={`p-2 rounded-lg ${iconColor}`}>{icon}</div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark truncate">{label}</p>
-        <p className="text-xl font-bold text-text-light dark:text-text-dark">{value}</p>
+const SnapshotCard: React.FC<SnapshotCardProps> = ({ icon, label, value, iconColor, subtitle, filterValue, activeFilter, onClick }) => {
+  const isActive = activeFilter === filterValue;
+  return (
+    <button
+      onClick={() => onClick(filterValue)}
+      className={`p-4 rounded-xl transition-all text-left w-full cursor-pointer border ${
+        isActive
+          ? 'bg-primary/5 dark:bg-primary/10 border-primary/40 shadow-sm'
+          : 'bg-card-light dark:bg-card-dark border-border-light dark:border-border-dark hover:shadow-md'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-lg ${iconColor}`}>{icon}</div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark truncate">{label}</p>
+          <p className="text-xl font-bold text-text-light dark:text-text-dark">{value}</p>
+          {subtitle && (
+            <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">{subtitle}</p>
+          )}
+        </div>
       </div>
-    </div>
-  </div>
-);
+    </button>
+  );
+};
 
 export default AdminAttendance;

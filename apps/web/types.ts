@@ -457,6 +457,8 @@ export interface NotificationItem {
 
 export type AttendanceStatus = 'On-time' | 'Late' | 'Absent' | 'On-leave';
 
+export type AdminDisplayStatus = 'Active' | 'Checked Out' | 'On-Leave' | 'Not In' | 'Absent';
+
 export interface AdminAttendanceRecord {
   id: string;
   employeeId: string;
@@ -466,6 +468,7 @@ export interface AdminAttendanceRecord {
   breakDuration: number;
   totalHours: number | null;
   status: AttendanceStatus;
+  displayStatus?: AdminDisplayStatus;
   notes: string | null;
   modifiedBy: string | null;
   createdAt: string;
@@ -480,6 +483,15 @@ export interface AttendanceSnapshot {
   absent: number;
   onLeave: number;
   total: number;
+}
+
+export interface AdminAttendanceSnapshotV2 {
+  total: number;
+  presentToday: number;
+  activeNow: number;
+  checkedOut: number;
+  absentOrLeave: number;
+  onLeave: number;
 }
 
 export interface AdminAttendanceUpsertData {

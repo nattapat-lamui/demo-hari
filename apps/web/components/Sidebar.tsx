@@ -27,6 +27,9 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/', allowed: true },
 
+    // Admin Attendance — right below Dashboard for admins
+    { icon: <Clock size={20} />, label: 'Attendance', path: '/admin-attendance', allowed: isAdmin },
+
     // Employee Focused Tools
     { icon: <Clock size={20} />, label: 'Attendance', path: '/attendance', allowed: !isAdmin },
     { icon: <Calendar size={20} />, label: 'Time Off', path: '/time-off', allowed: !isAdmin },
@@ -39,7 +42,6 @@ export const Sidebar: React.FC = () => {
     { icon: <ClipboardList size={20} />, label: 'Onboarding', path: '/onboarding', allowed: true },
 
     // Admin Specific
-    { icon: <Clock size={20} />, label: 'Attendance', path: '/admin-attendance', allowed: isAdmin },
     { icon: <ShieldCheck size={20} />, label: 'Compliance', path: '/compliance', allowed: isAdmin },
     { icon: <BarChart2 size={20} />, label: 'Analytics', path: '/analytics', allowed: isAdmin },
 

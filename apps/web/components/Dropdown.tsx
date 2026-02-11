@@ -124,7 +124,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         onClick={handleToggle}
         className="w-full flex items-center justify-between pl-4 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer text-text-light dark:text-text-dark hover:border-primary/50"
       >
-        <span className={selectedOption ? '' : 'text-text-muted-light'}>
+        <span className={`whitespace-nowrap truncate ${selectedOption ? '' : 'text-text-muted-light'}`}>
           {displayLabel}
         </span>
         <ChevronDown

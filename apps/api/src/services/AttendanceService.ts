@@ -24,18 +24,22 @@ export interface AdminAttendanceFilters {
   limit?: number;
 }
 
+export type AdminDisplayStatus = 'Active' | 'Checked Out' | 'On-Leave' | 'Not In' | 'Absent';
+
 export interface AdminAttendanceRecord extends AttendanceRecord {
   employeeName: string;
   employeeDepartment: string;
   employeeAvatar: string | null;
+  displayStatus?: AdminDisplayStatus;
 }
 
 export interface AttendanceSnapshot {
-  present: number;
-  late: number;
-  absent: number;
-  onLeave: number;
   total: number;
+  presentToday: number;
+  activeNow: number;
+  checkedOut: number;
+  absentOrLeave: number;
+  onLeave: number;
 }
 
 export interface AdminUpsertData {
@@ -248,14 +252,13 @@ export class AttendanceService {
 
     const result = await query(
       `SELECT
-        COUNT(*) FILTER (WHERE status = 'On-time') AS present,
-        COUNT(*) FILTER (WHERE status = 'Late') AS late,
-        COUNT(*) FILTER (WHERE status = 'Absent') AS absent,
-        COUNT(*) FILTER (WHERE status = 'On-leave') AS on_leave_records,
+        COUNT(*) FILTER (WHERE clock_in IS NOT NULL) AS present_today,
+        COUNT(*) FILTER (WHERE clock_in IS NOT NULL AND clock_out IS NULL) AS active_now,
+        COUNT(*) FILTER (WHERE clock_in IS NOT NULL AND clock_out IS NOT NULL) AS checked_out,
         (SELECT COUNT(DISTINCT lr.employee_id)
          FROM leave_requests lr
          JOIN employees e ON lr.employee_id = e.id AND e.status = 'Active'
-         WHERE lr.status = 'Approved' AND $1::date BETWEEN lr.start_date AND lr.end_date) AS on_leave_requests,
+         WHERE lr.status = 'Approved' AND $1::date BETWEEN lr.start_date AND lr.end_date) AS on_leave,
         (SELECT COUNT(*) FROM employees WHERE status = 'Active') AS total
        FROM attendance_records
        WHERE date = $1`,
@@ -263,19 +266,22 @@ export class AttendanceService {
     );
 
     const row = result.rows[0];
-    const onLeaveRecords = parseInt(row.on_leave_records, 10);
-    const onLeaveRequests = parseInt(row.on_leave_requests, 10);
+    const total = parseInt(row.total, 10);
+    const presentToday = parseInt(row.present_today, 10);
+    const onLeave = parseInt(row.on_leave, 10);
     return {
-      present: parseInt(row.present, 10),
-      late: parseInt(row.late, 10),
-      absent: parseInt(row.absent, 10),
-      onLeave: Math.max(onLeaveRecords, onLeaveRequests),
-      total: parseInt(row.total, 10),
+      total,
+      presentToday,
+      activeNow: parseInt(row.active_now, 10),
+      checkedOut: parseInt(row.checked_out, 10),
+      absentOrLeave: Math.max(0, total - presentToday),
+      onLeave,
     };
   }
 
   /**
-   * Get paginated attendance records with employee details for admin view
+   * Get paginated attendance for ALL active employees (including those with no record).
+   * Uses LEFT JOIN so every employee appears; displayStatus is computed from clock data + leave requests.
    */
   async adminGetAllAttendance(filters: AdminAttendanceFilters): Promise<{
     data: AdminAttendanceRecord[];
@@ -285,9 +291,13 @@ export class AttendanceService {
     totalPages: number;
   }> {
     const { search, department, status, startDate, endDate, page = 1, limit = 20 } = filters;
-    const conditions: string[] = [];
-    const params: unknown[] = [];
-    let paramIndex = 1;
+
+    // $1 = target date used in the LEFT JOINs
+    const targetDate = startDate || endDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+
+    const conditions: string[] = ["e.status = 'Active'"];
+    const params: unknown[] = [targetDate];
+    let paramIndex = 2;
 
     if (search) {
       conditions.push(`e.name ILIKE $${paramIndex++}`);
@@ -297,27 +307,50 @@ export class AttendanceService {
       conditions.push(`e.department = $${paramIndex++}`);
       params.push(department);
     }
+
+    // Map display-status filter values to SQL conditions
     if (status && status !== 'All') {
-      conditions.push(`ar.status = $${paramIndex++}`);
-      params.push(status);
-    }
-    if (startDate) {
-      conditions.push(`ar.date >= $${paramIndex++}`);
-      params.push(startDate);
-    }
-    if (endDate) {
-      conditions.push(`ar.date <= $${paramIndex++}`);
-      params.push(endDate);
+      switch (status) {
+        case 'Present':
+          conditions.push('ar.clock_in IS NOT NULL');
+          break;
+        case 'Active':
+          conditions.push("ar.clock_in IS NOT NULL AND ar.clock_out IS NULL AND ar.status NOT IN ('On-leave','Absent')");
+          break;
+        case 'Checked Out':
+          conditions.push("ar.clock_in IS NOT NULL AND ar.clock_out IS NOT NULL AND ar.status NOT IN ('On-leave','Absent')");
+          break;
+        case 'On-Leave':
+          conditions.push("(ar.status = 'On-leave' OR (ar.id IS NULL AND lr.id IS NOT NULL))");
+          break;
+        case 'Absent':
+          conditions.push("((ar.id IS NULL AND lr.id IS NULL) OR (ar.id IS NOT NULL AND (ar.status = 'Absent' OR (ar.clock_in IS NULL AND ar.status != 'On-leave'))))");
+          break;
+        case 'Not In':
+        case 'Absent / On-Leave':
+          conditions.push('ar.clock_in IS NULL');
+          break;
+        default:
+          conditions.push(`ar.status = $${paramIndex++}`);
+          params.push(status);
+      }
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+    const fromClause = `
+      FROM employees e
+      LEFT JOIN attendance_records ar ON ar.employee_id = e.id AND ar.date = $1
+      LEFT JOIN LATERAL (
+        SELECT lr2.id FROM leave_requests lr2
+        WHERE lr2.employee_id = e.id AND lr2.status = 'Approved'
+          AND $1::date BETWEEN lr2.start_date AND lr2.end_date
+        LIMIT 1
+      ) lr ON true`;
 
     // Count total
     const countResult = await query(
-      `SELECT COUNT(*) AS total
-       FROM attendance_records ar
-       JOIN employees e ON ar.employee_id = e.id
-       ${whereClause}`,
+      `SELECT COUNT(*) AS total ${fromClause} ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0].total, 10);
@@ -326,21 +359,73 @@ export class AttendanceService {
 
     // Fetch paginated records
     const dataResult = await query(
-      `SELECT ar.*, e.name AS employee_name, e.department AS employee_department, e.avatar AS employee_avatar
-       FROM attendance_records ar
-       JOIN employees e ON ar.employee_id = e.id
-       ${whereClause}
-       ORDER BY ar.date DESC, e.name ASC
-       LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
+      `SELECT
+        ar.id AS ar_id, ar.date AS ar_date, ar.clock_in, ar.clock_out,
+        ar.break_duration, ar.total_hours, ar.status AS ar_status,
+        ar.notes, ar.modified_by, ar.created_at AS ar_created_at,
+        e.id AS employee_id, e.name AS employee_name,
+        e.department AS employee_department, e.avatar AS employee_avatar,
+        CASE WHEN lr.id IS NOT NULL THEN true ELSE false END AS is_on_leave
+      ${fromClause}
+      ${whereClause}
+      ORDER BY
+        CASE
+          WHEN ar.clock_in IS NOT NULL AND ar.clock_out IS NULL THEN 0
+          WHEN ar.clock_in IS NOT NULL AND ar.clock_out IS NOT NULL THEN 1
+          WHEN lr.id IS NOT NULL OR ar.status = 'On-leave' THEN 2
+          ELSE 3
+        END,
+        e.name ASC
+      LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
       [...params, limit, offset]
     );
 
-    const data = dataResult.rows.map((row: Record<string, unknown>): AdminAttendanceRecord => ({
-      ...this.mapRowToAttendance(row),
-      employeeName: row.employee_name as string,
-      employeeDepartment: row.employee_department as string,
-      employeeAvatar: row.employee_avatar as string | null,
-    }));
+    // Determine whether "no check-in" means "Not In" (still early) or "Absent" (past noon)
+    const now = new Date();
+    const todayBangkok = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+    const isTargetToday = targetDate === todayBangkok;
+    const bangkokHour = isTargetToday
+      ? parseInt(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok', hour: '2-digit', hour12: false }))
+      : 24; // past date → always counts as "Absent"
+    const notInStatus: AdminDisplayStatus = bangkokHour < 12 ? 'Not In' : 'Absent';
+
+    const data = dataResult.rows.map((row: Record<string, unknown>): AdminAttendanceRecord => {
+      const hasRecord = row.ar_id != null;
+      const isOnLeave = row.is_on_leave === true || (hasRecord && row.ar_status === 'On-leave');
+
+      let displayStatus: AdminDisplayStatus;
+      if (hasRecord && row.ar_status === 'On-leave') {
+        displayStatus = 'On-Leave';
+      } else if (hasRecord && row.ar_status === 'Absent') {
+        displayStatus = notInStatus;
+      } else if (hasRecord && row.clock_in && !row.clock_out) {
+        displayStatus = 'Active';
+      } else if (hasRecord && row.clock_in && row.clock_out) {
+        displayStatus = 'Checked Out';
+      } else if (isOnLeave) {
+        displayStatus = 'On-Leave';
+      } else {
+        displayStatus = notInStatus;
+      }
+
+      return {
+        id: (row.ar_id as string) || `absent-${row.employee_id}`,
+        employeeId: row.employee_id as string,
+        date: (row.ar_date as string) || targetDate,
+        clockIn: row.clock_in as string | null,
+        clockOut: row.clock_out as string | null,
+        breakDuration: (row.break_duration as number) || 0,
+        totalHours: row.total_hours as number | null,
+        status: (row.ar_status as AttendanceRecord['status']) || (isOnLeave ? 'On-leave' : 'Absent'),
+        notes: row.notes as string | null,
+        modifiedBy: row.modified_by as string | null,
+        createdAt: (row.ar_created_at as Date) || new Date(),
+        employeeName: row.employee_name as string,
+        employeeDepartment: row.employee_department as string,
+        employeeAvatar: row.employee_avatar as string | null,
+        displayStatus,
+      };
+    });
 
     return { data, total, page, limit, totalPages };
   }

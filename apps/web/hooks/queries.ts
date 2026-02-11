@@ -21,7 +21,7 @@ import type {
   KeyContact,
   OnboardingDocument,
   AdminAttendanceRecord,
-  AttendanceSnapshot,
+  AdminAttendanceSnapshotV2,
   AdminAttendanceUpsertData,
   AdminAttendanceFilters,
 } from '../types';
@@ -730,7 +730,7 @@ export const useDeleteOrgNode = () => {
 export const useAdminAttendanceSnapshot = () => {
   return useQuery({
     queryKey: queryKeys.adminAttendance.snapshot(),
-    queryFn: () => api.get<AttendanceSnapshot>('/admin/attendance/snapshot'),
+    queryFn: () => api.get<AdminAttendanceSnapshotV2>('/admin/attendance/snapshot'),
     refetchInterval: 60_000,
   });
 };
@@ -762,7 +762,6 @@ export const useAdminAttendanceRecords = (filters: AdminAttendanceFilters) => {
         })),
       };
     },
-    placeholderData: (prev) => prev,
   });
 };
 
