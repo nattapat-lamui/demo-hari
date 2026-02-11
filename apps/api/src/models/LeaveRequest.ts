@@ -10,6 +10,10 @@ export interface LeaveRequest {
     reason?: string;
     status: 'Pending' | 'Approved' | 'Rejected';
     avatar?: string;
+    handoverEmployeeId?: string;
+    handoverEmployeeName?: string;
+    handoverNotes?: string;
+    medicalCertificatePath?: string;
 }
 
 export interface CreateLeaveRequestDTO {
@@ -19,6 +23,9 @@ export interface CreateLeaveRequestDTO {
     startDate: string;
     endDate: string;
     reason?: string;
+    handoverEmployeeId?: string;
+    handoverNotes?: string;
+    medicalCertificatePath?: string;
 }
 
 export interface UpdateLeaveRequestDTO {

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, API_HOST } from '../lib/api';
+import { api, API_HOST, BASE_URL } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import type {
   Employee,
@@ -482,11 +482,45 @@ export const useAddLeaveRequest = () => {
   });
 };
 
+export const useAddLeaveRequestWithFile = () => {
+  return useMutation({
+    mutationFn: async (formData: FormData) => {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${BASE_URL}/leave-requests`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || err.message || 'Failed to submit leave request');
+      }
+      return response.json();
+    },
+  });
+};
+
 export const useUpdateLeaveStatus = () => {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'Approved' | 'Rejected' }) =>
       api.patch(`/leave-requests/${id}`, { status }),
     // Socket handles real-time update
+  });
+};
+
+export const useEmployeeSearch = (searchQuery: string) => {
+  return useQuery({
+    queryKey: [...queryKeys.employees.all, 'search', searchQuery] as const,
+    queryFn: async () => {
+      const data = await api.get<Employee[]>('/employees');
+      if (!searchQuery.trim()) return data.map(transformAvatarUrl);
+      const q = searchQuery.toLowerCase();
+      return data
+        .filter((e) => e.name.toLowerCase().includes(q) || e.department?.toLowerCase().includes(q))
+        .map(transformAvatarUrl);
+    },
+    enabled: true,
+    staleTime: 30_000,
   });
 };
 

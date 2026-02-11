@@ -393,6 +393,14 @@ const runLightMigrations = async () => {
       WHERE id NOT IN (SELECT DISTINCT employee_id FROM tasks WHERE employee_id IS NOT NULL)
         AND onboarding_status = 'Completed'
     `);
+
+    // Leave requests: add handover + medical certificate columns
+    await query(`
+      ALTER TABLE leave_requests
+        ADD COLUMN IF NOT EXISTS handover_employee_id UUID REFERENCES employees(id),
+        ADD COLUMN IF NOT EXISTS handover_notes TEXT,
+        ADD COLUMN IF NOT EXISTS medical_certificate_path VARCHAR(500)
+    `);
   } catch (err) {
     // Table may not exist yet — ignore
   }

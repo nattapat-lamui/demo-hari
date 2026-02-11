@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, AlertCircle, Plus, CheckCircle2, XCircle, Building2, Briefcase, IdCard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { useLeaveRequests, useLeaveBalance, useAddLeaveRequest, useEmployeeDetail } from '../hooks/queries';
+import { useLeaveRequests, useLeaveBalance, useAddLeaveRequestWithFile, useEmployeeDetail } from '../hooks/queries';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { LeaveCalendar } from '../components/LeaveCalendar';
 import { RequestTimeOffModal } from '../components/RequestTimeOffModal';
@@ -78,7 +78,7 @@ export const TimeOff: React.FC = () => {
   const { data: allRequests = [], isPending } = useLeaveRequests();
   const { data: balances = [] } = useLeaveBalance(user?.employeeId);
   const { data: empDetail } = useEmployeeDetail(user?.employeeId);
-  const addMutation = useAddLeaveRequest();
+  const addMutation = useAddLeaveRequestWithFile();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -111,14 +111,8 @@ export const TimeOff: React.FC = () => {
     return map;
   }, [myRequests]);
 
-  const handleSubmit = async (data: { type: string; startDate: string; endDate: string; reason: string }) => {
-    await addMutation.mutateAsync({
-      employeeId: user?.employeeId,
-      type: data.type,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      reason: data.reason,
-    });
+  const handleSubmit = async (formData: FormData) => {
+    await addMutation.mutateAsync(formData);
     showToast('Leave request submitted!', 'success');
     setIsModalOpen(false);
   };
@@ -293,6 +287,7 @@ export const TimeOff: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmit}
         isPending={addMutation.isPending}
+        employeeId={user?.employeeId || ''}
       />
     </div>
   );

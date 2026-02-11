@@ -66,6 +66,11 @@ export class LeaveRequestController {
                 return;
             }
 
+            // Handle file upload (multer populates req.file for multipart)
+            if (req.file) {
+                requestData.medicalCertificatePath = `/uploads/medical-certs/${req.file.filename}`;
+            }
+
             const leaveRequest = await LeaveRequestService.createLeaveRequest(requestData);
 
             // Emit real-time event

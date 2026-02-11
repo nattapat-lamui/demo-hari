@@ -140,6 +140,15 @@ export const validateLeaveRequest = [
     .isLength({ max: 500 })
     .withMessage('Reason must not exceed 500 characters')
     .escape(),
+  body('handoverEmployeeId')
+    .optional()
+    .isUUID()
+    .withMessage('Invalid handover employee ID'),
+  body('handoverNotes')
+    .optional()
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage('Handover notes must not exceed 2000 characters'),
 ];
 
 // File upload validation

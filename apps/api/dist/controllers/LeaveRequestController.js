@@ -65,6 +65,10 @@ class LeaveRequestController {
                     res.status(400).json({ error: 'End date must be after start date' });
                     return;
                 }
+                // Handle file upload (multer populates req.file for multipart)
+                if (req.file) {
+                    requestData.medicalCertificatePath = `/uploads/medical-certs/${req.file.filename}`;
+                }
                 const leaveRequest = yield LeaveRequestService_1.default.createLeaveRequest(requestData);
                 // Emit real-time event
                 (0, socket_1.emitLeaveRequestCreated)(leaveRequest);

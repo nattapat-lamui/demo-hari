@@ -4,14 +4,19 @@ import SystemConfigService from './SystemConfigService';
 import NotificationService from './NotificationService';
 import { PaginationParams, PaginatedResult, createPaginatedResult, buildPaginationClause, buildSortClause } from '../utils/pagination';
 
+const BASE_SELECT = `
+    SELECT lr.*, e.avatar, e.name as employee_name,
+           (lr.end_date::date - lr.start_date::date) + 1 as days,
+           TO_CHAR(lr.start_date, 'Mon DD') || ' - ' || TO_CHAR(lr.end_date, 'Mon DD') as dates,
+           he.name as handover_employee_name
+    FROM leave_requests lr
+    LEFT JOIN employees e ON lr.employee_id = e.id
+    LEFT JOIN employees he ON lr.handover_employee_id = he.id`;
+
 export class LeaveRequestService {
     async getAllLeaveRequests(): Promise<LeaveRequest[]> {
         const result = await query(`
-            SELECT lr.*, e.avatar, e.name as employee_name,
-                   (lr.end_date::date - lr.start_date::date) + 1 as days,
-                   TO_CHAR(lr.start_date, 'Mon DD') || ' - ' || TO_CHAR(lr.end_date, 'Mon DD') as dates
-            FROM leave_requests lr
-            LEFT JOIN employees e ON lr.employee_id = e.id
+            ${BASE_SELECT}
             ORDER BY lr.created_at DESC
         `);
         return result.rows.map(this.mapRowToLeaveRequest);
@@ -73,9 +78,11 @@ export class LeaveRequestService {
         const result = await query(
             `SELECT lr.*, e.avatar, e.name as employee_name,
                     (lr.end_date::date - lr.start_date::date) + 1 as days,
-                    TO_CHAR(lr.start_date, 'Mon DD') || ' - ' || TO_CHAR(lr.end_date, 'Mon DD') as dates
+                    TO_CHAR(lr.start_date, 'Mon DD') || ' - ' || TO_CHAR(lr.end_date, 'Mon DD') as dates,
+                    he.name as handover_employee_name
              FROM leave_requests lr
              LEFT JOIN employees e ON lr.employee_id = e.id
+             LEFT JOIN employees he ON lr.handover_employee_id = he.id
              ${whereClause}
              ${sortClause}
              ${paginationClause}`,
@@ -89,11 +96,7 @@ export class LeaveRequestService {
 
     async getLeaveRequestById(id: string): Promise<LeaveRequest | null> {
         const result = await query(
-            `SELECT lr.*, e.avatar, e.name as employee_name,
-                    (lr.end_date::date - lr.start_date::date) + 1 as days,
-                    TO_CHAR(lr.start_date, 'Mon DD') || ' - ' || TO_CHAR(lr.end_date, 'Mon DD') as dates
-             FROM leave_requests lr
-             LEFT JOIN employees e ON lr.employee_id = e.id
+            `${BASE_SELECT}
              WHERE lr.id = $1`,
             [id]
         );
@@ -104,7 +107,7 @@ export class LeaveRequestService {
     }
 
     async createLeaveRequest(requestData: CreateLeaveRequestDTO): Promise<LeaveRequest> {
-        const { employeeId, type, startDate, endDate, reason } = requestData;
+        const { employeeId, type, startDate, endDate, reason, handoverEmployeeId, handoverNotes, medicalCertificatePath } = requestData;
 
         // Calculate days
         const start = new Date(startDate);
@@ -135,15 +138,22 @@ export class LeaveRequestService {
             }
         }
 
+        // Validate: Sick Leave >= 3 days requires medical certificate
+        if (type === 'Sick Leave' && days >= 3 && !medicalCertificatePath) {
+            const err: any = new Error('A medical certificate is required for sick leave of 3 or more days.');
+            err.statusCode = 400;
+            throw err;
+        }
+
         // Format dates string (for notification only)
         const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
         const dates = `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
 
         const result = await query(
-            `INSERT INTO leave_requests (employee_id, leave_type, start_date, end_date, reason, status)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO leave_requests (employee_id, leave_type, start_date, end_date, reason, status, handover_employee_id, handover_notes, medical_certificate_path)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING *`,
-            [employeeId, type, startDate, endDate, reason || '', 'Pending']
+            [employeeId, type, startDate, endDate, reason || '', 'Pending', handoverEmployeeId || null, handoverNotes || null, medicalCertificatePath || null]
         );
 
         // Get employee info (avatar and name)
@@ -264,6 +274,10 @@ export class LeaveRequestService {
             reason: row.reason,
             status: row.status,
             avatar: row.avatar,
+            handoverEmployeeId: row.handover_employee_id || undefined,
+            handoverEmployeeName: row.handover_employee_name || undefined,
+            handoverNotes: row.handover_notes || undefined,
+            medicalCertificatePath: row.medical_certificate_path || undefined,
         };
     }
 }

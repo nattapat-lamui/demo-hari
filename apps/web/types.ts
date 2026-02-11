@@ -91,6 +91,10 @@ export interface LeaveRequest {
   days: number;
   status: 'Pending' | 'Approved' | 'Rejected';
   avatar: string;
+  handoverEmployeeId?: string;
+  handoverEmployeeName?: string;
+  handoverNotes?: string;
+  medicalCertificatePath?: string;
 }
 
 export interface LeaveBalance {
