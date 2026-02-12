@@ -251,13 +251,13 @@ export function LeaveRequestForm() {
 
               {/* Total Duration + Quota */}
               {dayCount > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-text-light dark:text-text-dark">
+                <div className="w-full max-w-full overflow-hidden rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <span className="text-sm font-medium text-text-light dark:text-text-dark shrink-0">
                       Total Duration:
                     </span>
                     <span
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium shrink-0 ${
                         quotaExceeded
                           ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200'
                           : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200'
@@ -266,7 +266,7 @@ export function LeaveRequestForm() {
                       {dayCount} {dayCount === 1 ? 'Day' : 'Days'}
                     </span>
                     {quotaExceeded && (
-                      <span className="text-sm text-red-600 dark:text-red-400">
+                      <span className="text-sm text-red-600 dark:text-red-400 min-w-0 break-words">
                         Exceeds available balance
                       </span>
                     )}
@@ -274,7 +274,7 @@ export function LeaveRequestForm() {
 
                   {/* Quota bar */}
                   {currentBalance && !isUnlimited && (
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-text-muted-light dark:text-text-muted-dark">
                           Available: {remaining} / {currentBalance.total} days

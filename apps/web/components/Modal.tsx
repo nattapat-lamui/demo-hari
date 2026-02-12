@@ -33,7 +33,7 @@ export const Modal: React.FC<ModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={`bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full ${widthClass} overflow-hidden animate-in zoom-in-95 duration-200`}>
+      <div className={`bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-full ${widthClass} overflow-hidden animate-in zoom-in-95 duration-200`}>
         {title && (
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
             <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
