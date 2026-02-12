@@ -9,7 +9,6 @@ import {
     Mail,
     Hash,
     MapPin,
-    Calendar,
     Lock,
     HeartPulse,
     Phone,
@@ -78,9 +77,8 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                 )
             );
             const idx = focusable.indexOf(target);
-            if (idx >= 0 && idx < focusable.length - 1) {
-                focusable[idx + 1].focus();
-            }
+            const next = idx >= 0 ? focusable[idx + 1] : undefined;
+            if (next) next.focus();
         }
     };
 
@@ -212,16 +210,12 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     Join Date
                                     {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
                                 </label>
-                                <div className="relative">
-                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
-                                    <input
-                                        type="date"
-                                        value={editForm.joinDate || ''}
-                                        disabled={!canEditSensitiveInfo}
-                                        onChange={(e) => onProfileChange('joinDate', e.target.value)}
-                                        className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark ${!canEditSensitiveInfo ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    />
-                                </div>
+                                <DatePicker
+                                    value={editForm.joinDate || ''}
+                                    onChange={(date) => onProfileChange('joinDate', date)}
+                                    placeholder="Select join date"
+                                    disabled={!canEditSensitiveInfo}
+                                />
                             </div>
 
                             <div>

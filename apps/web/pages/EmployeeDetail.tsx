@@ -37,7 +37,7 @@ export const EmployeeDetail: React.FC = () => {
     // Permissions Logic
     const isOwnProfile = user?.id === id;
     const isAdmin = user?.role === 'HR_ADMIN';
-    const canEditBasicInfo = isAdmin || isOwnProfile;
+    const canEditBasicInfo = isOwnProfile;
     const canEditSensitiveInfo = isAdmin;
     const canViewSensitiveTabs = isAdmin || isOwnProfile;
 
@@ -152,7 +152,6 @@ export const EmployeeDetail: React.FC = () => {
                 slack: editForm.slack,
                 emergencyContact: editForm.emergencyContact,
                 address: editForm.address,
-                avatar: avatar.startsWith('blob:') ? undefined : avatar
             });
 
             if (isOwnProfile && updateUser) {
@@ -219,11 +218,20 @@ export const EmployeeDetail: React.FC = () => {
 
                 const data = await response.json();
 
+                // Save the avatar URL to the employee record
+                await api.patch(`/employees/${id}`, { avatar: data.avatarUrl });
+
                 const fullAvatarUrl = data.avatarUrl.startsWith('/')
                     ? `${API_HOST}${data.avatarUrl}`
                     : data.avatarUrl;
                 setAvatarPreview(fullAvatarUrl);
-                showToast('Avatar uploaded successfully!', 'success');
+
+                // Update auth context if own profile
+                if (isOwnProfile && updateUser) {
+                    updateUser({ avatar: data.avatarUrl });
+                }
+
+                showToast('Avatar updated successfully!', 'success');
 
                 qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id!) });
                 qc.invalidateQueries({ queryKey: queryKeys.employees.all });

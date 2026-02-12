@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { MapPin, ChevronDown, Search, X, Check } from 'lucide-react';
 // @ts-expect-error — no type declarations for thai-address-database
 import { searchAddressByProvince } from 'thai-address-database';
@@ -19,10 +20,10 @@ interface ThaiAddressFormProps {
 type TabKey = 'province' | 'district' | 'subDistrict' | 'postalCode';
 
 const TABS: { key: TabKey; label: string }[] = [
-    { key: 'province', label: 'จังหวัด' },
-    { key: 'district', label: 'เขต/อำเภอ' },
-    { key: 'subDistrict', label: 'แขวง/ตำบล' },
-    { key: 'postalCode', label: 'รหัสไปรษณีย์' },
+    { key: 'province', label: 'Province' },
+    { key: 'district', label: 'District' },
+    { key: 'subDistrict', label: 'Sub-district' },
+    { key: 'postalCode', label: 'Postal Code' },
 ];
 
 // Module-level cache — loaded once across all instances
@@ -39,7 +40,10 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<TabKey>('province');
     const [search, setSearch] = useState('');
+    const [pos, setPos] = useState({ top: 0, left: 0, width: 0, maxH: 300, openAbove: false });
     const containerRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLDivElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
 
     const allRecords = useMemo(() => getAllRecords(), []);
@@ -104,6 +108,16 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
         }
     };
 
+    // A tab is enabled only if its prerequisite is already selected
+    const isTabEnabled = (tab: TabKey): boolean => {
+        switch (tab) {
+            case 'province': return true;
+            case 'district': return !!addr.province;
+            case 'subDistrict': return !!addr.province && !!addr.district;
+            case 'postalCode': return !!addr.province && !!addr.district && !!addr.subDistrict;
+        }
+    };
+
     const handleSelect = useCallback((item: string) => {
         setSearch('');
         switch (activeTab) {
@@ -137,17 +151,37 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
         }
     }, [activeTab, addr, onChange, allRecords]);
 
+    // Calculate dropdown position from trigger's bounding rect
+    const updatePosition = useCallback(() => {
+        if (!triggerRef.current) return;
+        const rect = triggerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom - 16;
+        const spaceAbove = rect.top - 16;
+        const minH = 200;
+        // Open above if not enough room below but enough above
+        const openAbove = spaceBelow < minH && spaceAbove > spaceBelow;
+        const maxH = Math.max(openAbove ? spaceAbove : spaceBelow, minH);
+        const top = openAbove ? rect.top - 4 : rect.bottom + 4;
+        setPos({ top, left: rect.left, width: rect.width, maxH, openAbove });
+    }, []);
+
     const handleToggle = () => {
         if (!isOpen) {
-            // Open on the first incomplete tab
             if (!addr.province) setActiveTab('province');
             else if (!addr.district) setActiveTab('district');
             else if (!addr.subDistrict) setActiveTab('subDistrict');
             else if (!addr.postalCode) setActiveTab('postalCode');
             else setActiveTab('province');
             setSearch('');
+            // Scroll trigger to top of modal scroll area first, then open
+            triggerRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+            requestAnimationFrame(() => {
+                updatePosition();
+                setIsOpen(true);
+            });
+            return;
         }
-        setIsOpen(prev => !prev);
+        setIsOpen(false);
     };
 
     const handleClear = (e: React.MouseEvent) => {
@@ -156,10 +190,14 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
         setActiveTab('province');
     };
 
-    // Close on outside click
+    // Close on outside click — check both trigger and portal dropdown
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+            const target = e.target as Node;
+            if (
+                containerRef.current && !containerRef.current.contains(target) &&
+                (!dropdownRef.current || !dropdownRef.current.contains(target))
+            ) {
                 setIsOpen(false);
             }
         };
@@ -167,9 +205,36 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
         return () => document.removeEventListener('mousedown', handleClick);
     }, []);
 
+    // Reposition on scroll/resize while open; close if trigger leaves visible area
+    useEffect(() => {
+        if (!isOpen) return;
+        updatePosition();
+
+        const scrollParent = triggerRef.current?.closest('.overflow-y-auto') as HTMLElement | null;
+        const onReposition = () => {
+            if (triggerRef.current && scrollParent) {
+                const triggerRect = triggerRef.current.getBoundingClientRect();
+                const parentRect = scrollParent.getBoundingClientRect();
+                // Close if trigger is scrolled out of the visible scroll container
+                if (triggerRect.bottom < parentRect.top || triggerRect.top > parentRect.bottom) {
+                    setIsOpen(false);
+                    return;
+                }
+            }
+            updatePosition();
+        };
+
+        scrollParent?.addEventListener('scroll', onReposition);
+        window.addEventListener('resize', onReposition);
+        return () => {
+            scrollParent?.removeEventListener('scroll', onReposition);
+            window.removeEventListener('resize', onReposition);
+        };
+    }, [isOpen, updatePosition]);
+
     // Auto-focus search when panel opens or tab changes
     useEffect(() => {
-        if (isOpen && searchRef.current) {
+        if (isOpen) {
             setTimeout(() => searchRef.current?.focus(), 0);
         }
     }, [isOpen, activeTab]);
@@ -198,64 +263,62 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
         <div className="md:col-span-2 space-y-4">
             <label className={labelClass}>Current Address</label>
 
-            {/* Address detail textarea */}
-            <div>
-                <label className={labelClass}>Address</label>
-                <div className="relative">
-                    <MapPin className="absolute left-3 top-3 text-text-muted-light" size={16} />
-                    <textarea
-                        rows={2}
-                        value={addr.addressLine1 || ''}
-                        onChange={(e) => onChange({ ...addr, addressLine1: e.target.value })}
-                        className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark resize-none"
-                        placeholder="House No., Building, Street, Soi"
-                    />
-                </div>
-            </div>
-
             {/* Unified address picker */}
-            <div ref={containerRef} className="relative">
+            <div ref={containerRef}>
                 <label className={labelClass}>Province / District / Sub-district</label>
 
                 {/* Trigger button */}
                 <div
-                    className={`w-full flex items-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg cursor-pointer transition-colors ${
+                    ref={triggerRef}
+                    className={`w-full flex items-center pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg cursor-pointer transition-colors relative ${
                         isOpen
                             ? 'border-primary ring-2 ring-primary'
                             : 'border-border-light dark:border-border-dark hover:border-primary/50'
                     }`}
                     onClick={handleToggle}
                 >
-                    <Search className="text-text-muted-light shrink-0" size={16} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
                     {displayText ? (
-                        <span className="flex-1 text-sm text-text-light dark:text-text-dark truncate">
+                        <span className="flex-1 text-text-light dark:text-text-dark truncate">
                             {displayText}
                         </span>
                     ) : (
-                        <span className="flex-1 text-sm text-text-muted-light dark:text-text-muted-dark">
-                            จังหวัด, เขต/อำเภอ, แขวง/ตำบล, รหัสไปรษณีย์
+                        <span className="flex-1 text-text-muted-light dark:text-text-muted-dark">
+                            Province, District, Sub-district, Postal Code
                         </span>
                     )}
                     {displayText && (
                         <button
                             type="button"
                             onClick={handleClear}
-                            className="text-text-muted-light hover:text-text-light dark:hover:text-text-dark transition-colors"
+                            className="ml-2 text-text-muted-light hover:text-text-light dark:hover:text-text-dark transition-colors"
                         >
                             <X size={14} />
                         </button>
                     )}
                     <ChevronDown
-                        className={`text-text-muted-light shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                        className={`ml-2 text-text-muted-light shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                         size={16}
                     />
                 </div>
 
-                {/* Dropdown panel */}
-                {isOpen && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-lg overflow-hidden">
+                {/* Dropdown panel — rendered via portal to escape modal overflow */}
+                {isOpen && createPortal(
+                    <div
+                        ref={dropdownRef}
+                        style={{
+                            position: 'fixed',
+                            ...(pos.openAbove
+                                ? { bottom: window.innerHeight - pos.top, left: pos.left }
+                                : { top: pos.top, left: pos.left }),
+                            width: pos.width,
+                            maxHeight: pos.maxH,
+                            zIndex: 10000,
+                        }}
+                        className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-lg overflow-hidden flex flex-col"
+                    >
                         {/* Search input */}
-                        <div className="p-2 border-b border-border-light dark:border-border-dark">
+                        <div className="p-2 border-b border-border-light dark:border-border-dark shrink-0">
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted-light" size={14} />
                                 <input
@@ -264,14 +327,10 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     onKeyDown={(e) => {
-                                        // Prevent Enter from propagating to form's keydown handler
                                         if (e.key === 'Enter') {
                                             e.stopPropagation();
-                                            // Select first item if searching
                                             const first = currentItems[0];
-                                            if (first) {
-                                                handleSelect(first);
-                                            }
+                                            if (first) handleSelect(first);
                                         }
                                         if (e.key === 'Escape') {
                                             setIsOpen(false);
@@ -284,21 +343,25 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
                         </div>
 
                         {/* Tabs */}
-                        <div className="flex border-b border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50">
+                        <div className="flex border-b border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 shrink-0">
                             {TABS.map((tab) => {
                                 const isActive = activeTab === tab.key;
                                 const hasValue = !!getSelectedForTab(tab.key);
+                                const enabled = isTabEnabled(tab.key);
                                 return (
                                     <button
                                         key={tab.key}
                                         type="button"
+                                        disabled={!enabled}
                                         onClick={() => { setActiveTab(tab.key); setSearch(''); }}
                                         className={`flex-1 px-1 py-2.5 text-xs font-medium transition-colors relative ${
-                                            isActive
-                                                ? 'text-primary'
-                                                : hasValue
-                                                    ? 'text-green-600 dark:text-green-400'
-                                                    : 'text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark'
+                                            !enabled
+                                                ? 'text-text-muted-light/40 dark:text-text-muted-dark/40 cursor-not-allowed'
+                                                : isActive
+                                                    ? 'text-primary'
+                                                    : hasValue
+                                                        ? 'text-green-600 dark:text-green-400'
+                                                        : 'text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark'
                                         }`}
                                     >
                                         <span className="flex items-center justify-center gap-1">
@@ -315,7 +378,7 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
 
                         {/* Selected breadcrumb */}
                         {(addr.province || addr.district || addr.subDistrict) && (
-                            <div className="px-3 py-1.5 border-b border-border-light dark:border-border-dark bg-primary/5 dark:bg-primary/10">
+                            <div className="px-3 py-1.5 border-b border-border-light dark:border-border-dark bg-primary/5 dark:bg-primary/10 shrink-0">
                                 <p className="text-xs text-text-muted-light dark:text-text-muted-dark truncate">
                                     {[addr.province, addr.district, addr.subDistrict, addr.postalCode]
                                         .filter(Boolean)
@@ -325,7 +388,7 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
                         )}
 
                         {/* Items list */}
-                        <div className="max-h-52 overflow-y-auto">
+                        <div className="flex-1 min-h-0 overflow-y-auto">
                             {currentItems.length === 0 ? (
                                 <div className="px-4 py-8 text-center text-sm text-text-muted-light dark:text-text-muted-dark">
                                     {emptyMessage}
@@ -351,8 +414,24 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
                                 })
                             )}
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
+            </div>
+
+            {/* Address detail textarea */}
+            <div>
+                <label className={labelClass}>Address</label>
+                <div className="relative">
+                    <MapPin className="absolute left-3 top-3 text-text-muted-light" size={16} />
+                    <textarea
+                        rows={2}
+                        value={addr.addressLine1 || ''}
+                        onChange={(e) => onChange({ ...addr, addressLine1: e.target.value })}
+                        className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark resize-none"
+                        placeholder="House No., Building, Street, Soi"
+                    />
+                </div>
             </div>
         </div>
     );
