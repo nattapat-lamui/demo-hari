@@ -8,7 +8,6 @@ import {
     Users,
     Mail,
     Hash,
-    MapPin,
     Lock,
     HeartPulse,
     Phone,
@@ -17,6 +16,7 @@ import {
     Trash2,
 } from 'lucide-react';
 import { DatePicker } from '../../components/DatePicker';
+import { Dropdown } from '../../components/Dropdown';
 import { ThaiAddressForm } from '../../components/ThaiAddressForm';
 import { EmployeeModalsProps } from './EmployeeDetailTypes';
 
@@ -183,26 +183,18 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     Location
                                     {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
                                 </label>
-                                <div className="relative">
-                                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
-                                    <select
-                                        value={editForm.location || ''}
-                                        disabled={!canEditSensitiveInfo}
-                                        onChange={(e) => onProfileChange('location', e.target.value)}
-                                        className={`w-full pl-10 pr-8 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark appearance-none ${!canEditSensitiveInfo ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <option value="">Select location</option>
-                                        {editForm.location && !OFFICE_LOCATIONS.includes(editForm.location) && (
-                                            <option value={editForm.location}>{editForm.location}</option>
-                                        )}
-                                        {OFFICE_LOCATIONS.map((loc) => (
-                                            <option key={loc} value={loc}>{loc}</option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted-light">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-                                    </div>
-                                </div>
+                                <Dropdown
+                                    value={editForm.location || ''}
+                                    onChange={(val) => onProfileChange('location', val)}
+                                    placeholder="Select location"
+                                    disabled={!canEditSensitiveInfo}
+                                    options={[
+                                        ...(editForm.location && !OFFICE_LOCATIONS.includes(editForm.location)
+                                            ? [{ value: editForm.location, label: editForm.location }]
+                                            : []),
+                                        ...OFFICE_LOCATIONS.map((loc) => ({ value: loc, label: loc })),
+                                    ]}
+                                />
                             </div>
 
                             <div>
@@ -223,21 +215,16 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     Status
                                     {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
                                 </label>
-                                <div className="relative">
-                                    <select
-                                        value={editForm.status || 'Active'}
-                                        disabled={!canEditSensitiveInfo}
-                                        onChange={(e) => onProfileChange('status', e.target.value as any)}
-                                        className={`w-full pl-3 pr-8 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark appearance-none ${!canEditSensitiveInfo ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <option value="Active">Active</option>
-                                        <option value="On Leave">On Leave</option>
-                                        <option value="Terminated">Terminated</option>
-                                    </select>
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted-light">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-                                    </div>
-                                </div>
+                                <Dropdown
+                                    value={editForm.status || 'Active'}
+                                    onChange={(val) => onProfileChange('status', val)}
+                                    disabled={!canEditSensitiveInfo}
+                                    options={[
+                                        { value: 'Active', label: 'Active' },
+                                        { value: 'On Leave', label: 'On Leave' },
+                                        { value: 'Terminated', label: 'Terminated' },
+                                    ]}
+                                />
                             </div>
 
                             <div className="md:col-span-2">

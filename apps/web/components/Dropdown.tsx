@@ -16,6 +16,7 @@ interface DropdownProps {
   width?: string;
   id?: string;
   name?: string;
+  disabled?: boolean;
 }
 
 /**
@@ -39,7 +40,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
   className = '',
   width = 'w-full',
   id,
-  name
+  name,
+  disabled = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -52,6 +54,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
 
   // Calculate position and open dropdown
   const handleToggle = () => {
+    if (disabled) return;
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setMenuPosition({
@@ -122,7 +125,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
         id={id}
         name={name}
         onClick={handleToggle}
-        className="w-full flex items-center justify-between pl-4 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer text-text-light dark:text-text-dark hover:border-primary/50"
+        disabled={disabled}
+        className={`w-full flex items-center justify-between pl-4 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-text-light dark:text-text-dark ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary/50'}`}
       >
         <span className={`whitespace-nowrap truncate ${selectedOption ? '' : 'text-text-muted-light'}`}>
           {displayLabel}
