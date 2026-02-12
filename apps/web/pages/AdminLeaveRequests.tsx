@@ -101,7 +101,13 @@ export const AdminLeaveRequests: React.FC = () => {
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     }).length;
 
-    return { pending: pending + cancelRequested, approvedThisMonth, rejectedThisMonth };
+    const totalDecided = approvedThisMonth + rejectedThisMonth;
+    const approvalRate = totalDecided > 0 ? Math.round((approvedThisMonth / totalDecided) * 100) : 0;
+    const rejectionRate = totalDecided > 0 ? Math.round((rejectedThisMonth / totalDecided) * 100) : 0;
+    const pendingTotal = pending + cancelRequested;
+    const pendingRate = leaveRequests.length > 0 ? Math.round((pendingTotal / leaveRequests.length) * 100) : 0;
+
+    return { pending: pendingTotal, approvedThisMonth, rejectedThisMonth, approvalRate, rejectionRate, pendingRate };
   }, [leaveRequests]);
 
   // Filter & sort requests
@@ -208,10 +214,15 @@ export const AdminLeaveRequests: React.FC = () => {
             <div>
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Pending Requests</p>
               <p className="text-3xl font-bold text-text-light dark:text-text-dark mt-1">{stats.pending}</p>
-              <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">Requires attention</p>
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                {stats.pendingRate}% of all requests
+              </p>
             </div>
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <div className="flex flex-col items-center gap-1">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{stats.pendingRate}%</span>
             </div>
           </div>
         </div>
@@ -220,9 +231,15 @@ export const AdminLeaveRequests: React.FC = () => {
             <div>
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Approved This Month</p>
               <p className="text-3xl font-bold text-text-light dark:text-text-dark mt-1">{stats.approvedThisMonth}</p>
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                {stats.approvalRate}% approval rate
+              </p>
             </div>
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+            <div className="flex flex-col items-center gap-1">
+              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+              <span className="text-xs font-semibold text-green-600 dark:text-green-400">{stats.approvalRate}%</span>
             </div>
           </div>
         </div>
@@ -231,9 +248,15 @@ export const AdminLeaveRequests: React.FC = () => {
             <div>
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Rejected This Month</p>
               <p className="text-3xl font-bold text-text-light dark:text-text-dark mt-1">{stats.rejectedThisMonth}</p>
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                {stats.rejectionRate}% rejection rate
+              </p>
             </div>
-            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
-              <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+            <div className="flex flex-col items-center gap-1">
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <span className="text-xs font-semibold text-red-600 dark:text-red-400">{stats.rejectionRate}%</span>
             </div>
           </div>
         </div>

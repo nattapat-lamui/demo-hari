@@ -43,6 +43,7 @@ import {
   useDeleteNote,
   useToggleNotePin,
   useAddEmployee,
+  useAdminAttendanceSnapshot,
 } from '../hooks/queries';
 
 export const AdminDashboard: React.FC = () => {
@@ -54,6 +55,7 @@ export const AdminDashboard: React.FC = () => {
 
   // ----- REACT QUERY HOOKS -----
   const { data: allEmployees = [], isPending: isEmployeesLoading } = useAllEmployees();
+  const { data: attendanceSnapshot } = useAdminAttendanceSnapshot();
   const { data: auditLogsData = [] } = useAuditLogs();
   const { data: headcountStats = [] } = useHeadcountStats();
   const { data: eventsData = [] } = useUpcomingEvents();
@@ -85,9 +87,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // ----- COMPUTED STATS -----
-  const { activeEmployeesCount, onLeaveCount, newHiresCount, newHiresTrend, turnoverRate, turnoverTrend } = useMemo(() => {
-    const activeEmployees = allEmployees.filter((employee) => employee.status === 'Active');
-    const onLeaveEmployees = allEmployees.filter((employee) => employee.status === 'On Leave');
+  const { newHiresCount, newHiresTrend, turnoverRate, turnoverTrend } = useMemo(() => {
     const terminatedEmployees = allEmployees.filter((employee) => employee.status === 'Terminated');
 
     const currentDate = new Date();
@@ -118,8 +118,6 @@ export const AdminDashboard: React.FC = () => {
     const turnoverTrendCalc = terminatedEmployees.length > 0 ? turnoverRateCalc : 0;
 
     return {
-      activeEmployeesCount: activeEmployees.length,
-      onLeaveCount: onLeaveEmployees.length,
       newHiresCount: newJoinersThisMonth,
       newHiresTrend: hireTrend,
       turnoverRate: turnoverRateCalc,
@@ -370,19 +368,18 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div onClick={() => navigate('/employees')} className="cursor-pointer">
+        <div onClick={() => navigate('/admin-attendance')} className="cursor-pointer">
           <StatCard
-            title="Active Employees"
-            value={activeEmployeesCount}
-            trend={2.5}
+            title="Active Now"
+            value={attendanceSnapshot?.activeNow ?? 0}
             icon={<Briefcase size={22} />}
             color="primary"
           />
         </div>
-        <div onClick={() => navigate('/employees?status=On Leave')} className="cursor-pointer">
+        <div onClick={() => navigate('/admin-attendance')} className="cursor-pointer">
           <StatCard
-            title="On Leave"
-            value={onLeaveCount}
+            title="On Leave Today"
+            value={attendanceSnapshot?.onLeave ?? 0}
             icon={<UserMinus size={22} />}
             color="orange"
           />
