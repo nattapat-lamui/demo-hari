@@ -33,6 +33,9 @@ const LEAVE_OPTIONS = [
   { value: 'Vacation', label: 'Vacation' },
   { value: 'Sick Leave', label: 'Sick Leave' },
   { value: 'Personal Day', label: 'Personal Day' },
+  { value: 'Maternity Leave', label: 'Maternity Leave' },
+  { value: 'Compensatory Leave', label: 'Compensatory Leave' },
+  { value: 'Military Leave', label: 'Military Leave' },
 ];
 
 const initialForm: FormState = {
@@ -107,7 +110,7 @@ export function LeaveRequestForm() {
   const isUnlimited = !currentBalance || currentBalance.total === -1;
   const remaining = currentBalance?.remaining ?? 0;
   const quotaExceeded = !isUnlimited && dayCount > 0 && dayCount > remaining;
-  const needsMedicalCert = form.type === 'Sick Leave' && dayCount >= 3;
+  const needsMedicalCert = (form.type === 'Sick Leave' && dayCount >= 3) || form.type === 'Maternity Leave';
 
   // Employee options for SearchableSelect
   const employeeOptions: SearchableSelectOption[] = useMemo(
@@ -150,7 +153,12 @@ export function LeaveRequestForm() {
       return;
     }
     if (needsMedicalCert && !form.medicalCertificate && !isEditMode) {
-      showToast('Medical certificate required for sick leave of 3+ days', 'error');
+      showToast(
+        form.type === 'Maternity Leave'
+          ? 'Medical certificate required for maternity leave'
+          : 'Medical certificate required for sick leave of 3+ days',
+        'error',
+      );
       return;
     }
 
@@ -219,7 +227,7 @@ export function LeaveRequestForm() {
                   onChange={(value) => setForm((prev) => ({
                     ...prev,
                     type: value,
-                    medicalCertificate: value !== 'Sick Leave' ? null : prev.medicalCertificate,
+                    medicalCertificate: (value !== 'Sick Leave' && value !== 'Maternity Leave') ? null : prev.medicalCertificate,
                   }))}
                   placeholder="Select leave type"
                 />
@@ -407,12 +415,15 @@ export function LeaveRequestForm() {
                     : bal.total > 0
                     ? Math.min((bal.remaining / bal.total) * 100, 100)
                     : 0;
-                  const colorClass =
-                    bal.type === 'Vacation'
-                      ? 'bg-blue-500'
-                      : bal.type === 'Sick Leave'
-                      ? 'bg-amber-500'
-                      : 'bg-violet-500';
+                  const BALANCE_COLORS: Record<string, string> = {
+                    'Vacation': 'bg-blue-500',
+                    'Sick Leave': 'bg-amber-500',
+                    'Personal Day': 'bg-violet-500',
+                    'Maternity Leave': 'bg-pink-500',
+                    'Compensatory Leave': 'bg-teal-500',
+                    'Military Leave': 'bg-slate-500',
+                  };
+                  const colorClass = BALANCE_COLORS[bal.type] || 'bg-gray-500';
 
                   return (
                     <div key={bal.type}>

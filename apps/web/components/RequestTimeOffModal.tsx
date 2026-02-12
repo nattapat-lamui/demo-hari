@@ -21,6 +21,9 @@ const LEAVE_OPTIONS = [
   { value: 'Vacation', label: 'Vacation' },
   { value: 'Sick Leave', label: 'Sick Leave' },
   { value: 'Personal Day', label: 'Personal Day' },
+  { value: 'Maternity Leave', label: 'Maternity Leave' },
+  { value: 'Compensatory Leave', label: 'Compensatory Leave' },
+  { value: 'Military Leave', label: 'Military Leave' },
 ];
 
 interface FormState {
@@ -76,7 +79,7 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
   const remaining = currentBalance?.remaining ?? 0;
   const quotaExceeded = !isUnlimited && dayCount > 0 && dayCount > remaining;
 
-  const needsMedicalCert = form.type === 'Sick Leave' && dayCount >= 3;
+  const needsMedicalCert = (form.type === 'Sick Leave' && dayCount >= 3) || form.type === 'Maternity Leave';
   const showHandoverNotes = !!form.handoverEmployeeId;
 
   // Employee options for SearchableSelect
@@ -103,8 +106,8 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
     setForm((prev) => ({
       ...prev,
       type,
-      // Clear medical cert when switching away from Sick Leave
-      medicalCertificate: type !== 'Sick Leave' ? null : prev.medicalCertificate,
+      // Clear medical cert when switching away from types that require it
+      medicalCertificate: (type !== 'Sick Leave' && type !== 'Maternity Leave') ? null : prev.medicalCertificate,
     }));
   };
 
@@ -128,7 +131,11 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
       return;
     }
     if (needsMedicalCert && !form.medicalCertificate) {
-      setError('A medical certificate is required for sick leave of 3+ days.');
+      setError(
+        form.type === 'Maternity Leave'
+          ? 'A medical certificate is required for maternity leave.'
+          : 'A medical certificate is required for sick leave of 3+ days.',
+      );
       return;
     }
 

@@ -27,6 +27,9 @@ const LEAVE_TYPE_COLORS: Record<string, string> = {
   'Vacation': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
   'Sick Leave': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
   'Personal Day': 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-200',
+  'Maternity Leave': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-200',
+  'Compensatory Leave': 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200',
+  'Military Leave': 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-200',
 };
 
 const STATUS_OPTIONS = [
@@ -42,6 +45,9 @@ const LEAVE_TYPE_OPTIONS = [
   { value: 'Vacation', label: 'Vacation' },
   { value: 'Sick Leave', label: 'Sick Leave' },
   { value: 'Personal Day', label: 'Personal Day' },
+  { value: 'Maternity Leave', label: 'Maternity Leave' },
+  { value: 'Compensatory Leave', label: 'Compensatory Leave' },
+  { value: 'Military Leave', label: 'Military Leave' },
 ];
 
 const SORT_OPTIONS = [

@@ -115,7 +115,7 @@ export const validateLeaveRequest = [
     .trim()
     .notEmpty()
     .withMessage('Leave type is required')
-    .isIn(['Vacation', 'Sick Leave', 'Personal Day'])
+    .isIn(['Vacation', 'Sick Leave', 'Personal Day', 'Maternity Leave', 'Compensatory Leave', 'Military Leave'])
     .withMessage('Invalid leave type')
     .escape(),
   body('startDate')
