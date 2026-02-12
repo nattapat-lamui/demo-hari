@@ -138,12 +138,15 @@ export const OrgChart: React.FC = () => {
   // Department filter - use strict type
   const [departmentFilter, setDepartmentFilter] = useState<Department | ''>('');
 
-  // Pan/Zoom state
+  // Pan/Zoom — refs for zero-rerender drag, state for React sync
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [isPanning, setIsPanning] = useState(false);
+  const isPanningRef = useRef(false);
+  const panPositionRef = useRef({ x: 0, y: 0 });
+  const startPanRef = useRef({ x: 0, y: 0 });
+  const zoomRef = useRef(1);
+  const zoomSyncTimer = useRef<number>();
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
-  const [startPan, setStartPan] = useState({ x: 0, y: 0 });
 
   // Use predefined departments for type safety
   const departments: readonly Department[] = DEPARTMENTS;
@@ -169,6 +172,18 @@ export const OrgChart: React.FC = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const [zoom, setZoom] = useState(1);
+
+  // Apply transform directly to DOM (bypasses React re-renders during pan/zoom)
+  const applyTransform = useCallback(() => {
+    if (!contentRef.current) return;
+    const { x, y } = panPositionRef.current;
+    contentRef.current.style.transform = `translate(${x}px, ${y}px) scale(${zoomRef.current})`;
+  }, []);
+
+  // Keep refs in sync when React state changes (fitToView, slider, etc.)
+  useEffect(() => { panPositionRef.current = panPosition; }, [panPosition]);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     type: 'add',
@@ -270,33 +285,37 @@ export const OrgChart: React.FC = () => {
     return () => clearTimeout(timer);
   }, [tree, fitToView]);
 
-  // Pan handlers
+  // Pan handlers — use refs + direct DOM writes to avoid re-renders during drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only left click
-
-    // Don't start panning if clicking on interactive elements (buttons, inputs, etc.)
+    if (e.button !== 0) return;
     const target = e.target as HTMLElement;
-    if (target.closest('[draggable="true"]') || target.closest('button') || target.closest('input') || target.closest('select') || target.closest('a')) {
-      return;
-    }
-
-    // Prevent text selection during drag
+    if (target.closest('[draggable="true"]') || target.closest('button') || target.closest('input') || target.closest('select') || target.closest('a')) return;
     e.preventDefault();
-    setIsPanning(true);
-    setStartPan({ x: e.clientX - panPosition.x, y: e.clientY - panPosition.y });
-  }, [panPosition]);
+    isPanningRef.current = true;
+    startPanRef.current = {
+      x: e.clientX - panPositionRef.current.x,
+      y: e.clientY - panPositionRef.current.y,
+    };
+    if (containerRef.current) containerRef.current.style.cursor = 'grabbing';
+    if (contentRef.current) contentRef.current.style.transition = 'none';
+  }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanning) return;
+    if (!isPanningRef.current) return;
     e.preventDefault();
-    setPanPosition({
-      x: e.clientX - startPan.x,
-      y: e.clientY - startPan.y,
-    });
-  }, [isPanning, startPan]);
+    panPositionRef.current = {
+      x: e.clientX - startPanRef.current.x,
+      y: e.clientY - startPanRef.current.y,
+    };
+    applyTransform();
+  }, [applyTransform]);
 
   const handleMouseUp = useCallback(() => {
-    setIsPanning(false);
+    if (!isPanningRef.current) return;
+    isPanningRef.current = false;
+    if (containerRef.current) containerRef.current.style.cursor = 'grab';
+    if (contentRef.current) contentRef.current.style.transition = 'transform 0.2s ease-out';
+    setPanPosition(panPositionRef.current);
   }, []);
 
   // Use non-passive wheel listener to prevent browser zoom on Mac
@@ -308,7 +327,10 @@ export const OrgChart: React.FC = () => {
       e.preventDefault();
       e.stopPropagation();
       const delta = e.deltaY > 0 ? -0.05 : 0.05;
-      setZoom((prev) => Math.min(1.5, Math.max(0.3, prev + delta)));
+      zoomRef.current = Math.min(1.5, Math.max(0.3, zoomRef.current + delta));
+      applyTransform();
+      clearTimeout(zoomSyncTimer.current);
+      zoomSyncTimer.current = window.setTimeout(() => setZoom(zoomRef.current), 100);
     };
 
     // Add with passive: false to allow preventDefault
@@ -784,7 +806,7 @@ export const OrgChart: React.FC = () => {
 
       <div
         ref={containerRef}
-        className={`flex-grow bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-8 overflow-hidden relative bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#2d3748_1px,transparent_1px)] [background-size:20px_20px] select-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className="flex-grow bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-8 overflow-hidden relative bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#2d3748_1px,transparent_1px)] [background-size:20px_20px] select-none cursor-grab"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -807,7 +829,7 @@ export const OrgChart: React.FC = () => {
           className="flex justify-center min-w-max pt-8 pb-8 transition-transform origin-top-left"
           style={{
             transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoom})`,
-            transition: isPanning ? 'none' : 'transform 0.2s ease-out',
+            transition: 'transform 0.2s ease-out',
           }}
         >
           <div className="flex gap-16">
