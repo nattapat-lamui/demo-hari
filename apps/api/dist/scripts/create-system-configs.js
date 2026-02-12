@@ -43,9 +43,9 @@ function createSystemConfigsTable() {
                     category: 'leave',
                     key: 'quotas',
                     value: JSON.stringify([
-                        { type: 'Vacation', total: 15 },
+                        { type: 'Vacation', total: 7 },
                         { type: 'Sick Leave', total: 30 },
-                        { type: 'Personal Day', total: -1 } // -1 = unlimited
+                        { type: 'Personal Day', total: 6 }
                     ]),
                     data_type: 'json',
                     description: 'Leave quotas by type. -1 means unlimited.'
@@ -129,7 +129,7 @@ function createSystemConfigsTable() {
             }
             console.log('\n✅ All configurations inserted successfully!');
             console.log('\nDefault configurations:');
-            console.log('  - Leave quotas: Vacation (15), Sick Leave (30), Personal Day (Unlimited)');
+            console.log('  - Leave quotas: Vacation (7), Sick Leave (30), Personal Day (6)');
             console.log('  - Default password: Welcome123!');
             console.log('  - Session timeout: 8 hours');
             console.log('  - Max file upload: 50 MB');

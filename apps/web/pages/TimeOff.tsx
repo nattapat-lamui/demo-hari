@@ -65,7 +65,7 @@ interface CardConfig {
 }
 
 const LEAVE_CARDS: CardConfig[] = [
-  { type: 'Vacation',      label: 'Annual Leave',    color: '#3B82F6', borderColor: 'border-l-blue-500' },
+  { type: 'Vacation',      label: 'Vacation Leave',  color: '#3B82F6', borderColor: 'border-l-blue-500' },
   { type: 'Sick Leave',    label: 'Sick Leave',      color: '#F59E0B', borderColor: 'border-l-amber-500' },
   { type: 'Personal Day',  label: 'Personal Leave',  color: '#8B5CF6', borderColor: 'border-l-violet-500' },
 ];
