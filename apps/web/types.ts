@@ -20,6 +20,35 @@ export const DEPARTMENTS = [
 
 export type Department = (typeof DEPARTMENTS)[number];
 
+// Job title type for strict type checking
+export const JOB_TITLES = [
+  'Software Engineer',
+  'Senior Software Engineer',
+  'Full-stack Developer',
+  'Frontend Developer',
+  'Backend Developer',
+  'Full-stack Developer Intern',
+  'UI/UX Designer',
+  'Graphic Designer',
+  'Product Manager',
+  'Project Manager',
+  'QA Engineer',
+  'DevOps Engineer',
+  'Data Analyst',
+  'Data Scientist',
+  'Marketing Specialist',
+  'Sales Representative',
+  'HR Specialist',
+  'HR Manager',
+  'Finance Analyst',
+  'Customer Support Specialist',
+  'Team Lead',
+  'Engineering Manager',
+  'Intern',
+] as const;
+
+export type JobTitle = (typeof JOB_TITLES)[number];
+
 export interface User {
   id: string;
   employeeId?: string;

@@ -4,8 +4,6 @@ import {
     X,
     Check,
     User,
-    Briefcase,
-    Users,
     Mail,
     Hash,
     Lock,
@@ -19,13 +17,9 @@ import { DatePicker } from '../../components/DatePicker';
 import { Dropdown } from '../../components/Dropdown';
 import { ThaiAddressForm } from '../../components/ThaiAddressForm';
 import { EmployeeModalsProps } from './EmployeeDetailTypes';
+import { DEPARTMENTS, JOB_TITLES } from '../../types';
 
-const OFFICE_LOCATIONS = [
-    'Bangkok, Thailand',
-    'Chiang Mai, Thailand',
-    'Phuket, Thailand',
-    'Remote',
-];
+const OFFICE_LOCATIONS = ['Office', 'Remote'];
 
 export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
     // Edit Profile Modal
@@ -122,16 +116,18 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     Role / Title
                                     {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
                                 </label>
-                                <div className="relative">
-                                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
-                                    <input
-                                        type="text"
-                                        value={editForm.role || ''}
-                                        disabled={!canEditSensitiveInfo}
-                                        onChange={(e) => onProfileChange('role', e.target.value)}
-                                        className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark ${!canEditSensitiveInfo ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    />
-                                </div>
+                                <Dropdown
+                                    value={editForm.role || ''}
+                                    onChange={(val) => onProfileChange('role', val)}
+                                    placeholder="Select role"
+                                    disabled={!canEditSensitiveInfo}
+                                    options={[
+                                        ...(editForm.role && !JOB_TITLES.includes(editForm.role as any)
+                                            ? [{ value: editForm.role, label: editForm.role }]
+                                            : []),
+                                        ...JOB_TITLES.map((t) => ({ value: t, label: t })),
+                                    ]}
+                                />
                             </div>
 
                             <div>
@@ -139,16 +135,18 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     Department
                                     {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
                                 </label>
-                                <div className="relative">
-                                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
-                                    <input
-                                        type="text"
-                                        value={editForm.department || ''}
-                                        disabled={!canEditSensitiveInfo}
-                                        onChange={(e) => onProfileChange('department', e.target.value)}
-                                        className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark ${!canEditSensitiveInfo ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    />
-                                </div>
+                                <Dropdown
+                                    value={editForm.department || ''}
+                                    onChange={(val) => onProfileChange('department', val)}
+                                    placeholder="Select department"
+                                    disabled={!canEditSensitiveInfo}
+                                    options={[
+                                        ...(editForm.department && !DEPARTMENTS.includes(editForm.department as any)
+                                            ? [{ value: editForm.department, label: editForm.department }]
+                                            : []),
+                                        ...DEPARTMENTS.map((d) => ({ value: d, label: d })),
+                                    ]}
+                                />
                             </div>
 
                             <div>

@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import {
   User,
   Mail,
-  Calendar,
   Check,
-  Briefcase,
-  Users,
   AlertCircle
 } from 'lucide-react';
 import { Modal } from './Modal';
 import { DatePicker } from './DatePicker';
+import { Dropdown } from './Dropdown';
+import { DEPARTMENTS, JOB_TITLES } from '../types';
 
 /**
  * Form data for adding a new employee
@@ -192,23 +191,12 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
               Role
             </label>
-            <div className="relative">
-              <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
-              <input
-                type="text"
-                value={newEmployee.role}
-                onChange={(e) => updateField('role', e.target.value)}
-                placeholder="e.g. Designer"
-                className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 text-text-light dark:text-text-dark ${
-                  validationErrors.role
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-border-light dark:border-border-dark focus:ring-primary'
-                }`}
-              />
-              {validationErrors.role && (
-                <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500" size={16} />
-              )}
-            </div>
+            <Dropdown
+              value={newEmployee.role}
+              onChange={(val) => updateField('role', val)}
+              placeholder="Select role"
+              options={JOB_TITLES.map((t) => ({ value: t, label: t }))}
+            />
             {validationErrors.role && (
               <p className="mt-1 text-xs text-red-500">{validationErrors.role}</p>
             )}
@@ -218,23 +206,12 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
               Department
             </label>
-            <div className="relative">
-              <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
-              <input
-                type="text"
-                value={newEmployee.department}
-                onChange={(e) => updateField('department', e.target.value)}
-                placeholder="e.g. Product"
-                className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 text-text-light dark:text-text-dark ${
-                  validationErrors.department
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-border-light dark:border-border-dark focus:ring-primary'
-                }`}
-              />
-              {validationErrors.department && (
-                <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500" size={16} />
-              )}
-            </div>
+            <Dropdown
+              value={newEmployee.department}
+              onChange={(val) => updateField('department', val)}
+              placeholder="Select department"
+              options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
+            />
             {validationErrors.department && (
               <p className="mt-1 text-xs text-red-500">{validationErrors.department}</p>
             )}
