@@ -67,8 +67,11 @@ export class DashboardService {
    */
   private async getLeaveBalance(employeeId: string): Promise<number> {
     // Get real leave quotas from system config
+    // Only count standard leave types for the summary balance card;
+    // special types (Maternity, Compensatory, Military) are excluded.
+    const STANDARD_TYPES = ['Vacation', 'Sick Leave', 'Personal Day'];
     const leaveQuotas = await SystemConfigService.getLeaveQuotas();
-    const limitedQuotas = leaveQuotas.filter(q => q.total !== -1);
+    const limitedQuotas = leaveQuotas.filter(q => q.total !== -1 && STANDARD_TYPES.includes(q.type));
     if (limitedQuotas.length === 0) return 0;
 
     // Get used days per leave type from approved requests this year
