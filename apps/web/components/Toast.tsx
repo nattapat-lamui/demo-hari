@@ -1,69 +1,122 @@
-import React, { useEffect } from 'react';
-import { CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
+
+type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface ToastProps {
   message: string;
-  type?: 'success' | 'error' | 'warning' | 'info';
+  type?: ToastType;
   duration?: number;
   onClose: () => void;
 }
+
+const TOAST_CONFIG: Record<
+  ToastType,
+  { title: string; borderColor: string; iconBg: string; progressColor: string; Icon: React.ElementType }
+> = {
+  success: {
+    title: 'Success',
+    borderColor: 'border-l-green-500',
+    iconBg: 'bg-green-500',
+    progressColor: 'bg-green-500',
+    Icon: CheckCircle2,
+  },
+  error: {
+    title: 'Error',
+    borderColor: 'border-l-red-500',
+    iconBg: 'bg-red-500',
+    progressColor: 'bg-red-500',
+    Icon: XCircle,
+  },
+  warning: {
+    title: 'Warning',
+    borderColor: 'border-l-amber-500',
+    iconBg: 'bg-amber-500',
+    progressColor: 'bg-amber-500',
+    Icon: AlertTriangle,
+  },
+  info: {
+    title: 'Information',
+    borderColor: 'border-l-blue-500',
+    iconBg: 'bg-blue-500',
+    progressColor: 'bg-blue-500',
+    Icon: Info,
+  },
+};
+
+const ANIMATION_MS = 300;
 
 export const Toast: React.FC<ToastProps> = ({
   message,
   type = 'success',
   duration = 3000,
-  onClose
+  onClose,
 }) => {
+  const [isExiting, setIsExiting] = useState(false);
+
+  const triggerExit = useCallback(() => {
+    if (isExiting) return;
+    setIsExiting(true);
+    setTimeout(onClose, ANIMATION_MS);
+  }, [onClose, isExiting]);
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose();
-    }, duration);
-
+    if (duration <= 0) return;
+    const timer = setTimeout(triggerExit, duration);
     return () => clearTimeout(timer);
-  }, [duration, onClose]);
+  }, [duration, triggerExit]);
 
-  const getIcon = () => {
-    switch (type) {
-      case 'success':
-        return <CheckCircle2 size={20} className="text-green-500" />;
-      case 'error':
-        return <XCircle size={20} className="text-red-500" />;
-      case 'warning':
-        return <AlertCircle size={20} className="text-orange-500" />;
-      case 'info':
-        return <AlertCircle size={20} className="text-blue-500" />;
-      default:
-        return <CheckCircle2 size={20} className="text-green-500" />;
-    }
-  };
-
-  const getBgColor = () => {
-    switch (type) {
-      case 'success':
-        return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
-      case 'error':
-        return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
-      case 'warning':
-        return 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800';
-      case 'info':
-        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
-      default:
-        return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
-    }
-  };
+  const config = TOAST_CONFIG[type];
+  const { Icon } = config;
 
   return (
-    <div className={`fixed top-4 right-4 z-[9999] flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg ${getBgColor()} animate-in slide-in-from-top-5 duration-300`}>
-      {getIcon()}
-      <p className="text-sm font-medium text-text-light dark:text-text-dark pr-6">
-        {message}
-      </p>
+    <div
+      role="alert"
+      aria-live="assertive"
+      className={`
+        fixed z-[9999]
+        top-4 inset-x-4
+        md:top-auto md:bottom-4 md:right-4 md:left-auto md:w-96
+        overflow-hidden
+        flex items-start gap-3
+        bg-white dark:bg-gray-800
+        border-l-4 ${config.borderColor}
+        rounded-lg
+        ring-1 ring-black/5 dark:ring-white/10
+        shadow-lg
+        p-4
+        ${isExiting ? 'animate-toast-exit' : 'animate-toast-enter'}
+      `}
+    >
+      {/* Icon with colored circle */}
+      <div className={`flex-shrink-0 rounded-full p-1.5 ${config.iconBg}`}>
+        <Icon className="w-4 h-4 text-white" />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">{config.title}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed">{message}</p>
+      </div>
+
+      {/* Close button */}
       <button
-        onClick={onClose}
-        className="absolute top-2 right-2 text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark transition-colors"
+        onClick={triggerExit}
+        className="flex-shrink-0 p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        aria-label="Dismiss notification"
       >
-        <X size={16} />
+        <X className="w-4 h-4" />
       </button>
+
+      {/* Progress bar */}
+      {duration > 0 && !isExiting && (
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-100 dark:bg-gray-700">
+          <div
+            className={`h-full ${config.progressColor} opacity-60 rounded-br`}
+            style={{ animation: `toast-progress ${duration}ms linear forwards` }}
+          />
+        </div>
+      )}
     </div>
   );
 };

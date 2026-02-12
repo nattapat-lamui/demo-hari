@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Modal } from './Modal';
 import { Avatar } from './Avatar';
+import { LeaveActionBar } from './LeaveActionBar';
 import { useLeaveBalance } from '../hooks/queries';
 import { API_HOST } from '../lib/api';
 import type { LeaveRequest } from '../types';
@@ -18,8 +19,8 @@ interface LeaveDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   request: LeaveRequest | null;
-  onApprove: (id: string) => void;
-  onReject: (request: LeaveRequest) => void;
+  onApprove: (id: string) => void | Promise<void>;
+  onReject: (request: LeaveRequest, reason: string) => void | Promise<void>;
 }
 
 export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({
@@ -169,30 +170,23 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({
       </div>
 
       {/* Footer with actions */}
-      <div className="px-6 py-4 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-3">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-        >
-          Close
-        </button>
-        {isPending && (
-          <>
-            <button
-              onClick={() => onReject(request)}
-              className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-            >
-              Reject
-            </button>
-            <button
-              onClick={() => onApprove(request.id)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-            >
-              Approve
-            </button>
-          </>
-        )}
-      </div>
+      {isPending ? (
+        <LeaveActionBar
+          employeeName={request.employeeName}
+          onApprove={() => onApprove(request.id)}
+          onReject={(reason) => onReject(request, reason)}
+          sticky={true}
+        />
+      ) : (
+        <div className="px-6 py-4 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 bg-white dark:bg-card-dark border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      )}
     </Modal>
   );
 };

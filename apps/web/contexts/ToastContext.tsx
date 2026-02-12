@@ -6,7 +6,10 @@ export interface Toast {
   id: string;
   message: string;
   type: ToastType;
-  duration?: number;
+  duration: number;
+  title?: string;
+  isExiting?: boolean;
+  createdAt: number;
 }
 
 interface ToastContextType {
@@ -15,6 +18,8 @@ interface ToastContextType {
   hideToast: (id: string) => void;
   clearAll: () => void;
 }
+
+const ANIMATION_DURATION = 300;
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
@@ -33,9 +38,18 @@ interface ToastProviderProps {
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  const hideToast = useCallback((id: string) => {
+    // Mark as exiting to trigger exit animation
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, isExiting: true } : t)));
+    // Remove after animation completes
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, ANIMATION_DURATION);
+  }, []);
+
   const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 5000) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
-    const newToast: Toast = { id, message, type, duration };
+    const newToast: Toast = { id, message, type, duration, createdAt: Date.now() };
 
     setToasts((prev) => [...prev, newToast]);
 
@@ -45,11 +59,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         hideToast(id);
       }, duration);
     }
-  }, []);
-
-  const hideToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
+  }, [hideToast]);
 
   const clearAll = useCallback(() => {
     setToasts([]);

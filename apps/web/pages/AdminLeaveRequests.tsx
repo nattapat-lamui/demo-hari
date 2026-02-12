@@ -16,7 +16,7 @@ import { Pagination } from '../components/Pagination';
 import { Dropdown } from '../components/Dropdown';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { LeaveDetailModal } from '../components/LeaveDetailModal';
-import { RejectReasonDialog } from '../components/RejectReasonDialog';
+import { LeaveActionBar } from '../components/LeaveActionBar';
 import type { LeaveRequest } from '../types';
 import { DEPARTMENTS } from '../types';
 
@@ -113,7 +113,6 @@ export const AdminLeaveRequests: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('date_desc');
   const [detailRequest, setDetailRequest] = useState<LeaveRequest | null>(null);
-  const [rejectingRequest, setRejectingRequest] = useState<LeaveRequest | null>(null);
 
   const { data: leaveRequests = [], isPending: isLoadingRequests } = useLeaveRequests();
   const { data: employees = [], isPending: isLoadingEmployees } = useAllEmployees();
@@ -188,29 +187,23 @@ export const AdminLeaveRequests: React.FC = () => {
     setCurrentPage(1);
   }, [statusFilter, typeFilter, departmentFilter, sortBy]);
 
-  const handleApprove = async (request: LeaveRequest) => {
+  const handleApprove = async (id: string) => {
     try {
-      await updateLeaveStatusMutation.mutateAsync({ id: request.id, status: 'Approved' });
+      await updateLeaveStatusMutation.mutateAsync({ id, status: 'Approved' });
       showToast('Leave request approved', 'success');
     } catch {
       showToast('Failed to approve leave request', 'error');
     }
   };
 
-  const handleReject = (request: LeaveRequest) => {
-    setRejectingRequest(request);
-  };
-
-  const handleRejectConfirm = async (reason: string) => {
-    if (!rejectingRequest) return;
+  const handleReject = async (id: string, reason: string) => {
     try {
       await updateLeaveStatusMutation.mutateAsync({
-        id: rejectingRequest.id,
+        id,
         status: 'Rejected',
         rejectionReason: reason,
       });
       showToast('Leave request rejected', 'success');
-      setRejectingRequest(null);
     } catch {
       showToast('Failed to reject leave request', 'error');
     }
@@ -418,41 +411,37 @@ export const AdminLeaveRequests: React.FC = () => {
                             <>
                               <button
                                 onClick={() => handleCancelDecision(request, 'approve_cancel')}
-                                className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-200 dark:hover:bg-green-900/50 rounded transition-colors"
+                                className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-200 dark:hover:bg-green-900/50 rounded-lg transition-colors"
                               >
                                 Approve Cancel
                               </button>
                               <button
                                 onClick={() => handleCancelDecision(request, 'reject_cancel')}
-                                className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-200 dark:hover:bg-red-900/50 rounded transition-colors"
+                                className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-200 dark:hover:bg-red-900/50 rounded-lg transition-colors"
                               >
                                 Reject Cancel
                               </button>
                             </>
                           ) : request.status === 'Pending' ? (
-                            <>
-                              <button
-                                onClick={() => handleReject(request)}
-                                className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                title="Decline"
-                              >
-                                <XCircle className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() => handleApprove(request)}
-                                className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
-                              >
-                                Approve
-                              </button>
-                            </>
+                            <LeaveActionBar
+                              employeeName={emp?.name || request.employeeName}
+                              onApprove={() => handleApprove(request.id)}
+                              onReject={(reason) => handleReject(request.id, reason)}
+                              compact={true}
+                            />
                           ) : (
                             <span
-                              className={`text-xs font-medium ${
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${
                                 request.status === 'Approved'
-                                  ? 'text-green-600 dark:text-green-400'
-                                  : 'text-red-600 dark:text-red-400'
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-200'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-200'
                               }`}
                             >
+                              {request.status === 'Approved' ? (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              ) : (
+                                <XCircle className="w-3.5 h-3.5" />
+                              )}
                               {request.status}
                             </span>
                           )}
@@ -484,24 +473,14 @@ export const AdminLeaveRequests: React.FC = () => {
           isOpen={true}
           request={detailRequest}
           onClose={() => setDetailRequest(null)}
-          onApprove={(id) => {
-            const req = leaveRequests.find((r) => r.id === id);
-            if (req) handleApprove(req);
+          onApprove={async (id) => {
+            await handleApprove(id);
             setDetailRequest(null);
           }}
-          onReject={(req) => {
-            handleReject(req);
+          onReject={async (req, reason) => {
+            await handleReject(req.id, reason);
             setDetailRequest(null);
           }}
-        />
-      )}
-
-      {/* Reject Dialog */}
-      {rejectingRequest && (
-        <RejectReasonDialog
-          isOpen={true}
-          onClose={() => setRejectingRequest(null)}
-          onConfirm={handleRejectConfirm}
         />
       )}
     </div>
