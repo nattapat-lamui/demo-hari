@@ -99,8 +99,8 @@ class EmployeeController {
                 // If employee updating own profile, restrict fields they can update
                 let updateData = Object.assign({ id }, req.body);
                 if (!isAdmin && isOwnProfile) {
-                    // Employees can only update: name, email, avatar, bio, phone, location, slack, emergencyContact, skills
-                    const allowedFields = ['name', 'email', 'avatar', 'bio', 'phone', 'location', 'slack', 'emergencyContact', 'skills'];
+                    // Employees can only update: name, email, avatar, bio, phone, location, slack, emergencyContact, skills, address
+                    const allowedFields = ['name', 'email', 'avatar', 'bio', 'phone', 'location', 'slack', 'emergencyContact', 'skills', 'address'];
                     updateData = Object.assign({ id }, Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key))));
                 }
                 const employee = yield EmployeeService_1.default.updateEmployee(updateData);
