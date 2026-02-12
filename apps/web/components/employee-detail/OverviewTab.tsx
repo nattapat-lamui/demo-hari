@@ -1,6 +1,22 @@
-import React from 'react';
-import { Edit2, Save, Plus, X, Shield, Clock } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Edit2, Save, Plus, X, Shield, Clock, Calendar, Award } from 'lucide-react';
 import { OverviewTabProps } from './EmployeeDetailTypes';
+
+function formatServiceDuration(joinDate: string): string {
+    const start = new Date(joinDate);
+    const now = new Date();
+    if (start > now) return 'Not started yet';
+    let years = now.getFullYear() - start.getFullYear();
+    let months = now.getMonth() - start.getMonth();
+    if (months < 0) {
+        years--;
+        months += 12;
+    }
+    const parts: string[] = [];
+    if (years > 0) parts.push(`${years} year${years > 1 ? 's' : ''}`);
+    if (months > 0) parts.push(`${months} month${months > 1 ? 's' : ''}`);
+    return parts.length > 0 ? parts.join(' ') : 'Less than a month';
+}
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
     employee,
@@ -16,6 +32,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     onCancelSkills,
 }) => {
     const { canEditBasicInfo } = permissions;
+
+    const formattedJoinDate = useMemo(() => {
+        if (!employee.joinDate) return '-';
+        const d = new Date(employee.joinDate);
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }, [employee.joinDate]);
+
+    const serviceDuration = useMemo(() => {
+        if (!employee.joinDate) return '-';
+        return formatServiceDuration(employee.joinDate);
+    }, [employee.joinDate]);
 
     return (
         <div className="space-y-8 animate-fade-in">
@@ -118,6 +145,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         <p className="font-semibold text-text-light dark:text-text-dark">Work Schedule</p>
                     </div>
                     <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">Mon-Fri • 9:00 AM - 5:00 PM</p>
+                </div>
+                <div className="p-4 bg-background-light dark:bg-background-dark/50 rounded-lg border border-border-light dark:border-border-dark">
+                    <div className="flex items-center gap-3 mb-2">
+                        <Calendar className="text-primary" size={20} />
+                        <p className="font-semibold text-text-light dark:text-text-dark">Start Date</p>
+                    </div>
+                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">{formattedJoinDate}</p>
+                </div>
+                <div className="p-4 bg-background-light dark:bg-background-dark/50 rounded-lg border border-border-light dark:border-border-dark">
+                    <div className="flex items-center gap-3 mb-2">
+                        <Award className="text-accent-teal" size={20} />
+                        <p className="font-semibold text-text-light dark:text-text-dark">Service Years</p>
+                    </div>
+                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">{serviceDuration}</p>
                 </div>
             </div>
         </div>

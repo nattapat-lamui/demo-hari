@@ -1,3 +1,11 @@
+export interface EmployeeAddress {
+    addressLine1?: string;
+    subDistrict?: string;
+    district?: string;
+    province?: string;
+    postalCode?: string;
+}
+
 export interface Employee {
     id: string;
     name: string;
@@ -11,7 +19,8 @@ export interface Employee {
     bio?: string;
     phone?: string;
     phoneNumber?: string;
-    address?: string;
+    employeeCode?: string;
+    address?: EmployeeAddress | null;
     location?: string;
     slack?: string;
     emergencyContact?: string;
@@ -41,4 +50,6 @@ export interface UpdateEmployeeDTO extends Partial<CreateEmployeeDTO> {
     emergencyContact?: string;
     skills?: string[];
     managerId?: string | null;
+    employeeCode?: string;
+    address?: EmployeeAddress | null;
 }

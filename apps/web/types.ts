@@ -32,6 +32,14 @@ export interface User {
   phone?: string;
 }
 
+export interface EmployeeAddress {
+  addressLine1?: string;
+  subDistrict?: string;
+  district?: string;
+  province?: string;
+  postalCode?: string;
+}
+
 export interface Employee {
   id: string;
   name: string;
@@ -50,6 +58,8 @@ export interface Employee {
   slack?: string;
   emergencyContact?: string;
   managerId?: string;
+  employeeCode?: string;
+  address?: EmployeeAddress | null;
 }
 
 export interface StatCardProps {

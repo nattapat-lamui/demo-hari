@@ -82,7 +82,7 @@ export interface EmployeeModalsProps {
     editForm: Partial<Employee>;
     permissions: EmployeePermissions;
     onCloseEditProfile: () => void;
-    onProfileChange: (field: keyof Employee, value: string) => void;
+    onProfileChange: (field: keyof Employee, value: any) => void;
     onProfileSave: () => void;
 
     // Add History Modal

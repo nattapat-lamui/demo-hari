@@ -106,12 +106,19 @@ export class EmployeeService {
         // Generate avatar
         const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
 
+        // Auto-generate employee_code
+        const codeResult = await query(
+            `SELECT COALESCE(MAX(CAST(SUBSTRING(employee_code FROM 5) AS INTEGER)), 0) + 1 AS next_num FROM employees WHERE employee_code LIKE 'EMP-%'`
+        );
+        const nextNum = codeResult.rows[0].next_num;
+        const employeeCode = `EMP-${String(nextNum).padStart(4, '0')}`;
+
         // Insert employee
         const result = await query(
-            `INSERT INTO employees (name, email, role, department, join_date, avatar, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `INSERT INTO employees (name, email, role, department, join_date, avatar, status, employee_code)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              RETURNING *`,
-            [name, email, role, department, joinDate, avatar, 'Active']
+            [name, email, role, department, joinDate, avatar, 'Active', employeeCode]
         );
 
         return this.mapRowToEmployee(result.rows[0]);
@@ -187,6 +194,14 @@ export class EmployeeService {
             updates.push(`manager_id = $${paramIndex++}`);
             values.push(data.managerId || null);
         }
+        if (data.employeeCode !== undefined) {
+            updates.push(`employee_code = $${paramIndex++}`);
+            values.push(data.employeeCode);
+        }
+        if (data.address !== undefined) {
+            updates.push(`address = $${paramIndex++}`);
+            values.push(data.address || null);
+        }
 
         if (updates.length === 0) {
             return existing;
@@ -220,6 +235,7 @@ export class EmployeeService {
             bio: row.bio,
             phone: row.phone,
             phoneNumber: row.phone_number,
+            employeeCode: row.employee_code,
             address: row.address,
             location: row.location,
             slack: row.slack,

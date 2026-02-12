@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Mail, Hash, Briefcase, Camera, MoreHorizontal } from 'lucide-react';
+import { Camera, MoreHorizontal } from 'lucide-react';
 import { EmployeeHeroProps } from './EmployeeDetailTypes';
 
 export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
@@ -16,7 +16,7 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <div className="h-32 bg-gradient-to-r from-primary/80 to-accent-teal/80 rounded-t-xl"></div>
             <div className="px-6 pb-6 pt-2">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end -mt-14 mb-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end -mt-14 mb-2">
                     <div className="flex items-end gap-4">
                         <div className="relative group cursor-pointer">
                             <img
@@ -42,7 +42,26 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
                         </div>
                         <div className="mb-1 flex flex-col">
                             <h1 className="text-2xl font-bold text-text-light dark:text-text-dark leading-[1.2]">{employee.name}</h1>
-                            <p className="text-text-muted-light dark:text-text-muted-dark font-medium mt-1 leading-normal">{employee.role}</p>
+                            <p className="text-text-muted-light dark:text-text-muted-dark font-medium mt-1 leading-normal">
+                                {employee.role} | {employee.department}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1">
+                                {employee.employeeCode && (
+                                    <span className="text-xs text-text-muted-light dark:text-text-muted-dark font-mono">
+                                        {employee.employeeCode}
+                                    </span>
+                                )}
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${employee.status === 'Active'
+                                    ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900'
+                                    : employee.status === 'Terminated'
+                                        ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900'
+                                        : 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900'
+                                    }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${employee.status === 'Active' ? 'bg-green-500' : employee.status === 'Terminated' ? 'bg-red-500' : 'bg-yellow-500'
+                                        }`}></span>
+                                    {employee.status}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -82,39 +101,6 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
                                 </div>
                             </div>
                         )}
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-text-muted-light dark:text-text-muted-dark border-t border-border-light dark:border-border-dark pt-4">
-                    <div className="flex items-center gap-2">
-                        <MapPin size={16} className="text-primary" />
-                        {employee.location}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Mail size={16} className="text-primary" />
-                        {employee.email}
-                    </div>
-                    {employee.slack && (
-                        <div className="flex items-center gap-2">
-                            <Hash size={16} className="text-primary" />
-                            {employee.slack}
-                        </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                        <Briefcase size={16} className="text-primary" />
-                        {employee.department}
-                    </div>
-                    <div className="flex items-center gap-2 ml-auto">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${employee.status === 'Active'
-                            ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900'
-                            : employee.status === 'Terminated'
-                                ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900'
-                                : 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900'
-                            }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${employee.status === 'Active' ? 'bg-green-500' : employee.status === 'Terminated' ? 'bg-red-500' : 'bg-yellow-500'
-                                }`}></span>
-                            {employee.status}
-                        </span>
                     </div>
                 </div>
             </div>

@@ -1,7 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Phone, Mail, MapPin, HeartPulse } from 'lucide-react';
+import { Phone, Mail, MapPin, HeartPulse, Home } from 'lucide-react';
 import { EmployeeSidebarProps } from './EmployeeDetailTypes';
+import { EmployeeAddress } from '../../types';
+
+function formatAddress(address: EmployeeAddress): string {
+    const parts = [
+        address.addressLine1,
+        address.subDistrict,
+        address.district,
+        address.province,
+        address.postalCode,
+    ].filter(Boolean);
+    return parts.join(', ');
+}
 
 export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     employee,
@@ -18,15 +30,13 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
                 <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">Contact Information</h2>
                 <div className="space-y-4 text-sm">
-                    {employee.phone && (
-                        <div>
-                            <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Phone</p>
-                            <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-medium">
-                                <Phone size={16} />
-                                {employee.phone}
-                            </div>
+                    <div>
+                        <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Phone</p>
+                        <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-medium">
+                            <Phone size={16} />
+                            {employee.phone || '-'}
                         </div>
-                    )}
+                    </div>
                     <div>
                         <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Work Email</p>
                         <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-medium">
@@ -34,6 +44,22 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                             {employee.email}
                         </div>
                     </div>
+                    <div>
+                        <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Office Address</p>
+                        <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-medium">
+                            <MapPin size={16} />
+                            {employee.location || '-'}
+                        </div>
+                    </div>
+                    {canViewSensitiveTabs && employee.address && (
+                        <div>
+                            <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Current Address</p>
+                            <div className="flex items-start gap-2 text-text-light dark:text-text-dark font-medium">
+                                <Home size={16} className="mt-0.5 shrink-0" />
+                                <span>{formatAddress(employee.address)}</span>
+                            </div>
+                        </div>
+                    )}
                     {employee.emergencyContact && canViewSensitiveTabs && (
                         <div>
                             <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Emergency Contact</p>
@@ -43,13 +69,6 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                             </div>
                         </div>
                     )}
-                    <div>
-                        <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Office Address</p>
-                        <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-medium">
-                            <MapPin size={16} />
-                            {employee.location} - Floor 4
-                        </div>
-                    </div>
                 </div>
             </div>
 

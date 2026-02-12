@@ -151,6 +151,7 @@ export const EmployeeDetail: React.FC = () => {
                 phone: editForm.phone,
                 slack: editForm.slack,
                 emergencyContact: editForm.emergencyContact,
+                address: editForm.address,
                 avatar: avatar.startsWith('blob:') ? undefined : avatar
             });
 
@@ -177,7 +178,7 @@ export const EmployeeDetail: React.FC = () => {
         }
     };
 
-    const handleProfileChange = (field: keyof Employee, value: string) => {
+    const handleProfileChange = (field: keyof Employee, value: any) => {
         setEditForm(prev => ({ ...prev, [field]: value }));
     };
 

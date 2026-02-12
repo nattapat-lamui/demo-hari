@@ -91,7 +91,7 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({
           {balance && (
             <DetailItem
               icon={<FileText size={16} />}
-              label="Quota Impact"
+              label="Total Days Used"
               value={
                 balance.total === -1
                   ? `${balance.used} used (unlimited)`

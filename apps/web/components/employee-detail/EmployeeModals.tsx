@@ -18,7 +18,15 @@ import {
     Trash2,
 } from 'lucide-react';
 import { DatePicker } from '../../components/DatePicker';
+import { ThaiAddressForm } from '../../components/ThaiAddressForm';
 import { EmployeeModalsProps } from './EmployeeDetailTypes';
+
+const OFFICE_LOCATIONS = [
+    'Bangkok, Thailand',
+    'Chiang Mai, Thailand',
+    'Phuket, Thailand',
+    'Remote',
+];
 
 export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
     // Edit Profile Modal
@@ -51,6 +59,31 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
 }) => {
     const { canEditSensitiveInfo, isOwnProfile } = permissions;
 
+    const handleFormKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        // Ctrl/Cmd+Enter → save from anywhere
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            onProfileSave();
+            return;
+        }
+
+        // Enter → focus next field (Shift+Enter for newline in textarea)
+        if (e.key === 'Enter' && !e.shiftKey) {
+            const target = e.target as HTMLElement;
+
+            e.preventDefault();
+            const focusable = Array.from(
+                e.currentTarget.querySelectorAll<HTMLElement>(
+                    'input:not(:disabled), select:not(:disabled), textarea:not(:disabled)'
+                )
+            );
+            const idx = focusable.indexOf(target);
+            if (idx >= 0 && idx < focusable.length - 1) {
+                focusable[idx + 1].focus();
+            }
+        }
+    };
+
     return (
         <>
             {/* Edit Profile Modal */}
@@ -69,7 +102,10 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             </button>
                         </div>
 
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
+                        <div
+                            className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto"
+                            onKeyDown={handleFormKeyDown}
+                        >
                             <div>
                                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Full Name</label>
                                 <div className="relative">
@@ -145,15 +181,29 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Location</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                                    Location
+                                    {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
+                                </label>
                                 <div className="relative">
                                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
-                                    <input
-                                        type="text"
+                                    <select
                                         value={editForm.location || ''}
+                                        disabled={!canEditSensitiveInfo}
                                         onChange={(e) => onProfileChange('location', e.target.value)}
-                                        className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
-                                    />
+                                        className={`w-full pl-10 pr-8 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark appearance-none ${!canEditSensitiveInfo ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <option value="">Select location</option>
+                                        {editForm.location && !OFFICE_LOCATIONS.includes(editForm.location) && (
+                                            <option value={editForm.location}>{editForm.location}</option>
+                                        )}
+                                        {OFFICE_LOCATIONS.map((loc) => (
+                                            <option key={loc} value={loc}>{loc}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted-light">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                                    </div>
                                 </div>
                             </div>
 
@@ -226,9 +276,6 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                         placeholder="+66812345678"
                                     />
                                 </div>
-                                <p className="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                                    Include country code (e.g., +66812345678)
-                                </p>
                             </div>
 
                             <div className="md:col-span-2">
@@ -244,21 +291,29 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     />
                                 </div>
                             </div>
+
+                            {/* Current Address — Thai autocomplete */}
+                            <ThaiAddressForm
+                                value={editForm.address}
+                                onChange={(addr) => onProfileChange('address', addr)}
+                            />
                         </div>
 
                         <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-end gap-3 bg-gray-50 dark:bg-gray-800/50">
-                            <button
-                                onClick={onCloseEditProfile}
-                                className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={onProfileSave}
-                                className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
-                            >
-                                <Check size={16} /> Save Changes
-                            </button>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={onCloseEditProfile}
+                                    className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={onProfileSave}
+                                    className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
+                                >
+                                    <Check size={16} /> Save Changes
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>,

@@ -99,8 +99,8 @@ export class EmployeeController {
             // If employee updating own profile, restrict fields they can update
             let updateData = { id, ...req.body };
             if (!isAdmin && isOwnProfile) {
-                // Employees can only update: name, email, avatar, bio, phone, location, slack, emergencyContact, skills
-                const allowedFields = ['name', 'email', 'avatar', 'bio', 'phone', 'location', 'slack', 'emergencyContact', 'skills'];
+                // Employees can only update: name, email, avatar, bio, phone, location, slack, emergencyContact, skills, address
+                const allowedFields = ['name', 'email', 'avatar', 'bio', 'phone', 'location', 'slack', 'emergencyContact', 'skills', 'address'];
                 updateData = {
                     id,
                     ...Object.fromEntries(
