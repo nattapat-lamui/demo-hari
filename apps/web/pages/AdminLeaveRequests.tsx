@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Clock,
   CheckCircle2,
@@ -17,6 +17,7 @@ import { Dropdown } from '../components/Dropdown';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { LeaveDetailModal } from '../components/LeaveDetailModal';
 import { LeaveActionBar } from '../components/LeaveActionBar';
+import { FilterToolbar } from '../components/FilterToolbar';
 import type { LeaveRequest } from '../types';
 import { DEPARTMENTS } from '../types';
 
@@ -37,10 +38,10 @@ const STATUS_OPTIONS = [
 ];
 
 const LEAVE_TYPE_OPTIONS = [
-  { value: 'All', label: 'Leave Type: All' },
-  { value: 'Vacation', label: 'Leave Type: Vacation' },
-  { value: 'Sick Leave', label: 'Leave Type: Sick Leave' },
-  { value: 'Personal Day', label: 'Leave Type: Personal Day' },
+  { value: 'All', label: 'All Leave Types' },
+  { value: 'Vacation', label: 'Vacation' },
+  { value: 'Sick Leave', label: 'Sick Leave' },
+  { value: 'Personal Day', label: 'Personal Day' },
 ];
 
 const SORT_OPTIONS = [
@@ -48,61 +49,6 @@ const SORT_OPTIONS = [
   { value: 'date_asc', label: 'Oldest First' },
   { value: 'name_asc', label: 'Name (A-Z)' },
 ];
-
-// ---------------------------------------------------------------------------
-// Status Filter Button (primary-styled dropdown)
-// ---------------------------------------------------------------------------
-const StatusFilterButton: React.FC<{
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
-}> = ({ value, options, onChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
-    };
-    if (isOpen) document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [isOpen]);
-
-  const selected = options.find((o) => o.value === value);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-      >
-        {selected?.label || value}
-      </button>
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-lg z-50 py-1 min-w-[180px]">
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onChange(opt.value);
-                setIsOpen(false);
-              }}
-              className={`w-full text-left px-4 py-2 text-sm transition-colors ${
-                value === opt.value
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const AdminLeaveRequests: React.FC = () => {
   const { showToast } = useToast();
@@ -227,8 +173,8 @@ export const AdminLeaveRequests: React.FC = () => {
   };
 
   const departmentOptions = useMemo(() => [
-    { value: 'All', label: 'Department: All' },
-    ...DEPARTMENTS.map((d) => ({ value: d, label: `Department: ${d}` })),
+    { value: 'All', label: 'All Departments' },
+    ...DEPARTMENTS.map((d) => ({ value: d, label: d })),
   ], []);
 
   if (isLoadingRequests || isLoadingEmployees) {
@@ -287,40 +233,20 @@ export const AdminLeaveRequests: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl px-4 py-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <StatusFilterButton
-            value={statusFilter}
-            options={STATUS_OPTIONS}
-            onChange={setStatusFilter}
-          />
-          <Dropdown
-            options={LEAVE_TYPE_OPTIONS}
-            value={typeFilter}
-            onChange={setTypeFilter}
-            width="w-auto"
-          />
-          <Dropdown
-            options={departmentOptions}
-            value={departmentFilter}
-            onChange={setDepartmentFilter}
-            width="w-auto"
-          />
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark whitespace-nowrap">Sort by:</span>
-            <Dropdown
-              options={SORT_OPTIONS}
-              value={sortBy}
-              onChange={setSortBy}
-              width="w-auto"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
+      {/* Table Card */}
+      <div className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden">
+        <FilterToolbar
+          trailing={
+            <>
+              <span className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark whitespace-nowrap">Sort by:</span>
+              <Dropdown options={SORT_OPTIONS} value={sortBy} onChange={setSortBy} width="w-auto" />
+            </>
+          }
+        >
+          <Dropdown options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} width="w-auto" />
+          <Dropdown options={LEAVE_TYPE_OPTIONS} value={typeFilter} onChange={setTypeFilter} width="w-auto" />
+          <Dropdown options={departmentOptions} value={departmentFilter} onChange={setDepartmentFilter} width="w-auto" />
+        </FilterToolbar>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-border-light dark:border-border-dark">
