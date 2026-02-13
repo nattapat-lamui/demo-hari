@@ -182,6 +182,20 @@ export const useMyTeamHierarchy = (enabled: boolean) => {
   });
 };
 
+interface AdminDashboardStats {
+  newHiresCount: number;
+  newHiresTrend: number;
+  turnoverRate: number;
+  turnoverTrend: number;
+}
+
+export const useAdminDashboardStats = () => {
+  return useQuery({
+    queryKey: queryKeys.dashboard.adminStats(),
+    queryFn: () => api.get<AdminDashboardStats>('/dashboard/admin-stats'),
+  });
+};
+
 // ---------------------------------------------------------------------------
 // Attendance Queries
 // ---------------------------------------------------------------------------

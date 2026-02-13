@@ -45,6 +45,7 @@ import {
   useToggleNotePin,
   useAddEmployee,
   useAdminAttendanceSnapshot,
+  useAdminDashboardStats,
 } from '../hooks/queries';
 
 export const AdminDashboard: React.FC = () => {
@@ -56,6 +57,7 @@ export const AdminDashboard: React.FC = () => {
 
   // ----- REACT QUERY HOOKS -----
   const { data: allEmployees = [], isPending: isEmployeesLoading, isError: isEmployeesError, error: employeesError, refetch: refetchEmployees } = useAllEmployees();
+  const { data: adminStats } = useAdminDashboardStats();
   const { data: attendanceSnapshot } = useAdminAttendanceSnapshot();
   const { data: auditLogsData = [] } = useAuditLogs();
   const { data: headcountStats = [] } = useHeadcountStats();
@@ -87,44 +89,11 @@ export const AdminDashboard: React.FC = () => {
     setToast({ show: true, message, type });
   };
 
-  // ----- COMPUTED STATS -----
-  const { newHiresCount, newHiresTrend, turnoverRate, turnoverTrend } = useMemo(() => {
-    const terminatedEmployees = allEmployees.filter((employee) => employee.status === 'Terminated');
-
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
-
-    const newJoinersThisMonth = allEmployees.filter(e => {
-      const joinDate = new Date(e.joinDate);
-      return joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear;
-    }).length;
-
-    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-    const newJoinersLastMonth = allEmployees.filter(e => {
-      const joinDate = new Date(e.joinDate);
-      return joinDate.getMonth() === lastMonth && joinDate.getFullYear() === lastMonthYear;
-    }).length;
-
-    const hireTrend = newJoinersLastMonth > 0
-      ? ((newJoinersThisMonth - newJoinersLastMonth) / newJoinersLastMonth) * 100
-      : newJoinersThisMonth > 0 ? 100 : 0;
-
-    const totalEmployees = allEmployees.length;
-    const turnoverRateCalc = totalEmployees > 0
-      ? (terminatedEmployees.length / totalEmployees) * 100
-      : 0;
-
-    const turnoverTrendCalc = terminatedEmployees.length > 0 ? turnoverRateCalc : 0;
-
-    return {
-      newHiresCount: newJoinersThisMonth,
-      newHiresTrend: hireTrend,
-      turnoverRate: turnoverRateCalc,
-      turnoverTrend: turnoverTrendCalc,
-    };
-  }, [allEmployees]);
+  // ----- STATS FROM BACKEND -----
+  const newHiresCount = adminStats?.newHiresCount ?? 0;
+  const newHiresTrend = adminStats?.newHiresTrend ?? 0;
+  const turnoverRate = adminStats?.turnoverRate ?? 0;
+  const turnoverTrend = adminStats?.turnoverTrend ?? 0;
 
   // ----- COMPUTED HEADCOUNT DATA -----
   const headcountData = useMemo<ChartDataPoint[]>(() => {

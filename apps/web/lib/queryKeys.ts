@@ -28,6 +28,7 @@ export const queryKeys = {
     all: ['dashboard'] as const,
     employeeStats: () => [...queryKeys.dashboard.all, 'employeeStats'] as const,
     teamHierarchy: () => [...queryKeys.dashboard.all, 'teamHierarchy'] as const,
+    adminStats: () => [...queryKeys.dashboard.all, 'adminStats'] as const,
   },
   attendance: {
     all: ['attendance'] as const,

@@ -37,6 +37,13 @@ export interface MyTeamHierarchy {
   };
 }
 
+export interface AdminDashboardStats {
+  newHiresCount: number;
+  newHiresTrend: number;
+  turnoverRate: number;
+  turnoverTrend: number;
+}
+
 export class DashboardService {
   /**
    * Get employee dashboard stats
@@ -246,6 +253,69 @@ export class DashboardService {
       status: row.status,
       department: row.department,
     }));
+  }
+
+  /**
+   * Get aggregated stats for admin dashboard
+   * Computes: new hires this month vs last month, turnover rate
+   */
+  async getAdminStats(): Promise<AdminDashboardStats> {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1; // SQL months are 1-indexed
+    const currentYear = currentDate.getFullYear();
+
+    // Calculate last month
+    const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+    // Query: New hires this month
+    const thisMonthResult = await query(
+      `SELECT COUNT(*) as count
+       FROM employees
+       WHERE EXTRACT(MONTH FROM join_date) = $1
+       AND EXTRACT(YEAR FROM join_date) = $2`,
+      [currentMonth, currentYear]
+    );
+    const newHiresThisMonth = parseInt(thisMonthResult.rows[0].count, 10);
+
+    // Query: New hires last month
+    const lastMonthResult = await query(
+      `SELECT COUNT(*) as count
+       FROM employees
+       WHERE EXTRACT(MONTH FROM join_date) = $1
+       AND EXTRACT(YEAR FROM join_date) = $2`,
+      [lastMonth, lastMonthYear]
+    );
+    const newHiresLastMonth = parseInt(lastMonthResult.rows[0].count, 10);
+
+    // Calculate new hires trend
+    const newHiresTrend = newHiresLastMonth > 0
+      ? ((newHiresThisMonth - newHiresLastMonth) / newHiresLastMonth) * 100
+      : newHiresThisMonth > 0 ? 100 : 0;
+
+    // Query: Total employees and terminated employees
+    const employeeCountsResult = await query(
+      `SELECT
+          COUNT(*) as total,
+          COUNT(*) FILTER (WHERE status = 'Terminated') as terminated
+       FROM employees`
+    );
+    const totalEmployees = parseInt(employeeCountsResult.rows[0].total, 10);
+    const terminatedEmployees = parseInt(employeeCountsResult.rows[0].terminated, 10);
+
+    // Calculate turnover rate
+    const turnoverRate = totalEmployees > 0
+      ? (terminatedEmployees / totalEmployees) * 100
+      : 0;
+
+    const turnoverTrend = terminatedEmployees > 0 ? turnoverRate : 0;
+
+    return {
+      newHiresCount: newHiresThisMonth,
+      newHiresTrend: Math.round(newHiresTrend * 100) / 100, // Round to 2 decimals
+      turnoverRate: Math.round(turnoverRate * 100) / 100,
+      turnoverTrend: Math.round(turnoverTrend * 100) / 100,
+    };
   }
 
   /**

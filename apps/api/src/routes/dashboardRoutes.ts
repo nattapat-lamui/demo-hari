@@ -31,4 +31,10 @@ router.get(
   DashboardController.getMyTeamHierarchy.bind(DashboardController)
 );
 
+// GET /api/dashboard/admin-stats - Get aggregated admin dashboard stats
+router.get(
+  "/admin-stats",
+  DashboardController.getAdminStats.bind(DashboardController)
+);
+
 export default router;

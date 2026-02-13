@@ -81,6 +81,21 @@ export class DashboardController {
       res.status(500).json({ error: "Failed to fetch team hierarchy" });
     }
   }
+
+  /**
+   * GET /api/dashboard/admin-stats
+   * Get aggregated stats for admin dashboard
+   * Returns: newHiresCount, newHiresTrend, turnoverRate, turnoverTrend
+   */
+  async getAdminStats(req: Request, res: Response): Promise<void> {
+    try {
+      const stats = await DashboardService.getAdminStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Error fetching admin stats:", error);
+      res.status(500).json({ error: "Failed to fetch admin stats" });
+    }
+  }
 }
 
 export default new DashboardController();

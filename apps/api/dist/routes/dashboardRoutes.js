@@ -17,4 +17,6 @@ router.get("/my-team", DashboardController_1.default.getMyTeam.bind(DashboardCon
 router.get("/direct-reports", DashboardController_1.default.getDirectReports.bind(DashboardController_1.default));
 // GET /api/dashboard/my-team-hierarchy - Get full team hierarchy (manager, peers, direct reports, stats)
 router.get("/my-team-hierarchy", DashboardController_1.default.getMyTeamHierarchy.bind(DashboardController_1.default));
+// GET /api/dashboard/admin-stats - Get aggregated admin dashboard stats
+router.get("/admin-stats", DashboardController_1.default.getAdminStats.bind(DashboardController_1.default));
 exports.default = router;

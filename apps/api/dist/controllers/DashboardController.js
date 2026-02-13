@@ -104,6 +104,23 @@ class DashboardController {
             }
         });
     }
+    /**
+     * GET /api/dashboard/admin-stats
+     * Get aggregated stats for admin dashboard
+     * Returns: newHiresCount, newHiresTrend, turnoverRate, turnoverTrend
+     */
+    getAdminStats(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const stats = yield DashboardService_1.default.getAdminStats();
+                res.json(stats);
+            }
+            catch (error) {
+                console.error("Error fetching admin stats:", error);
+                res.status(500).json({ error: "Failed to fetch admin stats" });
+            }
+        });
+    }
 }
 exports.DashboardController = DashboardController;
 exports.default = new DashboardController();
