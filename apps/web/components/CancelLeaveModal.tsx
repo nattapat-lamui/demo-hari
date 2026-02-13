@@ -23,7 +23,7 @@ export function CancelLeaveModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Cancel Leave Request" maxWidth="sm">
-      <div className="space-y-4">
+      <div className="p-6 space-y-4">
         {/* Leave Details */}
         <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-4">
           <div className="flex items-start gap-3">
