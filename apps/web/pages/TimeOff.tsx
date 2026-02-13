@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, AlertCircle, Plus, CheckCircle2, XCircle, Building2, Briefcase, IdCard, Pencil } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useLeave } from '../contexts/LeaveContext';
 import { useLeaveRequests, useLeaveBalance, useEmployeeDetail, useCancelLeaveRequest } from '../hooks/queries';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { LeaveCalendar } from '../components/LeaveCalendar';
 import { CancelLeaveModal } from '../components/CancelLeaveModal';
+import { LeaveDetailModal } from '../components/LeaveDetailModal';
+import { RejectReasonDialog } from '../components/RejectReasonDialog';
 import QueryErrorState from '../components/QueryErrorState';
 import type { LeaveBalance, LeaveRequest } from '../types';
 
@@ -103,12 +106,16 @@ export const TimeOff: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { updateRequestStatus } = useLeave();
   const { data: allRequests = [], isPending, isError: isLeaveError, error: leaveError, refetch: refetchLeave } = useLeaveRequests();
   const { data: balances = [] } = useLeaveBalance(user?.employeeId);
   const { data: empDetail } = useEmployeeDetail(user?.employeeId);
   const cancelMutation = useCancelLeaveRequest();
 
+  const isManager = user?.role === 'HR_ADMIN';
   const [cancelModalRequest, setCancelModalRequest] = useState<LeaveRequest | null>(null);
+  const [detailRequest, setDetailRequest] = useState<LeaveRequest | null>(null);
+  const [rejectingRequest, setRejectingRequest] = useState<LeaveRequest | null>(null);
 
   const myRequests = useMemo(
     () => allRequests.filter((r) => r.employeeId === user?.employeeId),
@@ -153,6 +160,23 @@ export const TimeOff: React.FC = () => {
       showToast(error?.message || 'Failed to cancel leave request', 'error');
     } finally {
       setCancelModalRequest(null);
+    }
+  };
+
+  const handleDetailApprove = (id: string) => {
+    updateRequestStatus(id, 'Approved');
+    setDetailRequest(null);
+  };
+
+  const handleDetailReject = (request: LeaveRequest) => {
+    setRejectingRequest(request);
+  };
+
+  const handleConfirmReject = (reason: string) => {
+    if (rejectingRequest) {
+      updateRequestStatus(rejectingRequest.id, 'Rejected', reason);
+      setRejectingRequest(null);
+      setDetailRequest(null);
     }
   };
 
@@ -267,7 +291,7 @@ export const TimeOff: React.FC = () => {
 
       {/* ========== Calendar + History ========== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <LeaveCalendar userLeaves={myRequests} teamLeaves={teamRequests} />
+        <LeaveCalendar userLeaves={myRequests} teamLeaves={teamRequests} isManager={isManager} onLeaveClick={setDetailRequest} />
 
         {/* My Leave History */}
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
@@ -366,6 +390,22 @@ export const TimeOff: React.FC = () => {
         onConfirm={handleCancelConfirm}
         request={cancelModalRequest}
         isPending={cancelMutation.isPending}
+      />
+
+      {/* Leave Detail Modal (manager calendar click) */}
+      <LeaveDetailModal
+        isOpen={!!detailRequest}
+        onClose={() => setDetailRequest(null)}
+        request={detailRequest}
+        onApprove={handleDetailApprove}
+        onReject={handleDetailReject}
+      />
+
+      <RejectReasonDialog
+        isOpen={!!rejectingRequest}
+        onClose={() => setRejectingRequest(null)}
+        onConfirm={handleConfirmReject}
+        employeeName={rejectingRequest?.employeeName}
       />
     </div>
   );

@@ -1,10 +1,12 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { LeaveRequest } from '../types';
 
 interface LeaveCalendarProps {
   userLeaves: LeaveRequest[];
   teamLeaves: LeaveRequest[];
+  isManager?: boolean;
+  onLeaveClick?: (request: LeaveRequest) => void;
 }
 
 const MONTH_NAMES = [
@@ -27,6 +29,7 @@ interface LeaveEntry {
   name: string;
   type: string;
   isUser: boolean;
+  request: LeaveRequest;
 }
 
 function toLocalDateStr(raw: string): string {
@@ -61,15 +64,20 @@ function toDateKey(date: Date): string {
 }
 
 /** Build a map of date → leave entries with names */
-function buildLeaveMap(leaves: LeaveRequest[], isUser: boolean): Map<string, LeaveEntry[]> {
+function buildLeaveMap(leaves: LeaveRequest[], isUser: boolean, isManager: boolean): Map<string, LeaveEntry[]> {
   const map = new Map<string, LeaveEntry[]>();
   for (const leave of leaves) {
-    if (leave.status !== 'Approved') continue;
+    if (isManager) {
+      if (leave.status !== 'Approved' && leave.status !== 'Pending') continue;
+    } else {
+      if (leave.status !== 'Approved') continue;
+    }
     if (!leave.startDate || !leave.endDate) continue;
     const entry: LeaveEntry = {
       name: leave.employeeName || 'Unknown',
       type: leave.type,
       isUser,
+      request: leave,
     };
     for (const d of expandDateRange(leave.startDate, leave.endDate)) {
       if (!map.has(d)) map.set(d, []);
@@ -80,10 +88,14 @@ function buildLeaveMap(leaves: LeaveRequest[], isUser: boolean): Map<string, Lea
 }
 
 /** Build a map of date → leave type set (for cell coloring) */
-function buildDateTypeMap(leaves: LeaveRequest[]): Map<string, Set<string>> {
+function buildDateTypeMap(leaves: LeaveRequest[], isManager: boolean): Map<string, Set<string>> {
   const map = new Map<string, Set<string>>();
   for (const leave of leaves) {
-    if (leave.status !== 'Approved') continue;
+    if (isManager) {
+      if (leave.status !== 'Approved' && leave.status !== 'Pending') continue;
+    } else {
+      if (leave.status !== 'Approved') continue;
+    }
     if (!leave.startDate || !leave.endDate) continue;
     for (const d of expandDateRange(leave.startDate, leave.endDate)) {
       if (!map.has(d)) map.set(d, new Set());
@@ -93,7 +105,7 @@ function buildDateTypeMap(leaves: LeaveRequest[]): Map<string, Set<string>> {
   return map;
 }
 
-export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLeaves }) => {
+export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLeaves, isManager = false, onLeaveClick }) => {
   const [displayMonth, setDisplayMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -101,13 +113,20 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isOverTooltipRef = useRef(false);
 
-  const userDateTypes = useMemo(() => buildDateTypeMap(userLeaves), [userLeaves]);
-  const teamDateTypes = useMemo(() => buildDateTypeMap(teamLeaves), [teamLeaves]);
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    };
+  }, []);
 
-  // Detailed leave entries for tooltips
-  const userLeaveMap = useMemo(() => buildLeaveMap(userLeaves, true), [userLeaves]);
-  const teamLeaveMap = useMemo(() => buildLeaveMap(teamLeaves, false), [teamLeaves]);
+  const userDateTypes = useMemo(() => buildDateTypeMap(userLeaves, isManager), [userLeaves, isManager]);
+  const teamDateTypes = useMemo(() => buildDateTypeMap(teamLeaves, isManager), [teamLeaves, isManager]);
+
+  const userLeaveMap = useMemo(() => buildLeaveMap(userLeaves, true, isManager), [userLeaves, isManager]);
+  const teamLeaveMap = useMemo(() => buildLeaveMap(teamLeaves, false, isManager), [teamLeaves, isManager]);
 
   const year = displayMonth.getFullYear();
   const month = displayMonth.getMonth();
@@ -128,6 +147,11 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
   const totalRows = cells.length / 7;
 
   const handleCellEnter = useCallback((key: string, e: React.MouseEvent<HTMLDivElement>) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+
     const userEntries = userLeaveMap.get(key) || [];
     const teamEntries = teamLeaveMap.get(key) || [];
     if (userEntries.length === 0 && teamEntries.length === 0) return;
@@ -144,11 +168,42 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
   }, [userLeaveMap, teamLeaveMap]);
 
   const handleCellLeave = useCallback(() => {
+    if (isManager) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        if (!isOverTooltipRef.current) {
+          setHoveredDay(null);
+          setTooltipPos(null);
+        }
+      }, 150);
+    } else {
+      setHoveredDay(null);
+      setTooltipPos(null);
+    }
+  }, [isManager]);
+
+  const handleTooltipEnter = useCallback(() => {
+    isOverTooltipRef.current = true;
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+  }, []);
+
+  const handleTooltipLeave = useCallback(() => {
+    isOverTooltipRef.current = false;
     setHoveredDay(null);
     setTooltipPos(null);
   }, []);
 
-  // Gather tooltip entries for hovered day
+  const handleCellClick = useCallback((key: string) => {
+    if (!isManager || !onLeaveClick) return;
+    const entries = [...(userLeaveMap.get(key) || []), ...(teamLeaveMap.get(key) || [])];
+    const single = entries[0];
+    if (entries.length === 1 && single) {
+      onLeaveClick(single.request);
+    }
+  }, [isManager, onLeaveClick, userLeaveMap, teamLeaveMap]);
+
   const tooltipEntries = useMemo(() => {
     if (!hoveredDay) return [];
     const user = userLeaveMap.get(hoveredDay) || [];
@@ -222,9 +277,11 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
               key={key}
               onMouseEnter={(e) => handleCellEnter(key, e)}
               onMouseLeave={handleCellLeave}
+              onClick={() => handleCellClick(key)}
               className={`
                 relative flex items-center justify-center rounded-lg text-sm min-h-[2.25rem]
-                transition-all duration-150 cursor-default select-none
+                transition-all duration-150 select-none
+                ${hasLeave && isManager ? 'cursor-pointer' : 'cursor-default'}
                 ${userColor ? `${userColor.bg} ${userColor.text} font-medium` : ''}
                 ${!userColor && isToday ? 'ring-2 ring-primary font-semibold text-primary' : ''}
                 ${!userColor && !isToday ? 'text-text-light dark:text-text-dark' : ''}
@@ -236,7 +293,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
               {teamDots.length > 0 && !userColor && (
                 <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
                   {teamDots.slice(0, 3).map((t) => {
-                    const c = TYPE_COLORS[t] || DEFAULT_COLOR;
+                    const c = isManager ? (TYPE_COLORS[t] || DEFAULT_COLOR) : DEFAULT_COLOR;
                     return <span key={t} className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />;
                   })}
                 </div>
@@ -248,12 +305,14 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
         {/* Tooltip */}
         {hoveredDay && tooltipPos && tooltipEntries.length > 0 && (
           <div
-            className="absolute z-50 pointer-events-none"
+            className={`absolute z-50 ${isManager ? 'pointer-events-auto' : 'pointer-events-none'}`}
             style={{
               left: tooltipPos.x,
               top: tooltipPos.y,
               transform: 'translate(-50%, -100%)',
             }}
+            onMouseEnter={isManager ? handleTooltipEnter : undefined}
+            onMouseLeave={isManager ? handleTooltipLeave : undefined}
           >
             <div className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-lg px-3 py-2 mb-1.5 min-w-[140px] max-w-[220px]">
               <p className="text-[11px] font-medium text-text-muted-light dark:text-text-muted-dark mb-1.5">
@@ -261,16 +320,46 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
               </p>
               <div className="space-y-1">
                 {tooltipEntries.map((entry, i) => {
-                  const colors = TYPE_COLORS[entry.type] || DEFAULT_COLOR;
-                  return (
-                    <div key={i} className="flex items-center gap-2">
+                  const isEntryClickable = isManager && !!onLeaveClick;
+                  // Manager sees type colors for all; employee sees type colors only for own leaves
+                  const colors = (entry.isUser || isManager)
+                    ? (TYPE_COLORS[entry.type] || DEFAULT_COLOR)
+                    : DEFAULT_COLOR;
+
+                  const content = (
+                    <>
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${colors.dot}`} />
                       <span className="text-xs text-text-light dark:text-text-dark truncate">
                         {entry.isUser ? 'You' : entry.name}
                       </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ml-auto shrink-0 ${colors.badge}`}>
-                        {entry.type === 'Sick Leave' ? 'Sick' : entry.type === 'Personal Day' ? 'Personal' : entry.type}
-                      </span>
+                      {isManager || entry.isUser ? (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ml-auto shrink-0 ${colors.badge}`}>
+                          {entry.type === 'Sick Leave' ? 'Sick' : entry.type === 'Personal Day' ? 'Personal' : entry.type}
+                          {entry.request.status === 'Pending' && isManager ? ' (Pending)' : ''}
+                        </span>
+                      ) : (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ml-auto shrink-0 ${DEFAULT_COLOR.badge}`}>
+                          On Leave
+                        </span>
+                      )}
+                    </>
+                  );
+
+                  if (isEntryClickable) {
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => onLeaveClick!(entry.request)}
+                        className="flex items-center gap-2 w-full hover:bg-background-light dark:hover:bg-background-dark rounded px-1 py-0.5 transition-colors cursor-pointer"
+                      >
+                        {content}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      {content}
                     </div>
                   );
                 })}
@@ -292,7 +381,9 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
           <div className="flex gap-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500" />
           </div>
-          <span className="text-xs text-text-muted-light dark:text-text-muted-dark">Team</span>
+          <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
+            {isManager ? 'Team' : 'Team on Leave'}
+          </span>
         </div>
       </div>
     </div>
