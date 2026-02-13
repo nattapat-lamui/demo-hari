@@ -7,6 +7,7 @@ import { useLeaveRequests, useLeaveBalance, useEmployeeDetail, useCancelLeaveReq
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { LeaveCalendar } from '../components/LeaveCalendar';
 import { CancelLeaveModal } from '../components/CancelLeaveModal';
+import QueryErrorState from '../components/QueryErrorState';
 import type { LeaveBalance, LeaveRequest } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -102,7 +103,7 @@ export const TimeOff: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast } = useToast();
-  const { data: allRequests = [], isPending } = useLeaveRequests();
+  const { data: allRequests = [], isPending, isError: isLeaveError, error: leaveError, refetch: refetchLeave } = useLeaveRequests();
   const { data: balances = [] } = useLeaveBalance(user?.employeeId);
   const { data: empDetail } = useEmployeeDetail(user?.employeeId);
   const cancelMutation = useCancelLeaveRequest();
@@ -156,6 +157,10 @@ export const TimeOff: React.FC = () => {
   };
 
   const getBalance = (type: string): LeaveBalance | undefined => balances.find((b) => b.type === type);
+
+  if (isLeaveError) {
+    return <QueryErrorState error={leaveError} onRetry={refetchLeave} />;
+  }
 
   if (isPending) {
     return (

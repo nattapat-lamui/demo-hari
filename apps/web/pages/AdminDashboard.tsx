@@ -23,6 +23,7 @@ import { StatCard } from '../components/StatCard';
 import { Toast } from '../components/Toast';
 import { Avatar } from '../components/Avatar';
 import { AddEmployeeModal } from '../components/AddEmployeeModal';
+import QueryErrorState from '../components/QueryErrorState';
 import { LeaveDetailModal } from '../components/LeaveDetailModal';
 import { RejectReasonDialog } from '../components/RejectReasonDialog';
 import { useAuth } from '../contexts/AuthContext';
@@ -54,7 +55,7 @@ export const AdminDashboard: React.FC = () => {
   const pendingRequests = requests.filter(r => r.status === 'Pending');
 
   // ----- REACT QUERY HOOKS -----
-  const { data: allEmployees = [], isPending: isEmployeesLoading } = useAllEmployees();
+  const { data: allEmployees = [], isPending: isEmployeesLoading, isError: isEmployeesError, error: employeesError, refetch: refetchEmployees } = useAllEmployees();
   const { data: attendanceSnapshot } = useAdminAttendanceSnapshot();
   const { data: auditLogsData = [] } = useAuditLogs();
   const { data: headcountStats = [] } = useHeadcountStats();
@@ -286,6 +287,10 @@ export const AdminDashboard: React.FC = () => {
       showToast("Failed to pin note", "error");
     }
   };
+
+  if (isEmployeesError) {
+    return <QueryErrorState error={employeesError} onRetry={refetchEmployees} />;
+  }
 
   // Show loading skeleton while fetching data
   if (isLoading) {

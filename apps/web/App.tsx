@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { queryClient } from "./lib/queryClient";
@@ -67,6 +67,9 @@ const LeaveRequestForm = lazy(() =>
 const AdminLeaveRequests = lazy(() =>
   import("./pages/AdminLeaveRequests").then((m) => ({ default: m.AdminLeaveRequests })),
 );
+const NotFound = lazy(() =>
+  import("./pages/NotFound").then((m) => ({ default: m.NotFound })),
+);
 
 // Loading component
 const PageLoader = () => (
@@ -79,6 +82,16 @@ const PageLoader = () => (
     </div>
   </div>
 );
+
+// Per-route error boundary that resets when the URL changes
+const PageErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const location = useLocation();
+  return (
+    <ErrorBoundary resetKey={location.pathname}>
+      {children}
+    </ErrorBoundary>
+  );
+};
 
 const App: React.FC = () => {
   return (
@@ -105,27 +118,27 @@ const App: React.FC = () => {
                       </NotificationProvider>
                     }
                   >
-                    <Route index element={<Dashboard />} />
-                    <Route path="attendance" element={<Attendance />} />
-                    <Route path="admin-attendance" element={<AdminAttendance />} />
-                    <Route path="time-off" element={<TimeOff />} />
-                    <Route path="time-off/request" element={<LeaveRequestForm />} />
-                    <Route path="time-off/request/:id" element={<LeaveRequestForm />} />
-                    <Route path="leave-requests" element={<AdminLeaveRequests />} />
-                    <Route path="expenses" element={<Expenses />} />
-                    <Route path="surveys" element={<Surveys />} />
-                    <Route path="wellbeing" element={<Wellbeing />} />
-                    <Route path="employees" element={<Employees />} />
-                    <Route path="employees/:id" element={<EmployeeDetail />} />
-                    <Route path="org-chart" element={<OrgChart />} />
-                    <Route path="onboarding" element={<Onboarding />} />
-                    <Route path="compliance" element={<Compliance />} />
-                    <Route path="analytics" element={<Analytics />} />
-                    <Route path="documents" element={<Documents />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="notifications" element={<Notifications />} />
-                    <Route path="help" element={<HelpSupport />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route index element={<PageErrorBoundary><Dashboard /></PageErrorBoundary>} />
+                    <Route path="attendance" element={<PageErrorBoundary><Attendance /></PageErrorBoundary>} />
+                    <Route path="admin-attendance" element={<PageErrorBoundary><AdminAttendance /></PageErrorBoundary>} />
+                    <Route path="time-off" element={<PageErrorBoundary><TimeOff /></PageErrorBoundary>} />
+                    <Route path="time-off/request" element={<PageErrorBoundary><LeaveRequestForm /></PageErrorBoundary>} />
+                    <Route path="time-off/request/:id" element={<PageErrorBoundary><LeaveRequestForm /></PageErrorBoundary>} />
+                    <Route path="leave-requests" element={<PageErrorBoundary><AdminLeaveRequests /></PageErrorBoundary>} />
+                    <Route path="expenses" element={<PageErrorBoundary><Expenses /></PageErrorBoundary>} />
+                    <Route path="surveys" element={<PageErrorBoundary><Surveys /></PageErrorBoundary>} />
+                    <Route path="wellbeing" element={<PageErrorBoundary><Wellbeing /></PageErrorBoundary>} />
+                    <Route path="employees" element={<PageErrorBoundary><Employees /></PageErrorBoundary>} />
+                    <Route path="employees/:id" element={<PageErrorBoundary><EmployeeDetail /></PageErrorBoundary>} />
+                    <Route path="org-chart" element={<PageErrorBoundary><OrgChart /></PageErrorBoundary>} />
+                    <Route path="onboarding" element={<PageErrorBoundary><Onboarding /></PageErrorBoundary>} />
+                    <Route path="compliance" element={<PageErrorBoundary><Compliance /></PageErrorBoundary>} />
+                    <Route path="analytics" element={<PageErrorBoundary><Analytics /></PageErrorBoundary>} />
+                    <Route path="documents" element={<PageErrorBoundary><Documents /></PageErrorBoundary>} />
+                    <Route path="settings" element={<PageErrorBoundary><Settings /></PageErrorBoundary>} />
+                    <Route path="notifications" element={<PageErrorBoundary><Notifications /></PageErrorBoundary>} />
+                    <Route path="help" element={<PageErrorBoundary><HelpSupport /></PageErrorBoundary>} />
+                    <Route path="*" element={<NotFound />} />
                   </Route>
                 </Route>
               </Routes>

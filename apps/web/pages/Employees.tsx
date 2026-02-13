@@ -9,6 +9,7 @@ import { Dropdown, DropdownOption } from '../components/Dropdown';
 import { Avatar } from '../components/Avatar';
 import { Pagination } from '../components/Pagination';
 import { FilterToolbar } from '../components/FilterToolbar';
+import QueryErrorState from '../components/QueryErrorState';
 
 export const Employees: React.FC = () => {
   const { user } = useAuth();
@@ -32,7 +33,7 @@ export const Employees: React.FC = () => {
   const [itemsPerPage] = useState(20);
 
   // React Query
-  const { data: employeesResponse } = useEmployeeList({
+  const { data: employeesResponse, isError: isEmployeesError, error: employeesError, refetch: refetchEmployees } = useEmployeeList({
     page: currentPage,
     limit: itemsPerPage,
     department: departmentFilter,
@@ -130,6 +131,10 @@ export const Employees: React.FC = () => {
       default: return <Circle size={16} className="text-text-muted-light" />;
     }
   };
+
+  if (isEmployeesError) {
+    return <QueryErrorState error={employeesError} onRetry={refetchEmployees} />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

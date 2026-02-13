@@ -1,16 +1,26 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import errorLogging from '../services/errorLogging';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  resetKey?: string;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+}
+
+function isChunkLoadError(error: Error): boolean {
+  return (
+    error.name === 'ChunkLoadError' ||
+    error.message.includes('Loading chunk') ||
+    error.message.includes('dynamically imported module') ||
+    error.message.includes('Failed to fetch dynamically imported module')
+  );
 }
 
 class ErrorBoundary extends Component<Props, State> {
@@ -29,6 +39,12 @@ class ErrorBoundary extends Component<Props, State> {
       error,
       errorInfo: null,
     };
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (this.props.resetKey !== prevProps.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, error: null, errorInfo: null });
+    }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -56,6 +72,35 @@ class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      if (this.state.error && isChunkLoadError(this.state.error)) {
+        return (
+          <div className="min-h-[50vh] flex items-center justify-center px-4">
+            <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4">
+                  <ArrowPathIcon className="w-9 h-9 text-blue-600 dark:text-blue-400" />
+                </div>
+
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                  A new version is available
+                </h1>
+
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  The app has been updated since you last loaded it. Please reload to get the latest version.
+                </p>
+
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Reload Page
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       if (this.props.fallback) {
         return this.props.fallback;
       }
