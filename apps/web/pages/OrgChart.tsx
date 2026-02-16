@@ -427,7 +427,7 @@ export const OrgChart: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!inputName || !inputRole) return;
+    if (!inputName) return;
 
     try {
       if (modalState.type === 'add') {

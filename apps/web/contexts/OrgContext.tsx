@@ -71,7 +71,7 @@ export const OrgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         try {
             const payload: any = {};
             if (updates.name) payload.name = updates.name;
-            if (updates.role) payload.role = updates.role;
+            if (updates.role !== undefined) payload.role = updates.role;
             if (updates.department !== undefined) payload.department = updates.department;
             if (updates.avatar) payload.avatar = updates.avatar;
             if ('parentId' in updates) payload.managerId = updates.parentId || null;

@@ -146,9 +146,9 @@ export class EmployeeService {
             updates.push(`email = $${paramIndex++}`);
             values.push(data.email);
         }
-        if (data.role) {
+        if (data.role !== undefined) {
             updates.push(`role = $${paramIndex++}`);
-            values.push(data.role);
+            values.push(data.role || null);
         }
         if (data.department) {
             updates.push(`department = $${paramIndex++}`);
