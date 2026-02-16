@@ -979,8 +979,8 @@ export const OrgChart: React.FC = () => {
                 Remove from Org Chart?
               </h3>
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                This will remove this person and all their direct reports from the organization
-                chart.
+                This will remove this person from the organization chart. Their direct reports
+                will be reassigned to their manager.
               </p>
             </div>
             <div className="flex justify-center gap-3 p-4 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50">

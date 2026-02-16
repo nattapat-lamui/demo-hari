@@ -477,7 +477,7 @@ export const useUpdateEmployee = () => {
 export const useDeleteEmployee = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.delete(`/employees/${id}?cascade=true`),
+    mutationFn: (id: string) => api.delete(`/employees/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.employees.all });
       qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
@@ -880,7 +880,7 @@ export const useUpdateOrgNode = () => {
 export const useDeleteOrgNode = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.delete(`/employees/${id}?cascade=true`),
+    mutationFn: (id: string) => api.delete(`/employees/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.employees.all });
       qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });

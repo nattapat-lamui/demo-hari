@@ -215,10 +215,20 @@ export class EmployeeService {
     }
 
     async deleteEmployee(id: string): Promise<void> {
-        const result = await query('DELETE FROM employees WHERE id = $1', [id]);
-        if (result.rowCount === 0) {
+        // Get the employee's manager so subordinates can be reassigned
+        const emp = await query('SELECT manager_id FROM employees WHERE id = $1', [id]);
+        if (emp.rowCount === 0) {
             throw new Error('Employee not found');
         }
+        const parentManagerId: string | null = emp.rows[0].manager_id || null;
+
+        // Reassign subordinates to the deleted employee's manager (move up one level)
+        await query(
+            'UPDATE employees SET manager_id = $1 WHERE manager_id = $2',
+            [parentManagerId, id],
+        );
+
+        await query('DELETE FROM employees WHERE id = $1', [id]);
     }
 
     private mapRowToEmployee(row: any): Employee {
