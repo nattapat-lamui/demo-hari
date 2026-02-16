@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { query } from "../db";
 import {
   User,
@@ -9,6 +10,7 @@ import {
   RegisterRequest,
 } from "../models/User";
 import NotificationService from "./NotificationService";
+import EmailService from "./EmailService";
 
 // Security: Fail fast if JWT_SECRET is not set
 if (!process.env.JWT_SECRET) {
@@ -278,6 +280,113 @@ export class AuthService {
       token,
       user: userResponse,
     };
+  }
+
+  /**
+   * Forgot password — generate reset token and send email.
+   * Always returns silently to prevent user enumeration.
+   */
+  async forgotPassword(email: string): Promise<void> {
+    // Look up user + employee name
+    const result = await query(
+      `SELECT u.id AS user_id, e.name
+       FROM users u
+       LEFT JOIN employees e ON e.user_id = u.id
+       WHERE u.email = $1`,
+      [email],
+    );
+
+    if (result.rows.length === 0) {
+      // No user found — return silently (no enumeration)
+      return;
+    }
+
+    const { user_id, name } = result.rows[0];
+
+    // Invalidate existing unused tokens for this user
+    await query(
+      `UPDATE password_reset_tokens SET used = TRUE WHERE user_id = $1 AND used = FALSE`,
+      [user_id],
+    );
+
+    // Generate token
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+    await query(
+      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+      [user_id, tokenHash, expiresAt.toISOString()],
+    );
+
+    // Send email (silent fail — don't expose errors)
+    try {
+      await EmailService.sendPasswordResetEmail(email, token, name || undefined);
+    } catch (err) {
+      console.error("Failed to send password reset email:", err);
+    }
+  }
+
+  /**
+   * Reset password using token
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    // Validate password complexity
+    const passwordValidation = validatePasswordComplexity(newPassword);
+    if (!passwordValidation.valid) {
+      throw new Error(passwordValidation.message);
+    }
+
+    // Hash incoming token and look up
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    const result = await query(
+      `SELECT prt.id AS token_id, prt.user_id, prt.used, prt.expires_at,
+              u.password_hash, u.email, e.name
+       FROM password_reset_tokens prt
+       JOIN users u ON u.id = prt.user_id
+       LEFT JOIN employees e ON e.user_id = u.id
+       WHERE prt.token_hash = $1`,
+      [tokenHash],
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("Invalid or expired reset link. Please request a new one.");
+    }
+
+    const row = result.rows[0];
+
+    if (row.used) {
+      throw new Error("This reset link has already been used. Please request a new one.");
+    }
+
+    if (new Date(row.expires_at) < new Date()) {
+      throw new Error("This reset link has expired. Please request a new one.");
+    }
+
+    // Prevent same password reuse
+    const isSamePassword = await bcrypt.compare(newPassword, row.password_hash);
+    if (isSamePassword) {
+      throw new Error("New password must be different from your current password.");
+    }
+
+    // Hash new password and update
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await query(
+      `UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [hashedPassword, row.user_id],
+    );
+
+    // Mark token as used + invalidate all remaining tokens for this user
+    await query(
+      `UPDATE password_reset_tokens SET used = TRUE WHERE user_id = $1 AND used = FALSE`,
+      [row.user_id],
+    );
+
+    // Send confirmation email (non-blocking)
+    EmailService.sendPasswordResetConfirmation(row.email, row.name || undefined).catch(
+      (err) => console.error("Failed to send reset confirmation email:", err),
+    );
   }
 
   /**

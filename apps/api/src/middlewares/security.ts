@@ -27,6 +27,15 @@ export const authLimiter = rateLimit({
   skipSuccessfulRequests: true, // Don't count successful requests
 });
 
+// Stricter rate limit for forgot password
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: isDevelopment ? 1 * 60 * 1000 : 15 * 60 * 1000, // 1 min (dev) / 15 min (prod)
+  max: isDevelopment ? 50 : 5, // 50 attempts (dev) / 5 attempts (prod)
+  message: 'Too many password reset requests. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // API rate limiter
 export const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
@@ -183,6 +192,35 @@ export const validateFileUpload = (req: Request, res: Response, next: NextFuncti
 
   next();
 };
+
+// Forgot password validation rules
+export const validateForgotPassword = [
+  body('email')
+    .trim()
+    .notEmpty()
+    .withMessage('Email is required')
+    .isEmail()
+    .withMessage('Invalid email format')
+    .normalizeEmail(),
+];
+
+// Reset password validation rules
+export const validateResetPassword = [
+  body('token')
+    .trim()
+    .notEmpty()
+    .withMessage('Token is required')
+    .isLength({ min: 64, max: 64 })
+    .withMessage('Invalid token format'),
+  body('newPassword')
+    .notEmpty()
+    .withMessage('New password is required')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters'),
+  body('confirmPassword')
+    .notEmpty()
+    .withMessage('Confirm password is required'),
+];
 
 // Sanitize HTML to prevent XSS
 export const sanitizeHtml = (text: string): string => {

@@ -209,6 +209,12 @@ const Login: React.FC = () => {
                 </div>
               </div>
 
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-sm text-primary hover:text-primary-hover font-medium transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}

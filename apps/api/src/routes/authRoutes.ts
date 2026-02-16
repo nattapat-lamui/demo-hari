@@ -2,7 +2,10 @@ import { Router } from "express";
 import AuthController from "../controllers/AuthController";
 import {
   authLimiter,
+  forgotPasswordLimiter,
   validateLogin,
+  validateForgotPassword,
+  validateResetPassword,
   validateRequest,
 } from "../middlewares/security";
 import { authenticateToken } from "../middlewares/auth";
@@ -30,6 +33,24 @@ router.post(
   "/register",
   authLimiter,
   AuthController.register.bind(AuthController),
+);
+
+// POST /api/auth/forgot-password - Request password reset
+router.post(
+  "/forgot-password",
+  forgotPasswordLimiter,
+  validateForgotPassword,
+  validateRequest,
+  AuthController.forgotPassword.bind(AuthController),
+);
+
+// POST /api/auth/reset-password - Reset password with token
+router.post(
+  "/reset-password",
+  authLimiter,
+  validateResetPassword,
+  validateRequest,
+  AuthController.resetPassword.bind(AuthController),
 );
 
 // GET /api/auth/check-email - Check if email is eligible for registration

@@ -73,6 +73,52 @@ export class AuthController {
     }
   }
 
+  async forgotPassword(req: Request, res: Response): Promise<void> {
+    const genericMessage =
+      "If an account exists with this email, you will receive a password reset link shortly.";
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        res.status(400).json({ error: "Email is required" });
+        return;
+      }
+
+      await AuthService.forgotPassword(email);
+      res.json({ message: genericMessage });
+    } catch (error: any) {
+      // Always return same generic message to prevent user enumeration
+      console.error("Forgot password error:", error);
+      res.json({ message: genericMessage });
+    }
+  }
+
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { token, newPassword, confirmPassword } = req.body;
+
+      if (!token || !newPassword || !confirmPassword) {
+        res
+          .status(400)
+          .json({ error: "Token, new password, and confirm password are required" });
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        res.status(400).json({ error: "Passwords do not match" });
+        return;
+      }
+
+      await AuthService.resetPassword(token, newPassword);
+      res.json({ message: "Password has been reset successfully." });
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      res
+        .status(400)
+        .json({ error: error.message || "Failed to reset password" });
+    }
+  }
+
   async checkEmail(req: Request, res: Response): Promise<void> {
     try {
       const { email } = req.query;
