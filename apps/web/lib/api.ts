@@ -29,7 +29,7 @@ const getHeaders = () => {
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
     };
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
@@ -41,6 +41,8 @@ const handleResponse = async (response: Response) => {
         // Token expired or invalid
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
         window.location.href = '/#/login';
         throw new Error('Unauthorized');
     }

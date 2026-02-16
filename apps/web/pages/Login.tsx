@@ -14,6 +14,7 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ const Login: React.FC = () => {
     setSuccessMessage("");
     setLoading(true);
 
-    const success = await login(email, password);
+    const success = await login(email, password, rememberMe);
     if (success) {
       navigate("/");
     } else {
@@ -209,7 +210,16 @@ const Login: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary cursor-pointer"
+                  />
+                  <span className="text-sm text-text-muted-light dark:text-text-muted-dark">Remember me</span>
+                </label>
                 <Link to="/forgot-password" className="text-sm text-primary hover:text-primary-hover font-medium transition-colors">
                   Forgot password?
                 </Link>

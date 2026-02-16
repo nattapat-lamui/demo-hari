@@ -40,7 +40,7 @@ function validatePasswordComplexity(password: string): { valid: boolean; message
 }
 
 export class AuthService {
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  async login(credentials: LoginCredentials, rememberMe?: boolean): Promise<AuthResponse> {
     const { email, password } = credentials;
 
     // 1. Find User in users table
@@ -76,7 +76,7 @@ export class AuthService {
         employeeId: employee.id || null,
       },
       JWT_SECRET,
-      { expiresIn: "8h" },
+      { expiresIn: rememberMe ? "30d" : "8h" },
     );
 
     // Return user info (without password)

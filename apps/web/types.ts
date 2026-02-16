@@ -307,6 +307,7 @@ export interface PerformanceReview {
 export interface LoginCredentials {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 /**

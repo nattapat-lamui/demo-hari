@@ -4,14 +4,14 @@ import AuthService from "../services/AuthService";
 export class AuthController {
   async login(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body;
+      const { email, password, rememberMe } = req.body;
 
       if (!email || !password) {
         res.status(400).json({ error: "Email and password are required" });
         return;
       }
 
-      const authResponse = await AuthService.login({ email, password });
+      const authResponse = await AuthService.login({ email, password }, rememberMe);
       res.json(authResponse);
     } catch (error: any) {
       console.error("Login error:", error);

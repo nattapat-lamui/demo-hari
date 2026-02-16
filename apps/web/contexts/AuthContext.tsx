@@ -4,7 +4,7 @@ import { api, API_HOST } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
@@ -17,10 +17,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize from LocalStorage
+  // Initialize from localStorage or sessionStorage
   React.useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
     if (token && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
@@ -30,17 +30,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         setUser(parsedUser);
       } catch (e) {
-        console.error("Failed to parse user from local storage", e);
+        console.error("Failed to parse user from storage", e);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+        sessionStorage.removeItem('token');
       }
     }
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string, rememberMe?: boolean): Promise<boolean> => {
     try {
-      const data = await api.auth.login({ email, password });
+      const data = await api.auth.login({ email, password, rememberMe });
 
       // Backend returns: { token, user: BackendUser }
       // Map BackendUser to frontend User type
@@ -61,8 +63,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         phone: data.user.phone
       };
 
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(userObj));
+      // Store in localStorage (persists) or sessionStorage (clears on browser close)
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('token', data.token);
+      storage.setItem('user', JSON.stringify(userObj));
       setUser(userObj);
       return true;
     } catch (err) {
@@ -74,6 +78,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     setUser(null);
     // Force redirect to login if needed, or let the ProtectedRoute handle it
     window.location.href = '/#/login';
@@ -84,7 +90,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const updatedUser = { ...user, ...updates };
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    // Update whichever storage holds the current session
+    const storage = localStorage.getItem('token') ? localStorage : sessionStorage;
+    storage.setItem('user', JSON.stringify(updatedUser));
   };
 
   return (
