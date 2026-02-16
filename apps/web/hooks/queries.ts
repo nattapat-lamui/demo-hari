@@ -605,7 +605,28 @@ export const useHandleCancelDecision = () => {
   return useMutation({
     mutationFn: ({ id, decision }: { id: string; decision: 'approve_cancel' | 'reject_cancel' }) =>
       api.post(`/leave-requests/${id}/cancel-decision`, { decision }),
-    onSuccess: () => {
+    onMutate: async ({ id, decision }) => {
+      await qc.cancelQueries({ queryKey: queryKeys.leaveRequests.list() });
+      const previous = qc.getQueryData<LeaveRequest[]>(queryKeys.leaveRequests.list());
+
+      qc.setQueryData<LeaveRequest[]>(queryKeys.leaveRequests.list(), (old) => {
+        if (!old) return old;
+        if (decision === 'approve_cancel') {
+          return old.filter((r) => r.id !== id);
+        }
+        return old.map((r) =>
+          r.id === id ? { ...r, status: 'Approved' as LeaveRequest['status'] } : r,
+        );
+      });
+
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(queryKeys.leaveRequests.list(), context.previous);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.leaveRequests.all });
       qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
     },
