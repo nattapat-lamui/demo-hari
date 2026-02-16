@@ -515,10 +515,32 @@ export const useAddLeaveRequestWithFile = () => {
 };
 
 export const useUpdateLeaveStatus = () => {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, status, rejectionReason }: { id: string; status: 'Approved' | 'Rejected'; rejectionReason?: string }) =>
       api.patch(`/leave-requests/${id}`, { status, rejectionReason }),
-    // Socket handles real-time update
+    onMutate: async ({ id, status, rejectionReason }) => {
+      await qc.cancelQueries({ queryKey: queryKeys.leaveRequests.list() });
+      const previous = qc.getQueryData<LeaveRequest[]>(queryKeys.leaveRequests.list());
+
+      qc.setQueryData<LeaveRequest[]>(queryKeys.leaveRequests.list(), (old) => {
+        if (!old) return old;
+        return old.map((r) =>
+          r.id === id ? { ...r, status: status as LeaveRequest['status'], rejectionReason } : r,
+        );
+      });
+
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(queryKeys.leaveRequests.list(), context.previous);
+      }
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.leaveRequests.all });
+      qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
+    },
   });
 };
 
