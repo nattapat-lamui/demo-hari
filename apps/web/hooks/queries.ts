@@ -525,8 +525,28 @@ export const useUpdateLeaveStatus = () => {
 export const useCancelLeaveRequest = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.post(`/leave-requests/${id}/cancel`, {}),
-    onSuccess: () => {
+    mutationFn: (id: string) => api.post<{ action: 'deleted' | 'cancel_requested' }>(`/leave-requests/${id}/cancel`, {}),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: queryKeys.leaveRequests.list() });
+      const previous = qc.getQueryData<LeaveRequest[]>(queryKeys.leaveRequests.list());
+
+      qc.setQueryData<LeaveRequest[]>(queryKeys.leaveRequests.list(), (old) => {
+        if (!old) return old;
+        return old.flatMap((r) => {
+          if (r.id !== id) return [r];
+          if (r.status === 'Pending') return [];
+          return [{ ...r, status: 'Cancel Requested' as LeaveRequest['status'] }];
+        });
+      });
+
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        qc.setQueryData(queryKeys.leaveRequests.list(), context.previous);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.leaveRequests.all });
       qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
     },
