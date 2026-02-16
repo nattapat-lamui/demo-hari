@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import { Lock, Mail, CheckCircle, Eye, EyeOff, Users, BarChart3, Clock, Shield } from "lucide-react";
+import { Lock, Mail, Check, CheckCircle, Eye, EyeOff, Users, BarChart3, Clock, Shield } from "lucide-react";
 
 interface LocationState {
   registrationSuccess?: boolean;
@@ -235,15 +235,12 @@ const Login: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary cursor-pointer"
-                  />
+                <button type="button" onClick={() => setRememberMe(!rememberMe)} className="flex items-center gap-2.5 cursor-pointer select-none group">
+                  <span className={`flex items-center justify-center w-[18px] h-[18px] rounded border transition-all duration-200 ${rememberMe ? "bg-primary border-primary" : "border-border-light dark:border-border-dark group-hover:border-primary/50"}`}>
+                    {rememberMe && <Check size={12} className="text-white" strokeWidth={3} />}
+                  </span>
                   <span className="text-sm text-text-muted-light dark:text-text-muted-dark">Remember me</span>
-                </label>
+                </button>
                 <Link to="/forgot-password" className="text-sm text-primary hover:text-primary-hover font-medium transition-colors">
                   Forgot password?
                 </Link>
