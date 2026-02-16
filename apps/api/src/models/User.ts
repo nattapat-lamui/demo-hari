@@ -22,7 +22,9 @@ export interface ChangePasswordRequest {
 }
 
 export interface AuthResponse {
-    token: string;
+    token: string;           // backward compat alias = accessToken
+    accessToken: string;
+    refreshToken: string;
     user: User;
 }
 

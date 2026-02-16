@@ -39,7 +39,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
     jwt.verify(token, JWT_SECRET, (err: jwt.VerifyErrors | null, decoded: unknown) => {
         if (err) {
-            return res.status(403).json({ error: 'Invalid or expired token' });
+            return res.status(401).json({ error: 'Invalid or expired token' });
         }
 
         // Type assertion: we know the structure of our JWT payload

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BASE_URL } from '../lib/api';
+import { BASE_URL, getAuthToken } from '../lib/api';
 import { Dropdown } from '../components/Dropdown';
 import { useDocumentList, useDocumentTrash, useDocumentStorage, useDeleteDocument, useRestoreDocument, usePermanentDeleteDocument } from '../hooks/queries';
 import { useQueryClient } from '@tanstack/react-query';
@@ -128,7 +128,7 @@ export const Documents: React.FC = () => {
 
     const fetchImage = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = getAuthToken();
         const response = await fetch(`${BASE_URL}/documents/${previewDoc.id}/download`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -224,7 +224,7 @@ export const Documents: React.FC = () => {
     e.stopPropagation();
     try {
       // Use fetch directly for file download since api client returns JSON
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${BASE_URL}/documents/${docId}/download`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -285,7 +285,7 @@ export const Documents: React.FC = () => {
       formData.append('ownerName', user?.name || 'Unknown');
       formData.append('employeeId', user?.id || '');
 
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${BASE_URL}/documents`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },

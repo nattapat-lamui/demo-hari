@@ -16,7 +16,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { Toast } from '../components/Toast';
 import { useAuth } from '../contexts/AuthContext';
-import { api, API_HOST, BASE_URL } from '../lib/api';
+import { api, API_HOST, BASE_URL, getAuthToken } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 
 export const Settings: React.FC = () => {
@@ -267,7 +267,7 @@ export const Settings: React.FC = () => {
       const response = await fetch(`${BASE_URL}/employees/upload-avatar`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${getAuthToken()}`,
         },
         body: formData,
       });

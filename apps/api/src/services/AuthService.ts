@@ -40,6 +40,31 @@ function validatePasswordComplexity(password: string): { valid: boolean; message
 }
 
 export class AuthService {
+  /**
+   * Generate an access + refresh token pair.
+   * Access token: short-lived JWT (15 min).
+   * Refresh token: opaque random bytes stored as SHA-256 hash in DB.
+   */
+  private async generateTokenPair(
+    payload: { userId: string; email: string; role: string; employeeId: string | null },
+    rememberMe?: boolean,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    // Short-lived access token
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });
+
+    // Opaque refresh token
+    const rawRefreshToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawRefreshToken).digest("hex");
+    const expiresAt = new Date(Date.now() + (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000); // 30d or 7d
+
+    await query(
+      `INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+      [payload.userId, tokenHash, expiresAt.toISOString()],
+    );
+
+    return { accessToken, refreshToken: rawRefreshToken };
+  }
+
   async login(credentials: LoginCredentials, rememberMe?: boolean): Promise<AuthResponse> {
     const { email, password } = credentials;
 
@@ -67,17 +92,14 @@ export class AuthService {
     );
     const employee = empResult.rows[0] || {};
 
-    // 4. Generate JWT token
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-        employeeId: employee.id || null,
-      },
-      JWT_SECRET,
-      { expiresIn: rememberMe ? "30d" : "8h" },
-    );
+    // 4. Generate token pair
+    const jwtPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      employeeId: employee.id || null,
+    };
+    const { accessToken, refreshToken } = await this.generateTokenPair(jwtPayload, rememberMe);
 
     // Return user info (without password)
     const userResponse: User = {
@@ -96,7 +118,9 @@ export class AuthService {
     };
 
     return {
-      token,
+      token: accessToken,
+      accessToken,
+      refreshToken,
       user: userResponse,
     };
   }
@@ -251,17 +275,14 @@ export class AuthService {
       console.error("Failed to create notifications:", notifError);
     }
 
-    // 10. Generate JWT token and return
-    const token = jwt.sign(
-      {
-        userId: newUser.id,
-        email: newUser.email,
-        role: newUser.role,
-        employeeId: employee.id,
-      },
-      JWT_SECRET,
-      { expiresIn: "8h" }
-    );
+    // 10. Generate token pair and return
+    const jwtPayload = {
+      userId: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+      employeeId: employee.id,
+    };
+    const { accessToken, refreshToken } = await this.generateTokenPair(jwtPayload);
 
     const userResponse: User = {
       userId: newUser.id,
@@ -277,7 +298,9 @@ export class AuthService {
     };
 
     return {
-      token,
+      token: accessToken,
+      accessToken,
+      refreshToken,
       user: userResponse,
     };
   }
@@ -425,6 +448,88 @@ export class AuthService {
       message: "Email eligible for registration",
       employeeName: employeeResult.rows.length > 0 ? employeeResult.rows[0].name : undefined
     };
+  }
+  /**
+   * Refresh access token using a valid refresh token.
+   * Implements token rotation: old token is revoked, new pair is issued.
+   * If a revoked token is reused, ALL user tokens are revoked (theft detection).
+   */
+  async refreshAccessToken(rawRefreshToken: string): Promise<AuthResponse> {
+    const tokenHash = crypto.createHash("sha256").update(rawRefreshToken).digest("hex");
+
+    const result = await query(
+      `SELECT rt.id, rt.user_id, rt.revoked, rt.expires_at,
+              u.email, u.role
+       FROM refresh_tokens rt
+       JOIN users u ON u.id = rt.user_id
+       WHERE rt.token_hash = $1`,
+      [tokenHash],
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("Invalid refresh token");
+    }
+
+    const row = result.rows[0];
+
+    // Theft detection: if a revoked token is reused, revoke ALL tokens for this user
+    if (row.revoked) {
+      await query(`UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1`, [row.user_id]);
+      throw new Error("Refresh token reuse detected — all sessions revoked");
+    }
+
+    if (new Date(row.expires_at) < new Date()) {
+      throw new Error("Refresh token expired");
+    }
+
+    // Revoke the old token (rotation)
+    await query(`UPDATE refresh_tokens SET revoked = TRUE WHERE id = $1`, [row.id]);
+
+    // Look up employee info for the new token payload + response
+    const empResult = await query(
+      "SELECT id, name, role, department, avatar, bio, phone FROM employees WHERE user_id = $1",
+      [row.user_id],
+    );
+    const employee = empResult.rows[0] || {};
+
+    const jwtPayload = {
+      userId: row.user_id,
+      email: row.email,
+      role: row.role,
+      employeeId: employee.id || null,
+    };
+
+    const { accessToken, refreshToken } = await this.generateTokenPair(jwtPayload);
+
+    const userResponse: User = {
+      userId: row.user_id,
+      employeeId: employee.id || row.user_id,
+      email: row.email,
+      name: employee.name || row.email,
+      role: row.role,
+      avatar:
+        employee.avatar ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name || row.email)}&background=random`,
+      jobTitle: employee.role,
+      department: employee.department,
+      bio: employee.bio,
+      phone: employee.phone,
+    };
+
+    return {
+      token: accessToken,
+      accessToken,
+      refreshToken,
+      user: userResponse,
+    };
+  }
+
+  /**
+   * Revoke a refresh token (used during logout).
+   */
+  async revokeRefreshToken(rawRefreshToken: string): Promise<void> {
+    const tokenHash = crypto.createHash("sha256").update(rawRefreshToken).digest("hex");
+    await query(`UPDATE refresh_tokens SET revoked = TRUE WHERE token_hash = $1`, [tokenHash]);
   }
 }
 

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { JobHistoryItem, Employee, PerformanceReview, DocumentItem } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { api, API_HOST, BASE_URL } from '../lib/api';
+import { api, API_HOST, BASE_URL, getAuthToken } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import {
     useEmployeeDetail,
@@ -207,7 +207,7 @@ export const EmployeeDetail: React.FC = () => {
                 const response = await fetch(`${BASE_URL}/employees/upload-avatar`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${getAuthToken()}`
                     },
                     body: formData
                 });
@@ -350,7 +350,7 @@ export const EmployeeDetail: React.FC = () => {
                 const response = await fetch(`${BASE_URL}/documents`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${getAuthToken()}`
                     },
                     body: formData
                 });

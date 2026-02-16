@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { User, UserRole } from '../types';
-import { api, API_HOST } from '../lib/api';
+import { api, API_HOST, BASE_URL } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -33,8 +33,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error("Failed to parse user from storage", e);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         sessionStorage.removeItem('user');
         sessionStorage.removeItem('token');
+        sessionStorage.removeItem('refreshToken');
       }
     }
     setLoading(false);
@@ -65,13 +67,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Clear both storages first to prevent stale tokens
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       sessionStorage.removeItem('token');
+      sessionStorage.removeItem('refreshToken');
       sessionStorage.removeItem('user');
 
       // Store in localStorage (persists) or sessionStorage (clears on browser close)
       const storage = rememberMe ? localStorage : sessionStorage;
-      storage.setItem('token', data.token);
+      storage.setItem('token', data.accessToken || data.token);
+      storage.setItem('refreshToken', data.refreshToken);
       storage.setItem('user', JSON.stringify(userObj));
       setUser(userObj);
       return true;
@@ -82,9 +87,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
+    // Fire-and-forget: revoke refresh token on the server
+    const rt = localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
+    if (rt) {
+      fetch(`${BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: rt }),
+      }).catch(() => { /* best-effort */ });
+    }
+
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     sessionStorage.removeItem('token');
+    sessionStorage.removeItem('refreshToken');
     sessionStorage.removeItem('user');
     setUser(null);
     // Force redirect to login if needed, or let the ProtectedRoute handle it

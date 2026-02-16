@@ -53,6 +53,19 @@ router.post(
   AuthController.resetPassword.bind(AuthController),
 );
 
+// POST /api/auth/refresh - Refresh access token (no auth required — token is expired)
+router.post(
+  "/refresh",
+  authLimiter,
+  AuthController.refresh.bind(AuthController),
+);
+
+// POST /api/auth/logout - Revoke refresh token (no auth required — token may be expired)
+router.post(
+  "/logout",
+  AuthController.logout.bind(AuthController),
+);
+
 // GET /api/auth/check-email - Check if email is eligible for registration
 router.get(
   "/check-email",

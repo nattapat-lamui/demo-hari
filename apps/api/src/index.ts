@@ -444,6 +444,23 @@ const runLightMigrations = async () => {
     `);
     await query(`CREATE INDEX IF NOT EXISTS idx_prt_user_id ON password_reset_tokens(user_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_prt_token_hash ON password_reset_tokens(token_hash)`);
+
+    // Refresh tokens table (for JWT refresh token rotation)
+    await query(`
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash VARCHAR(64) NOT NULL,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        revoked BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_rt_user_id ON refresh_tokens(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_rt_token_hash ON refresh_tokens(token_hash)`);
+
+    // Cleanup expired/revoked refresh tokens
+    await query(`DELETE FROM refresh_tokens WHERE revoked = TRUE OR expires_at < NOW() - INTERVAL '1 day'`);
   } catch (err) {
     // Table may not exist yet — ignore
   }

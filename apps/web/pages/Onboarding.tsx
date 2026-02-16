@@ -12,7 +12,7 @@ import { OnboardingTask, Employee, OnboardingDocument } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useOrg } from '../contexts/OrgContext';
 import { Toast } from '../components/Toast';
-import { api, BASE_URL } from '../lib/api';
+import { api, BASE_URL, getAuthToken } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import { useOnboardingTasks, useOnboardingContacts, useOnboardingDocuments, useAllEmployees } from '../hooks/queries';
 import { FlowGraph, TaskList, KeyContacts, DocumentChecklist, InviteModal } from '../components/onboarding';
@@ -292,7 +292,7 @@ export const Onboarding: React.FC = () => {
             const formData = new FormData();
             formData.append('file', file);
 
-            const token = localStorage.getItem('token');
+            const token = getAuthToken();
             const response = await fetch(`${BASE_URL}/onboarding/documents/${docId}/upload`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
@@ -316,7 +316,7 @@ export const Onboarding: React.FC = () => {
 
     const handleDocDownload = async (docId: string) => {
         try {
-            const token = localStorage.getItem('token');
+            const token = getAuthToken();
             const response = await fetch(`${BASE_URL}/onboarding/documents/${docId}/download`, {
                 headers: { Authorization: `Bearer ${token}` },
             });

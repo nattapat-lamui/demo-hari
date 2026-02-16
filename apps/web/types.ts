@@ -331,7 +331,9 @@ export interface BackendUser {
  * Authentication response from login endpoint
  */
 export interface AuthResponse {
-  token: string;
+  token: string;           // backward compat alias = accessToken
+  accessToken: string;
+  refreshToken: string;
   user: BackendUser;
 }
 

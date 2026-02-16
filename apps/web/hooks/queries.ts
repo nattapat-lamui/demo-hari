@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, API_HOST, BASE_URL } from '../lib/api';
+import { api, API_HOST, BASE_URL, getAuthToken } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import type {
   Employee,
@@ -499,7 +499,7 @@ export const useAddLeaveRequest = () => {
 export const useAddLeaveRequestWithFile = () => {
   return useMutation({
     mutationFn: async (formData: FormData) => {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${BASE_URL}/leave-requests`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -537,7 +537,7 @@ export const useEditLeaveRequest = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, formData }: { id: string; formData: FormData }) => {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${BASE_URL}/leave-requests/${id}`, {
         method: 'PUT',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -549,9 +549,11 @@ export const useEditLeaveRequest = () => {
       }
       return response.json();
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.leaveRequests.all });
-      qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.leaveRequests.all }),
+        qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all }),
+      ]);
     },
   });
 };

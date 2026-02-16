@@ -60,6 +60,18 @@ CREATE TABLE password_reset_tokens (
 CREATE INDEX idx_prt_user_id ON password_reset_tokens(user_id);
 CREATE INDEX idx_prt_token_hash ON password_reset_tokens(token_hash);
 
+-- Refresh Tokens (for JWT refresh token rotation)
+CREATE TABLE refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_rt_user_id ON refresh_tokens(user_id);
+CREATE INDEX idx_rt_token_hash ON refresh_tokens(token_hash);
+
 -- 1. Employees (Profile)
 CREATE TABLE employees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
