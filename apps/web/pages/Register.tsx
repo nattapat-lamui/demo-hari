@@ -38,6 +38,7 @@ const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
   const [loading, setLoading] = useState(false);
   const [showEmailVerified, setShowEmailVerified] = useState(true);
   const navigate = useNavigate();
@@ -62,6 +63,16 @@ const Register: React.FC = () => {
   const handleCheckEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!email.trim()) {
+      setFieldErrors({ email: "Please enter your email address" });
+      return;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFieldErrors({ email: "Please enter a valid email address" });
+      return;
+    }
+    setFieldErrors({});
+
     setLoading(true);
 
     try {
@@ -84,6 +95,19 @@ const Register: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const errors: typeof fieldErrors = {};
+    if (!password) {
+      errors.password = "Please enter a password";
+    }
+    if (!confirmPassword) {
+      errors.confirmPassword = "Please confirm your password";
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -247,28 +271,31 @@ const Register: React.FC = () => {
             )}
 
             {step === 'email' ? (
-              <form onSubmit={handleCheckEmail} className="space-y-5">
+              <form onSubmit={handleCheckEmail} noValidate className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                     Company Email
                   </label>
                   <div className="relative group">
                     <Mail
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark group-focus-within:text-accent-teal transition-colors"
+                      className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.email ? "text-accent-red" : "text-text-muted-light dark:text-text-muted-dark group-focus-within:text-accent-teal"}`}
                       size={20}
                     />
                     <input
                       type="email"
-                      required
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl focus:ring-2 focus:ring-accent-teal focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark"
+                      onChange={(e) => { setEmail(e.target.value); setFieldErrors((prev) => ({ ...prev, email: undefined })); }}
+                      className={`w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${fieldErrors.email ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-accent-teal"}`}
                       placeholder="yourname@company.com"
                     />
                   </div>
-                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
-                    Use the company email provided by HR
-                  </p>
+                  {fieldErrors.email ? (
+                    <p className="mt-1.5 text-sm text-accent-red">{fieldErrors.email}</p>
+                  ) : (
+                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
+                      Use the company email provided by HR
+                    </p>
+                  )}
                 </div>
 
                 <button
@@ -290,7 +317,7 @@ const Register: React.FC = () => {
                 </button>
               </form>
             ) : (
-              <form onSubmit={handleRegister} className="space-y-5">
+              <form onSubmit={handleRegister} noValidate className="space-y-5">
                 {showEmailVerified && (
                   <div className="bg-accent-green/10 p-4 rounded-xl flex items-center gap-3 text-accent-green text-sm border border-accent-green/20 animate-slide-in-right">
                     <CheckCircle size={20} />
@@ -304,15 +331,14 @@ const Register: React.FC = () => {
                   </label>
                   <div className="relative group">
                     <Lock
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark group-focus-within:text-accent-teal transition-colors"
+                      className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.password ? "text-accent-red" : "text-text-muted-light dark:text-text-muted-dark group-focus-within:text-accent-teal"}`}
                       size={20}
                     />
                     <input
                       type={showPassword ? "text" : "password"}
-                      required
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-12 pr-14 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl focus:ring-2 focus:ring-accent-teal focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark"
+                      onChange={(e) => { setPassword(e.target.value); setFieldErrors((prev) => ({ ...prev, password: undefined })); }}
+                      className={`w-full pl-12 pr-14 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${fieldErrors.password ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-accent-teal"}`}
                       placeholder="••••••••"
                     />
                     <button
@@ -323,6 +349,9 @@ const Register: React.FC = () => {
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
+                  {fieldErrors.password && (
+                    <p className="mt-1.5 text-sm text-accent-red">{fieldErrors.password}</p>
+                  )}
 
                   {/* Password Strength Meter */}
                   {password.length > 0 && (
@@ -366,16 +395,17 @@ const Register: React.FC = () => {
                   </label>
                   <div className="relative group">
                     <Lock
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark group-focus-within:text-accent-teal transition-colors"
+                      className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.confirmPassword ? "text-accent-red" : "text-text-muted-light dark:text-text-muted-dark group-focus-within:text-accent-teal"}`}
                       size={20}
                     />
                     <input
                       type={showConfirmPassword ? "text" : "password"}
-                      required
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => { setConfirmPassword(e.target.value); setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined })); }}
                       className={`w-full pl-12 pr-14 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:ring-accent-teal focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${
-                        confirmPassword && password !== confirmPassword
+                        fieldErrors.confirmPassword
+                          ? "border-accent-red focus:ring-accent-red/30"
+                          : confirmPassword && password !== confirmPassword
                           ? "border-accent-red bg-accent-red/5"
                           : confirmPassword && password === confirmPassword
                           ? "border-accent-green bg-accent-green/5"
@@ -391,10 +421,13 @@ const Register: React.FC = () => {
                       {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
-                  {confirmPassword && password !== confirmPassword && (
+                  {fieldErrors.confirmPassword && (
+                    <p className="mt-1.5 text-sm text-accent-red">{fieldErrors.confirmPassword}</p>
+                  )}
+                  {!fieldErrors.confirmPassword && confirmPassword && password !== confirmPassword && (
                     <p className="text-xs text-accent-red mt-1">Passwords do not match</p>
                   )}
-                  {confirmPassword && password === confirmPassword && (
+                  {!fieldErrors.confirmPassword && confirmPassword && password === confirmPassword && (
                     <p className="text-xs text-accent-green mt-1">Passwords match</p>
                   )}
                 </div>

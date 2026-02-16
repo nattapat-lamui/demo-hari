@@ -20,6 +20,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<{ currentPassword?: string; newPassword?: string; confirmPassword?: string }>({});
     const [success, setSuccess] = useState(false);
 
     // Calculate password strength
@@ -68,6 +69,16 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
         setError('');
         setSuccess(false);
 
+        const errors: typeof fieldErrors = {};
+        if (!currentPassword) errors.currentPassword = 'Please enter your current password';
+        if (!newPassword) errors.newPassword = 'Please enter a new password';
+        if (!confirmPassword) errors.confirmPassword = 'Please confirm your new password';
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            return;
+        }
+        setFieldErrors({});
+
         if (newPassword !== confirmPassword) {
             setError('New passwords do not match');
             return;
@@ -112,7 +123,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
                     {error && (
                         <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900">
                             {error}
@@ -127,29 +138,33 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                     <div>
                         <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Current Password</label>
                         <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
+                            <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 ${fieldErrors.currentPassword ? "text-accent-red" : "text-text-muted-light"}`} size={16} />
                             <input
                                 type="password"
-                                required
                                 value={currentPassword}
-                                onChange={(e) => setCurrentPassword(e.target.value)}
-                                className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
+                                onChange={(e) => { setCurrentPassword(e.target.value); setFieldErrors((prev) => ({ ...prev, currentPassword: undefined })); }}
+                                className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 text-text-light dark:text-text-dark ${fieldErrors.currentPassword ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-primary"}`}
                             />
                         </div>
+                        {fieldErrors.currentPassword && (
+                            <p className="mt-1 text-xs text-accent-red">{fieldErrors.currentPassword}</p>
+                        )}
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">New Password</label>
                         <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
+                            <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 ${fieldErrors.newPassword ? "text-accent-red" : "text-text-muted-light"}`} size={16} />
                             <input
                                 type="password"
-                                required
                                 value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
+                                onChange={(e) => { setNewPassword(e.target.value); setFieldErrors((prev) => ({ ...prev, newPassword: undefined })); }}
+                                className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 text-text-light dark:text-text-dark ${fieldErrors.newPassword ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-primary"}`}
                             />
                         </div>
+                        {fieldErrors.newPassword && (
+                            <p className="mt-1 text-xs text-accent-red">{fieldErrors.newPassword}</p>
+                        )}
 
                         {/* Password Strength Meter */}
                         {newPassword && (
@@ -187,15 +202,17 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                     <div>
                         <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Confirm New Password</label>
                         <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
+                            <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 ${fieldErrors.confirmPassword ? "text-accent-red" : "text-text-muted-light"}`} size={16} />
                             <input
                                 type="password"
-                                required
                                 value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
+                                onChange={(e) => { setConfirmPassword(e.target.value); setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined })); }}
+                                className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 text-text-light dark:text-text-dark ${fieldErrors.confirmPassword ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-primary"}`}
                             />
                         </div>
+                        {fieldErrors.confirmPassword && (
+                            <p className="mt-1 text-xs text-accent-red">{fieldErrors.confirmPassword}</p>
+                        )}
                     </div>
 
                     <div className="pt-2 flex justify-end gap-3">

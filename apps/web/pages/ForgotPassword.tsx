@@ -6,12 +6,23 @@ import { BASE_URL } from "../lib/api";
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [fieldError, setFieldError] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!email.trim()) {
+      setFieldError("Please enter your email address");
+      return;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFieldError("Please enter a valid email address");
+      return;
+    }
+    setFieldError("");
+
     setLoading(true);
 
     try {
@@ -145,25 +156,27 @@ const ForgotPassword: React.FC = () => {
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} noValidate className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                       Email Address
                     </label>
                     <div className="relative group">
                       <Mail
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark group-focus-within:text-primary transition-colors"
+                        className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${fieldError ? "text-accent-red" : "text-text-muted-light dark:text-text-muted-dark group-focus-within:text-primary"}`}
                         size={20}
                       />
                       <input
                         type="email"
-                        required
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark"
+                        onChange={(e) => { setEmail(e.target.value); setFieldError(""); }}
+                        className={`w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${fieldError ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-primary"}`}
                         placeholder="name@company.com"
                       />
                     </div>
+                    {fieldError && (
+                      <p className="mt-1.5 text-sm text-accent-red">{fieldError}</p>
+                    )}
                   </div>
 
                   <button

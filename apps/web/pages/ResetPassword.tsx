@@ -42,6 +42,7 @@ const ResetPassword: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ password?: string; confirmPassword?: string }>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
@@ -51,6 +52,19 @@ const ResetPassword: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const errors: typeof fieldErrors = {};
+    if (!newPassword) {
+      errors.password = "Please enter a new password";
+    }
+    if (!confirmPassword) {
+      errors.confirmPassword = "Please confirm your password";
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
 
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match");
@@ -253,22 +267,21 @@ const ResetPassword: React.FC = () => {
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} noValidate className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                       New Password
                     </label>
                     <div className="relative group">
                       <Lock
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark group-focus-within:text-accent-teal transition-colors"
+                        className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.password ? "text-accent-red" : "text-text-muted-light dark:text-text-muted-dark group-focus-within:text-accent-teal"}`}
                         size={20}
                       />
                       <input
                         type={showPassword ? "text" : "password"}
-                        required
                         value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full pl-12 pr-14 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl focus:ring-2 focus:ring-accent-teal focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark"
+                        onChange={(e) => { setNewPassword(e.target.value); setFieldErrors((prev) => ({ ...prev, password: undefined })); }}
+                        className={`w-full pl-12 pr-14 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${fieldErrors.password ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-accent-teal"}`}
                         placeholder="Enter new password"
                       />
                       <button
@@ -279,6 +292,9 @@ const ResetPassword: React.FC = () => {
                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
+                    {fieldErrors.password && (
+                      <p className="mt-1.5 text-sm text-accent-red">{fieldErrors.password}</p>
+                    )}
 
                     {/* Password Strength Meter */}
                     {newPassword.length > 0 && (
@@ -322,16 +338,17 @@ const ResetPassword: React.FC = () => {
                     </label>
                     <div className="relative group">
                       <Lock
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark group-focus-within:text-accent-teal transition-colors"
+                        className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.confirmPassword ? "text-accent-red" : "text-text-muted-light dark:text-text-muted-dark group-focus-within:text-accent-teal"}`}
                         size={20}
                       />
                       <input
                         type={showConfirmPassword ? "text" : "password"}
-                        required
                         value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className={`w-full pl-12 pr-14 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:ring-accent-teal focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${
-                          confirmPassword && newPassword !== confirmPassword
+                        onChange={(e) => { setConfirmPassword(e.target.value); setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined })); }}
+                        className={`w-full pl-12 pr-14 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${
+                          fieldErrors.confirmPassword
+                            ? "border-accent-red focus:ring-accent-red/30"
+                            : confirmPassword && newPassword !== confirmPassword
                             ? "border-accent-red bg-accent-red/5"
                             : confirmPassword && newPassword === confirmPassword
                             ? "border-accent-green bg-accent-green/5"
@@ -347,10 +364,13 @@ const ResetPassword: React.FC = () => {
                         {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
-                    {confirmPassword && newPassword !== confirmPassword && (
+                    {fieldErrors.confirmPassword && (
+                      <p className="mt-1.5 text-sm text-accent-red">{fieldErrors.confirmPassword}</p>
+                    )}
+                    {!fieldErrors.confirmPassword && confirmPassword && newPassword !== confirmPassword && (
                       <p className="text-xs text-accent-red mt-1">Passwords do not match</p>
                     )}
-                    {confirmPassword && newPassword === confirmPassword && (
+                    {!fieldErrors.confirmPassword && confirmPassword && newPassword === confirmPassword && (
                       <p className="text-xs text-accent-green mt-1">Passwords match</p>
                     )}
                   </div>
