@@ -63,6 +63,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         phone: data.user.phone
       };
 
+      // Clear both storages first to prevent stale tokens
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+
       // Store in localStorage (persists) or sessionStorage (clears on browser close)
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem('token', data.token);

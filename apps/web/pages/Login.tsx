@@ -9,13 +9,13 @@ interface LocationState {
 }
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => localStorage.getItem("rememberedEmail") || "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem("rememberedEmail"));
   const [successMessage, setSuccessMessage] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -60,6 +60,14 @@ const Login: React.FC = () => {
     if (!validate()) return;
 
     setLoading(true);
+
+    // Remember or forget the email based on checkbox
+    if (rememberMe) {
+      localStorage.setItem("rememberedEmail", email);
+    } else {
+      localStorage.removeItem("rememberedEmail");
+    }
+
     const success = await login(email, password, rememberMe);
     if (success) {
       navigate("/");
