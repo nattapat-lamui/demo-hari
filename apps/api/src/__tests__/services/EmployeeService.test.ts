@@ -89,8 +89,9 @@ describe('EmployeeService', () => {
     it('should create employee successfully', async () => {
       mockedQuery
         .mockResolvedValueOnce({ rows: [], rowCount: 0 } as never) // check email
+        .mockResolvedValueOnce({ rows: [{ next_num: 1 }], rowCount: 1 } as never) // employee_code
         .mockResolvedValueOnce({
-          rows: [{ ...mockEmployee, ...createData }],
+          rows: [{ ...mockEmployee, ...createData, employee_code: 'EMP-0001' }],
           rowCount: 1,
         } as never); // insert
 
@@ -119,11 +120,12 @@ describe('EmployeeService', () => {
       const dataWithPassword = { ...createData, password: 'CustomPassword123!' };
 
       mockedQuery
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 } as never)
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 } as never) // check email
+        .mockResolvedValueOnce({ rows: [{ next_num: 5 }], rowCount: 1 } as never) // employee_code
         .mockResolvedValueOnce({
-          rows: [{ ...mockEmployee, ...createData }],
+          rows: [{ ...mockEmployee, ...createData, employee_code: 'EMP-0005' }],
           rowCount: 1,
-        } as never);
+        } as never); // insert
 
       (mockedBcrypt.hash as jest.Mock).mockResolvedValue('hashed-custom-password');
 
@@ -134,11 +136,12 @@ describe('EmployeeService', () => {
 
     it('should use default password when not provided', async () => {
       mockedQuery
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 } as never)
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 } as never) // check email
+        .mockResolvedValueOnce({ rows: [{ next_num: 10 }], rowCount: 1 } as never) // employee_code
         .mockResolvedValueOnce({
-          rows: [{ ...mockEmployee, ...createData }],
+          rows: [{ ...mockEmployee, ...createData, employee_code: 'EMP-0010' }],
           rowCount: 1,
-        } as never);
+        } as never); // insert
 
       mockedSystemConfigService.getDefaultPassword.mockResolvedValue('DefaultPass123!');
       (mockedBcrypt.hash as jest.Mock).mockResolvedValue('hashed-default-password');
