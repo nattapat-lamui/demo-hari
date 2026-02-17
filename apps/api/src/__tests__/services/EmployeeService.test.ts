@@ -184,6 +184,23 @@ describe('EmployeeService', () => {
       expect(mockedQuery).toHaveBeenCalledTimes(1);
     });
 
+    it('should update role when set to empty string', async () => {
+      const updatedEmployee = { ...mockEmployee, role: null };
+
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [mockEmployee], rowCount: 1 } as never)
+        .mockResolvedValueOnce({ rows: [updatedEmployee], rowCount: 1 } as never);
+
+      const result = await employeeService.updateEmployee({
+        id: 'emp-123',
+        role: '',
+      });
+
+      expect(result.role).toBeNull();
+      // Should have called update query (not skipped)
+      expect(mockedQuery).toHaveBeenCalledTimes(2);
+    });
+
     it('should update multiple fields at once', async () => {
       const updatedEmployee = {
         ...mockEmployee,
@@ -210,12 +227,34 @@ describe('EmployeeService', () => {
   });
 
   describe('deleteEmployee', () => {
-    it('should delete employee successfully', async () => {
-      mockedQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as never);
+    it('should delete employee and reassign subordinates to parent manager', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [{ manager_id: 'mgr-parent' }], rowCount: 1 } as never) // SELECT manager_id
+        .mockResolvedValueOnce({ rows: [], rowCount: 2 } as never) // UPDATE subordinates
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 } as never); // DELETE
 
       await expect(employeeService.deleteEmployee('emp-123')).resolves.not.toThrow();
 
+      expect(mockedQuery).toHaveBeenCalledWith('SELECT manager_id FROM employees WHERE id = $1', ['emp-123']);
+      expect(mockedQuery).toHaveBeenCalledWith(
+        'UPDATE employees SET manager_id = $1 WHERE manager_id = $2',
+        ['mgr-parent', 'emp-123'],
+      );
       expect(mockedQuery).toHaveBeenCalledWith('DELETE FROM employees WHERE id = $1', ['emp-123']);
+    });
+
+    it('should set subordinates manager to null when deleting a root employee', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [{ manager_id: null }], rowCount: 1 } as never)
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 } as never)
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 } as never);
+
+      await expect(employeeService.deleteEmployee('emp-root')).resolves.not.toThrow();
+
+      expect(mockedQuery).toHaveBeenCalledWith(
+        'UPDATE employees SET manager_id = $1 WHERE manager_id = $2',
+        [null, 'emp-root'],
+      );
     });
 
     it('should throw error when employee not found', async () => {
