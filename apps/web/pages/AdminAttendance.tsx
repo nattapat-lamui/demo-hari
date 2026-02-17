@@ -184,12 +184,15 @@ const AdminAttendance: React.FC = () => {
       return;
     }
 
-    const headers = ['Employee', 'Department', 'Check In', 'Check Out', 'Status'];
+    const headers = ['Employee', 'Department', 'Check In', 'Check Out', 'Hours', 'Overtime', 'Auto-checkout', 'Status'];
     const rows = records.map((r) => [
       r.employeeName,
       r.employeeDepartment,
       r.clockIn ? formatTime(r.clockIn) : '-',
       r.clockOut ? formatTime(r.clockOut) : '-',
+      r.totalHours != null ? Number(r.totalHours).toFixed(1) : '-',
+      r.overtimeHours != null && r.overtimeHours > 0 ? Number(r.overtimeHours).toFixed(1) : '0',
+      r.autoCheckout ? 'Yes' : 'No',
       r.displayStatus || r.status,
     ]);
 
@@ -341,6 +344,12 @@ const AdminAttendance: React.FC = () => {
                   Check Out
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
+                  Hours
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
+                  OT
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
@@ -351,13 +360,13 @@ const AdminAttendance: React.FC = () => {
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
+                  <td colSpan={8} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
                     Loading attendance records...
                   </td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
+                  <td colSpan={8} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
                     No attendance records found
                   </td>
                 </tr>
@@ -390,18 +399,34 @@ const AdminAttendance: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
                       {formatTime(record.clockOut)}
+                      {record.autoCheckout && (
+                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">(auto)</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
+                      {record.totalHours != null ? `${Number(record.totalHours).toFixed(1)}h` : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {record.overtimeHours != null && record.overtimeHours > 0
+                        ? <span className="text-amber-600 dark:text-amber-400 font-medium">{Number(record.overtimeHours).toFixed(1)}h</span>
+                        : <span className="text-text-muted-light dark:text-text-muted-dark">-</span>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {(() => {
-                        const ds = displayStatus(record);
-                        const s = getStatusStyle(ds);
-                        return (
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                            {ds}
-                          </span>
-                        );
-                      })()}
+                      <div className="flex items-center gap-1.5">
+                        {(() => {
+                          const ds = displayStatus(record);
+                          const s = getStatusStyle(ds);
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                              {ds}
+                            </span>
+                          );
+                        })()}
+                        {record.earlyDeparture && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Early</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <div className="relative inline-block">
@@ -497,19 +522,27 @@ const AdminAttendance: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    {(() => {
-                      const ds = displayStatus(record);
-                      const s = getStatusStyle(ds);
-                      return (
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                          {ds}
-                        </span>
-                      );
-                    })()}
+                    <div className="flex items-center gap-1">
+                      {(() => {
+                        const ds = displayStatus(record);
+                        const s = getStatusStyle(ds);
+                        return (
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                            {ds}
+                          </span>
+                        );
+                      })()}
+                      {record.autoCheckout && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Auto</span>
+                      )}
+                      {record.earlyDeparture && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Early</span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  <div className="grid grid-cols-4 gap-2 text-xs mb-3">
                     <div>
                       <p className="text-text-muted-light dark:text-text-muted-dark">Check In</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockIn)}</p>
@@ -517,6 +550,16 @@ const AdminAttendance: React.FC = () => {
                     <div>
                       <p className="text-text-muted-light dark:text-text-muted-dark">Check Out</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockOut)}</p>
+                    </div>
+                    <div>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">Hours</p>
+                      <p className="font-medium text-text-light dark:text-text-dark">{record.totalHours != null ? `${Number(record.totalHours).toFixed(1)}h` : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">OT</p>
+                      <p className="font-medium text-amber-600 dark:text-amber-400">
+                        {record.overtimeHours != null && record.overtimeHours > 0 ? `${Number(record.overtimeHours).toFixed(1)}h` : '-'}
+                      </p>
                     </div>
                   </div>
 

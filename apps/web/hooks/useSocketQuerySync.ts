@@ -42,6 +42,7 @@ export const useSocketQuerySync = () => {
     // -- Attendance events --
     const onAttendanceUpdated = () => {
       qc.invalidateQueries({ queryKey: queryKeys.attendance.all });
+      qc.invalidateQueries({ queryKey: queryKeys.adminAttendance.all });
     };
 
     // -- Notification events --

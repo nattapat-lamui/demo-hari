@@ -1,9 +1,9 @@
 import dayjs from 'dayjs';
 
-/** Format a UTC timestamp to browser local time (e.g. "10:45 AM") */
+/** Format a UTC timestamp to browser local time (e.g. "14:30") */
 export const formatTimeTH = (dateString: string | null): string => {
   if (!dateString) return '-';
-  return dayjs(dateString).format('hh:mm A');
+  return dayjs(dateString).format('HH:mm');
 };
 
 /** Format a UTC timestamp to browser local date (e.g. "Mon, Feb 10") */

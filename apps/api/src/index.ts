@@ -33,6 +33,7 @@ import announcementsRoutes from "./routes/announcementsRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import adminAttendanceRoutes from "./routes/adminAttendanceRoutes";
 import { runMigration } from "./scripts/init-db";
+import { initAttendanceScheduler } from "./services/AttendanceScheduler";
 
 dotenv.config();
 
@@ -461,6 +462,20 @@ const runLightMigrations = async () => {
 
     // Cleanup expired/revoked refresh tokens
     await query(`DELETE FROM refresh_tokens WHERE revoked = TRUE OR expires_at < NOW() - INTERVAL '1 day'`);
+
+    // Attendance improvements: auto_checkout, early_departure, overtime_hours columns
+    await query(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS auto_checkout BOOLEAN DEFAULT FALSE`);
+    await query(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS early_departure BOOLEAN DEFAULT FALSE`);
+    await query(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS overtime_hours DECIMAL(5,2) DEFAULT 0`);
+
+    // Seed work schedule configs
+    await query(`
+      INSERT INTO system_configs (category, key, value, data_type, description) VALUES
+        ('attendance', 'late_threshold', '09:00', 'string', 'Late threshold (HH:mm) Bangkok timezone'),
+        ('attendance', 'work_end', '18:00', 'string', 'Work end time (HH:mm) Bangkok timezone'),
+        ('attendance', 'standard_hours', '8', 'number', 'Standard working hours per day')
+      ON CONFLICT (category, key) DO NOTHING
+    `);
   } catch (err) {
     // Table may not exist yet — ignore
   }
@@ -478,6 +493,7 @@ if (process.env.VERCEL !== '1') {
     httpServer.listen(port, () => {
       console.log(`Server running at http://localhost:${port}`);
       console.log(`Socket.io enabled for real-time updates`);
+      initAttendanceScheduler();
     });
   });
 }

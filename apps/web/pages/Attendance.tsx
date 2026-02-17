@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, TrendingUp, AlertCircle, CheckCircle2, Briefcase } from 'lucide-react';
+import { Clock, TrendingUp, AlertCircle, CheckCircle2, Briefcase, Timer } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAttendanceRecords, useAttendanceSummary } from '../hooks/queries';
 import { formatTimeTH } from '../lib/date';
@@ -11,6 +11,7 @@ interface AttendanceSummary {
   absentDays: number;
   lateDays: number;
   totalHours: number;
+  overtimeHours?: number;
 }
 
 const Attendance: React.FC = () => {
@@ -107,7 +108,7 @@ const Attendance: React.FC = () => {
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
           {/* Total Working Days */}
           <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
@@ -182,6 +183,21 @@ const Attendance: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Overtime */}
+          <div className="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg">
+                <Timer size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Overtime</p>
+                <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+                  {Number(summary.overtimeHours || 0).toFixed(1)}h
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -196,27 +212,43 @@ const Attendance: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Check In</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Check Out</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Total Hours</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Overtime</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">Loading attendance records...</td>
+                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">Loading attendance records...</td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">No attendance records for this period</td>
+                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">No attendance records for this period</td>
                 </tr>
               ) : (
                 records.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">{formatDate(record.date)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">{formatTime(record.clockIn)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">{formatTime(record.clockOut)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
+                      {formatTime(record.clockOut)}
+                      {record.autoCheckout && (
+                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Auto</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">{record.totalHours != null ? `${Number(record.totalHours).toFixed(1)}h` : '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
+                      {record.overtimeHours != null && record.overtimeHours > 0
+                        ? <span className="text-amber-600 dark:text-amber-400 font-medium">{Number(record.overtimeHours).toFixed(1)}h</span>
+                        : '-'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>{record.status}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>{record.status}</span>
+                        {record.earlyDeparture && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Early</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -237,9 +269,17 @@ const Attendance: React.FC = () => {
                 <div key={record.id} className="p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium text-text-light dark:text-text-dark">{formatDate(record.date)}</p>
-                    <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>{record.status}</span>
+                    <div className="flex items-center gap-1">
+                      <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>{record.status}</span>
+                      {record.autoCheckout && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Auto</span>
+                      )}
+                      {record.earlyDeparture && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Early</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="grid grid-cols-4 gap-2 text-xs">
                     <div>
                       <p className="text-text-muted-light dark:text-text-muted-dark">In</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockIn)}</p>
@@ -251,6 +291,12 @@ const Attendance: React.FC = () => {
                     <div>
                       <p className="text-text-muted-light dark:text-text-muted-dark">Hours</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{record.totalHours != null ? `${Number(record.totalHours).toFixed(1)}h` : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">OT</p>
+                      <p className="font-medium text-amber-600 dark:text-amber-400">
+                        {record.overtimeHours != null && record.overtimeHours > 0 ? `${Number(record.overtimeHours).toFixed(1)}h` : '-'}
+                      </p>
                     </div>
                   </div>
                 </div>

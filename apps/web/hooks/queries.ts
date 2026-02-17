@@ -205,6 +205,7 @@ interface AttendanceStatus {
   clockIn?: string;
   clockOut?: string;
   status?: string;
+  autoCheckout?: boolean;
 }
 
 export const useAttendanceToday = (enabled: boolean) => {
@@ -224,6 +225,9 @@ interface AttendanceRecord {
   hoursWorked: number | null;
   totalHours: number | null;
   overtime: number;
+  autoCheckout: boolean;
+  earlyDeparture: boolean;
+  overtimeHours: number | null;
 }
 
 export const useAttendanceRecords = (id: string | undefined, month: number, year: number) => {

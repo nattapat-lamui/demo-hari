@@ -524,6 +524,9 @@ export interface AdminAttendanceRecord {
   employeeName: string;
   employeeDepartment: string;
   employeeAvatar: string | null;
+  autoCheckout: boolean;
+  earlyDeparture: boolean;
+  overtimeHours: number | null;
 }
 
 export interface AttendanceSnapshot {

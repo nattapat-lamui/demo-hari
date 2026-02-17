@@ -203,7 +203,7 @@ export const EmployeeDashboard: React.FC = () => {
                 }`}></div>
                 <span>
                   {attendanceStatus.clockOut
-                    ? 'Completed'
+                    ? (attendanceStatus.autoCheckout ? 'Auto Checkout' : 'Completed')
                     : attendanceStatus.status === 'Late'
                     ? 'Working (Late)'
                     : 'Working'}
