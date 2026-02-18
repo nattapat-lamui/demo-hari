@@ -20,7 +20,9 @@ export interface EmployeeHeroProps {
     permissions: EmployeePermissions;
     onEditProfileClick: () => void;
     onAvatarChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    showToast: ShowToastFn;
+    onPromote: () => void;
+    onTransfer: () => void;
+    onTerminate: () => void;
 }
 
 export interface EmployeeSidebarProps {
@@ -104,4 +106,23 @@ export interface EmployeeModalsProps {
     deleteConfirmId: string | null;
     onCancelDelete: () => void;
     onConfirmDelete: () => void;
+
+    // Promote Modal
+    isPromoteOpen: boolean;
+    promoteForm: { role: string; salary: string };
+    onPromoteFormChange: (field: 'role' | 'salary', value: string) => void;
+    onClosePromote: () => void;
+    onConfirmPromote: () => void;
+
+    // Transfer Modal
+    isTransferOpen: boolean;
+    transferDepartment: string;
+    onTransferDepartmentChange: (value: string) => void;
+    onCloseTransfer: () => void;
+    onConfirmTransfer: () => void;
+
+    // Terminate Modal
+    isTerminateOpen: boolean;
+    onCloseTerminate: () => void;
+    onConfirmTerminate: () => void;
 }

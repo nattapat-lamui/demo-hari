@@ -204,6 +204,67 @@ describe('EmployeeService', () => {
       expect(mockedQuery).toHaveBeenCalledTimes(2);
     });
 
+    it('should update status field', async () => {
+      const updatedEmployee = { ...mockEmployee, status: 'On Leave' };
+
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [mockEmployee], rowCount: 1 } as never) // getEmployeeById
+        .mockResolvedValueOnce({ rows: [updatedEmployee], rowCount: 1 } as never); // update
+
+      const result = await employeeService.updateEmployee({
+        id: 'emp-123',
+        status: 'On Leave',
+      });
+
+      expect(result.status).toBe('On Leave');
+      expect(mockedQuery).toHaveBeenCalledTimes(2);
+    });
+
+    it('should reassign subordinates when terminating an active employee', async () => {
+      const terminatedEmployee = { ...mockEmployee, status: 'Terminated' };
+
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [mockEmployee], rowCount: 1 } as never) // getEmployeeById (status=Active)
+        .mockResolvedValueOnce({ rows: [{ manager_id: 'mgr-parent' }], rowCount: 1 } as never) // SELECT manager_id for reassign
+        .mockResolvedValueOnce({ rows: [], rowCount: 2 } as never) // UPDATE subordinates
+        .mockResolvedValueOnce({ rows: [terminatedEmployee], rowCount: 1 } as never); // UPDATE employee status
+
+      const result = await employeeService.updateEmployee({
+        id: 'emp-123',
+        status: 'Terminated',
+      });
+
+      expect(result.status).toBe('Terminated');
+      // Should have reassigned subordinates
+      expect(mockedQuery).toHaveBeenCalledWith(
+        'SELECT manager_id FROM employees WHERE id = $1',
+        ['emp-123'],
+      );
+      expect(mockedQuery).toHaveBeenCalledWith(
+        'UPDATE employees SET manager_id = $1 WHERE manager_id = $2',
+        ['mgr-parent', 'emp-123'],
+      );
+    });
+
+    it('should NOT reassign subordinates when employee is already terminated', async () => {
+      const alreadyTerminated = { ...mockEmployee, status: 'Terminated' };
+      const updatedEmployee = { ...alreadyTerminated, name: 'Updated Name' };
+
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [alreadyTerminated], rowCount: 1 } as never) // getEmployeeById (already Terminated)
+        .mockResolvedValueOnce({ rows: [updatedEmployee], rowCount: 1 } as never); // UPDATE
+
+      const result = await employeeService.updateEmployee({
+        id: 'emp-123',
+        status: 'Terminated',
+        name: 'Updated Name',
+      });
+
+      expect(result.name).toBe('Updated Name');
+      // Should NOT have reassigned subordinates (only 2 queries: getById + update)
+      expect(mockedQuery).toHaveBeenCalledTimes(2);
+    });
+
     it('should update multiple fields at once', async () => {
       const updatedEmployee = {
         ...mockEmployee,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { JobHistoryItem, Employee, PerformanceReview, DocumentItem } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,6 +31,7 @@ import type { EmployeePermissions, EmployeeTab } from '../components/employee-de
 export const EmployeeDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user, updateUser } = useAuth();
     const qc = useQueryClient();
 
@@ -105,6 +106,15 @@ export const EmployeeDetail: React.FC = () => {
     }, [docsQ.data, employee]);
     useEffect(() => { if (employee?.skills) setCurrentSkills(employee.skills); }, [employee?.skills]);
 
+    // Auto-open edit modal from ?edit=true query param
+    useEffect(() => {
+        if (searchParams.get('edit') === 'true' && isAdmin && employee && !isEditProfileOpen) {
+            setEditForm({ ...employee });
+            setIsEditProfileOpen(true);
+            setSearchParams({}, { replace: true });
+        }
+    }, [searchParams, isAdmin, employee]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Profile Edit State
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
     const [editForm, setEditForm] = useState<Partial<Employee>>({});
@@ -127,6 +137,13 @@ export const EmployeeDetail: React.FC = () => {
 
     // Delete confirmation state
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+    // Action modal states
+    const [isPromoteOpen, setIsPromoteOpen] = useState(false);
+    const [promoteForm, setPromoteForm] = useState({ role: '', salary: '' });
+    const [isTransferOpen, setIsTransferOpen] = useState(false);
+    const [transferDepartment, setTransferDepartment] = useState('');
+    const [isTerminateOpen, setIsTerminateOpen] = useState(false);
 
     // Profile Edit Handlers
     const handleEditProfileClick = () => {
@@ -404,6 +421,95 @@ export const EmployeeDetail: React.FC = () => {
         }
     };
 
+    // ---------------------------------------------------------------------------
+    // Action Handlers: Promote, Transfer, Terminate
+    // ---------------------------------------------------------------------------
+    const handleOpenPromote = () => {
+        if (employee) {
+            setPromoteForm({ role: employee.role || '', salary: employee.salary?.toString() || '' });
+            setIsPromoteOpen(true);
+        }
+    };
+
+    const handleConfirmPromote = async () => {
+        if (!employee || !id || !promoteForm.role) return;
+        try {
+            const oldRole = employee.role;
+            await api.patch(`/employees/${id}`, {
+                role: promoteForm.role,
+                ...(promoteForm.salary ? { salary: Number(promoteForm.salary) } : {}),
+            });
+            await api.post('/job-history', {
+                employeeId: id,
+                role: promoteForm.role,
+                department: employee.department,
+                startDate: new Date().toISOString().split('T')[0],
+                description: `Promoted from ${oldRole}`,
+            });
+            setIsPromoteOpen(false);
+            showToast('Employee promoted successfully!', 'success');
+            qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id) });
+            qc.invalidateQueries({ queryKey: queryKeys.employees.all });
+            qc.invalidateQueries({ queryKey: queryKeys.jobHistory.byEmployee(id) });
+            qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
+        } catch (error) {
+            showToast((error as Error).message || 'Failed to promote employee.', 'error');
+        }
+    };
+
+    const handleOpenTransfer = () => {
+        if (employee) {
+            setTransferDepartment('');
+            setIsTransferOpen(true);
+        }
+    };
+
+    const handleConfirmTransfer = async () => {
+        if (!employee || !id || !transferDepartment) return;
+        try {
+            const oldDept = employee.department;
+            await api.patch(`/employees/${id}`, { department: transferDepartment });
+            await api.post('/job-history', {
+                employeeId: id,
+                role: employee.role,
+                department: transferDepartment,
+                startDate: new Date().toISOString().split('T')[0],
+                description: `Transferred from ${oldDept}`,
+            });
+            setIsTransferOpen(false);
+            showToast('Employee transferred successfully!', 'success');
+            qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id) });
+            qc.invalidateQueries({ queryKey: queryKeys.employees.all });
+            qc.invalidateQueries({ queryKey: queryKeys.jobHistory.byEmployee(id) });
+            qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
+        } catch (error) {
+            showToast((error as Error).message || 'Failed to transfer employee.', 'error');
+        }
+    };
+
+    const handleConfirmTerminate = async () => {
+        if (!employee || !id) return;
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            await api.patch(`/employees/${id}`, { status: 'Terminated' });
+            await api.post('/job-history', {
+                employeeId: id,
+                role: employee.role,
+                department: employee.department,
+                startDate: today,
+                endDate: today,
+                description: 'Employment terminated',
+            });
+            setIsTerminateOpen(false);
+            showToast('Employee terminated successfully.', 'success');
+            qc.invalidateQueries({ queryKey: queryKeys.employees.all });
+            qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
+            navigate('/employees');
+        } catch (error) {
+            showToast((error as Error).message || 'Failed to terminate employee.', 'error');
+        }
+    };
+
     const handleSaveReview = () => {
         if (!reviewForm.reviewer || !reviewForm.date) return;
 
@@ -494,7 +600,9 @@ export const EmployeeDetail: React.FC = () => {
                 permissions={permissions}
                 onEditProfileClick={handleEditProfileClick}
                 onAvatarChange={handleAvatarChange}
-                showToast={showToast}
+                onPromote={handleOpenPromote}
+                onTransfer={handleOpenTransfer}
+                onTerminate={() => setIsTerminateOpen(true)}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -623,6 +731,19 @@ export const EmployeeDetail: React.FC = () => {
                 deleteConfirmId={deleteConfirmId}
                 onCancelDelete={() => setDeleteConfirmId(null)}
                 onConfirmDelete={confirmDeleteReview}
+                isPromoteOpen={isPromoteOpen}
+                promoteForm={promoteForm}
+                onPromoteFormChange={(field, value) => setPromoteForm(prev => ({ ...prev, [field]: value }))}
+                onClosePromote={() => setIsPromoteOpen(false)}
+                onConfirmPromote={handleConfirmPromote}
+                isTransferOpen={isTransferOpen}
+                transferDepartment={transferDepartment}
+                onTransferDepartmentChange={setTransferDepartment}
+                onCloseTransfer={() => setIsTransferOpen(false)}
+                onConfirmTransfer={handleConfirmTransfer}
+                isTerminateOpen={isTerminateOpen}
+                onCloseTerminate={() => setIsTerminateOpen(false)}
+                onConfirmTerminate={handleConfirmTerminate}
             />
 
             {toast.show && (

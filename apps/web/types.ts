@@ -86,6 +86,7 @@ export interface Employee {
   phone?: string;
   slack?: string;
   emergencyContact?: string;
+  salary?: number;
   managerId?: string;
   employeeCode?: string;
   address?: EmployeeAddress | null;

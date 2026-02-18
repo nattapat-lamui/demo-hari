@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Camera, MoreHorizontal } from 'lucide-react';
 import { EmployeeHeroProps } from './EmployeeDetailTypes';
 
@@ -8,9 +8,24 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
     permissions,
     onEditProfileClick,
     onAvatarChange,
-    showToast,
+    onPromote,
+    onTransfer,
+    onTerminate,
 }) => {
     const { canEditBasicInfo, isAdmin } = permissions;
+    const [actionsOpen, setActionsOpen] = useState(false);
+    const actionsRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!actionsOpen) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
+                setActionsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [actionsOpen]);
 
     return (
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
@@ -75,30 +90,35 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
                             </button>
                         )}
                         {isAdmin && (
-                            <div className="relative group">
-                                <button className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2">
+                            <div className="relative" ref={actionsRef}>
+                                <button
+                                    onClick={() => setActionsOpen(!actionsOpen)}
+                                    className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
+                                >
                                     Actions <MoreHorizontal size={16} />
                                 </button>
-                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-card-dark rounded-lg shadow-lg border border-border-light dark:border-border-dark hidden group-hover:block z-20">
-                                    <button
-                                        onClick={() => showToast('Promotion workflow coming soon!', 'info')}
-                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-text-light dark:text-text-dark"
-                                    >
-                                        Promote
-                                    </button>
-                                    <button
-                                        onClick={() => showToast('Transfer workflow coming soon!', 'info')}
-                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-text-light dark:text-text-dark"
-                                    >
-                                        Transfer
-                                    </button>
-                                    <button
-                                        onClick={() => showToast('Termination workflow coming soon!', 'warning')}
-                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 dark:text-red-400"
-                                    >
-                                        Terminate
-                                    </button>
-                                </div>
+                                {actionsOpen && (
+                                    <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-card-dark rounded-lg shadow-lg border border-border-light dark:border-border-dark z-20">
+                                        <button
+                                            onClick={() => { setActionsOpen(false); onPromote(); }}
+                                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-text-light dark:text-text-dark rounded-t-lg"
+                                        >
+                                            Promote
+                                        </button>
+                                        <button
+                                            onClick={() => { setActionsOpen(false); onTransfer(); }}
+                                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-text-light dark:text-text-dark"
+                                        >
+                                            Transfer
+                                        </button>
+                                        <button
+                                            onClick={() => { setActionsOpen(false); onTerminate(); }}
+                                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 rounded-b-lg"
+                                        >
+                                            Terminate
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

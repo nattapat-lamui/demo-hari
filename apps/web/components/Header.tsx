@@ -35,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useNotifications();
   const notificationRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const handleMarkAllRead = async () => {
@@ -111,6 +112,12 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         !notificationRef.current.contains(event.target as Node)
       ) {
         setIsNotificationOpen(false);
+      }
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -343,7 +350,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
           <div className="h-8 w-px bg-border-light dark:bg-border-dark mx-2"></div>
 
-          <div className="relative">
+          <div className="relative" ref={profileRef}>
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-3 hover:bg-background-light dark:hover:bg-background-dark p-1.5 rounded-lg transition-colors"

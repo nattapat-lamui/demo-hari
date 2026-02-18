@@ -12,6 +12,9 @@ import {
     AlignLeft,
     Star,
     Trash2,
+    TrendingUp,
+    ArrowRightLeft,
+    AlertTriangle,
 } from 'lucide-react';
 import { DatePicker } from '../../components/DatePicker';
 import { Dropdown } from '../../components/Dropdown';
@@ -49,6 +52,25 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
     deleteConfirmId,
     onCancelDelete,
     onConfirmDelete,
+
+    // Promote Modal
+    isPromoteOpen,
+    promoteForm,
+    onPromoteFormChange,
+    onClosePromote,
+    onConfirmPromote,
+
+    // Transfer Modal
+    isTransferOpen,
+    transferDepartment,
+    onTransferDepartmentChange,
+    onCloseTransfer,
+    onConfirmTransfer,
+
+    // Terminate Modal
+    isTerminateOpen,
+    onCloseTerminate,
+    onConfirmTerminate,
 }) => {
     const { canEditSensitiveInfo, isOwnProfile } = permissions;
 
@@ -478,6 +500,132 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
                             >
                                 <Check size={16} /> Save Review
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Promote Modal */}
+            {isPromoteOpen && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                            <h3 className="font-bold text-lg text-text-light dark:text-text-dark flex items-center gap-2">
+                                <TrendingUp size={20} className="text-primary" /> Promote Employee
+                            </h3>
+                            <button onClick={onClosePromote} className="text-text-muted-light hover:text-text-light">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">New Role</label>
+                                <Dropdown
+                                    value={promoteForm.role}
+                                    onChange={(val) => onPromoteFormChange('role', val)}
+                                    placeholder="Select new role"
+                                    options={[
+                                        ...(promoteForm.role && !JOB_TITLES.includes(promoteForm.role as any)
+                                            ? [{ value: promoteForm.role, label: promoteForm.role }]
+                                            : []),
+                                        ...JOB_TITLES.map((t) => ({ value: t, label: t })),
+                                    ]}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">New Salary</label>
+                                <input
+                                    type="number"
+                                    value={promoteForm.salary}
+                                    onChange={(e) => onPromoteFormChange('salary', e.target.value)}
+                                    placeholder="e.g. 85000"
+                                    className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
+                                />
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-end gap-3 bg-gray-50 dark:bg-gray-800/50">
+                            <button onClick={onClosePromote} className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={onConfirmPromote}
+                                disabled={!promoteForm.role}
+                                className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Check size={16} /> Confirm Promotion
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Transfer Modal */}
+            {isTransferOpen && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                            <h3 className="font-bold text-lg text-text-light dark:text-text-dark flex items-center gap-2">
+                                <ArrowRightLeft size={20} className="text-primary" /> Transfer Employee
+                            </h3>
+                            <button onClick={onCloseTransfer} className="text-text-muted-light hover:text-text-light">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">New Department</label>
+                                <Dropdown
+                                    value={transferDepartment}
+                                    onChange={onTransferDepartmentChange}
+                                    placeholder="Select new department"
+                                    options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
+                                />
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-end gap-3 bg-gray-50 dark:bg-gray-800/50">
+                            <button onClick={onCloseTransfer} className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={onConfirmTransfer}
+                                disabled={!transferDepartment}
+                                className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Check size={16} /> Confirm Transfer
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Terminate Confirmation Modal */}
+            {isTerminateOpen && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 text-center">
+                            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                <AlertTriangle className="text-red-600 dark:text-red-400" size={24} />
+                            </div>
+                            <h3 className="font-bold text-lg text-text-light dark:text-text-dark mb-2">
+                                Terminate Employee?
+                            </h3>
+                            <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
+                                This will mark the employee as terminated and automatically reassign their direct reports to their manager. This action can be reversed by changing status back to Active.
+                            </p>
+                        </div>
+                        <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-center gap-3 bg-gray-50 dark:bg-gray-800/50">
+                            <button onClick={onCloseTerminate} className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={onConfirmTerminate}
+                                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2"
+                            >
+                                <AlertTriangle size={16} /> Terminate
                             </button>
                         </div>
                     </div>

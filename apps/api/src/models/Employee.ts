@@ -45,6 +45,7 @@ export interface UpdateEmployeeDTO extends Partial<CreateEmployeeDTO> {
     bio?: string;
     phone?: string;
     avatar?: string;
+    status?: string;
     location?: string;
     slack?: string;
     emergencyContact?: string;

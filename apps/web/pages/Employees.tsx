@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { MoreHorizontal, Mail, MapPin, Eye, User, Briefcase, Users, Calendar, Check, Circle, CheckCircle2, Clock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MoreHorizontal, Mail, MapPin, Eye, User, Briefcase, Users, Calendar, Check, Circle, CheckCircle2, Clock, Pencil, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useEmployeeList, useAddEmployee } from '../hooks/queries';
+import { useEmployeeList, useAddEmployee, useDeleteEmployee } from '../hooks/queries';
 import { Toast } from '../components/Toast';
 import { Modal } from '../components/Modal';
 import { Dropdown, DropdownOption } from '../components/Dropdown';
@@ -55,6 +55,35 @@ export const Employees: React.FC = () => {
     email: '',
     joinDate: ''
   });
+
+  // Action menu & delete confirmation state
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const deleteEmployeeMutation = useDeleteEmployee();
+
+  // Close action menu on click outside
+  useEffect(() => {
+    if (!actionMenuId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
+        setActionMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [actionMenuId]);
+
+  const handleDeleteEmployee = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      await deleteEmployeeMutation.mutateAsync(deleteConfirmId);
+      setDeleteConfirmId(null);
+      showToast('Employee deleted successfully.', 'success');
+    } catch (error) {
+      showToast((error as Error).message || 'Failed to delete employee.', 'error');
+    }
+  };
 
   // Extract unique departments for filter dropdown
   const departments: DropdownOption[] = [
@@ -242,13 +271,37 @@ export const Employees: React.FC = () => {
                         <Eye size={18} />
                       </button>
                       {isAdmin && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); showToast('Quick actions menu coming soon!', 'info'); }}
-                          className="p-2 text-text-muted-light dark:text-text-muted-dark hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                          title="More Actions"
-                        >
-                          <MoreHorizontal size={18} />
-                        </button>
+                        <div className="relative" ref={actionMenuId === emp.id ? actionMenuRef : undefined}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setActionMenuId(actionMenuId === emp.id ? null : emp.id); }}
+                            className="p-2 text-text-muted-light dark:text-text-muted-dark hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                            title="More Actions"
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
+                          {actionMenuId === emp.id && (
+                            <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-card-dark rounded-lg shadow-lg border border-border-light dark:border-border-dark z-20">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setActionMenuId(null); navigate(`/employees/${emp.id}`); }}
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-text-light dark:text-text-dark flex items-center gap-2 rounded-t-lg"
+                              >
+                                <Eye size={14} /> View
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setActionMenuId(null); navigate(`/employees/${emp.id}?edit=true`); }}
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-text-light dark:text-text-dark flex items-center gap-2"
+                              >
+                                <Pencil size={14} /> Edit
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setActionMenuId(null); setDeleteConfirmId(emp.id); }}
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 flex items-center gap-2 rounded-b-lg"
+                              >
+                                <Trash2 size={14} /> Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </td>
@@ -320,12 +373,22 @@ export const Employees: React.FC = () => {
                   <Eye size={16} /> View Profile
                 </button>
                 {isAdmin && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); showToast('Quick actions menu coming soon!', 'info'); }}
-                    className="px-3 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-colors"
-                  >
-                    <MoreHorizontal size={18} />
-                  </button>
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/employees/${emp.id}?edit=true`); }}
+                      className="px-3 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+                      title="Edit"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(emp.id); }}
+                      className="px-3 py-2 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -464,6 +527,38 @@ export const Employees: React.FC = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        title="Delete Employee"
+        maxWidth="sm"
+      >
+        <div className="p-6 text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <Trash2 className="text-red-600 dark:text-red-400" size={24} />
+          </div>
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-6">
+            This will permanently delete this employee and reassign their direct reports to their manager. This action cannot be undone.
+          </p>
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={() => setDeleteConfirmId(null)}
+              className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteEmployee}
+              disabled={deleteEmployeeMutation.isPending}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2 disabled:opacity-50"
+            >
+              <Trash2 size={16} /> {deleteEmployeeMutation.isPending ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Toast Notification */}

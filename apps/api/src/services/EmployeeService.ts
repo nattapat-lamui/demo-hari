@@ -202,9 +202,23 @@ export class EmployeeService {
             updates.push(`address = $${paramIndex++}`);
             values.push(data.address || null);
         }
+        if (data.status !== undefined) {
+            updates.push(`status = $${paramIndex++}`);
+            values.push(data.status);
+        }
 
         if (updates.length === 0) {
             return existing;
+        }
+
+        // If terminating, reassign subordinates to the employee's manager
+        if (data.status === 'Terminated' && existing.status !== 'Terminated') {
+            const emp = await query('SELECT manager_id FROM employees WHERE id = $1', [id]);
+            const parentManagerId: string | null = emp.rows[0]?.manager_id || null;
+            await query(
+                'UPDATE employees SET manager_id = $1 WHERE manager_id = $2',
+                [parentManagerId, id],
+            );
         }
 
         values.push(id);
