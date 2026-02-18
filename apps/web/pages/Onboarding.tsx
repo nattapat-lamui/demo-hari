@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
     CheckCircle2,
     Clock,
@@ -6,16 +6,19 @@ import {
     Calendar,
     ListChecks,
     GitBranch,
+    ArrowLeft,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { OnboardingTask, Employee, OnboardingDocument } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useOrg } from '../contexts/OrgContext';
 import { Toast } from '../components/Toast';
+import { Dropdown } from '../components/Dropdown';
 import { api, BASE_URL, getAuthToken } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import { useOnboardingTasks, useOnboardingContacts, useOnboardingDocuments, useAllEmployees } from '../hooks/queries';
-import { FlowGraph, TaskList, KeyContacts, DocumentChecklist, InviteModal } from '../components/onboarding';
+import { FlowGraph, TaskList, KeyContacts, DocumentChecklist, InviteModal, OnboardingOverview } from '../components/onboarding';
 
 export const Onboarding: React.FC = () => {
     const { user } = useAuth();
@@ -62,6 +65,45 @@ export const Onboarding: React.FC = () => {
     // Autocomplete state (employees from React Query)
     const { data: allEmployees = [] } = useAllEmployees();
 
+    // Employee selector state (admin only — synced with URL ?employee=<id>)
+    const [searchParams, setSearchParams] = useSearchParams();
+    const isAdmin = user?.role === 'HR_ADMIN';
+    const selectedEmployeeId = searchParams.get('employee');
+    const setSelectedEmployeeId = useCallback((id: string | null) => {
+        setSearchParams(prev => {
+            if (id) {
+                prev.set('employee', id);
+            } else {
+                prev.delete('employee');
+            }
+            return prev;
+        });
+    }, [setSearchParams]);
+
+    // Build employee dropdown options from tasks that have an employeeId
+    const employeeDropdownOptions = useMemo(() => {
+        if (!isAdmin) return [];
+        const idsInTasks = new Set(tasks.map(t => t.employeeId).filter(Boolean) as string[]);
+        const matched = allEmployees.filter(e => idsInTasks.has(e.id));
+        return [
+            { value: '__overview__', label: 'All Employees (Overview)' },
+            ...matched.map(e => ({ value: e.id, label: e.name })),
+        ];
+    }, [isAdmin, tasks, allEmployees]);
+
+    const selectedEmployee = allEmployees.find(e => e.id === selectedEmployeeId) ?? null;
+
+    // Filter tasks & docs by selected employee (when one is chosen)
+    const visibleTasks = useMemo(() => {
+        if (!isAdmin || !selectedEmployeeId) return tasks;
+        return tasks.filter(t => t.employeeId === selectedEmployeeId);
+    }, [isAdmin, selectedEmployeeId, tasks]);
+
+    const visibleDocs = useMemo(() => {
+        if (!isAdmin || !selectedEmployeeId) return onboardingDocs;
+        return onboardingDocs.filter(d => d.employeeId === selectedEmployeeId);
+    }, [isAdmin, selectedEmployeeId, onboardingDocs]);
+
     const toggleTask = async (id: string) => {
         const task = tasks.find(t => t.id === id);
         if (!task) return;
@@ -107,8 +149,8 @@ export const Onboarding: React.FC = () => {
 
     const calculateProgress = () => {
         const relevantTasks = user?.role === 'EMPLOYEE'
-            ? tasks.filter(t => t.assignee === 'Employee')
-            : tasks;
+            ? visibleTasks.filter(t => t.assignee === 'Employee')
+            : visibleTasks;
         const completed = relevantTasks.filter(t => t.completed).length;
         return relevantTasks.length > 0 ? Math.round((completed / relevantTasks.length) * 100) : 0;
     };
@@ -145,7 +187,7 @@ export const Onboarding: React.FC = () => {
     };
 
     // Filtering Logic
-    const filteredTasks = tasks.filter(task => {
+    const filteredTasks = visibleTasks.filter(task => {
         if (user?.role === 'EMPLOYEE' && task.assignee !== 'Employee') {
             return false;
         }
@@ -374,12 +416,29 @@ export const Onboarding: React.FC = () => {
                     <p className="text-text-muted-light dark:text-text-muted-dark">
                         {user?.role === 'EMPLOYEE'
                             ? `Welcome aboard, ${user?.name?.split(' ')[0] || 'User'}! Complete these tasks to get started.`
-                            : <><span className="font-semibold text-text-light dark:text-text-dark">Leo Martinez</span> (Product Designer) - Onboarding Dashboard</>
+                            : selectedEmployee
+                                ? <><span className="font-semibold text-text-light dark:text-text-dark">{selectedEmployee.name}</span> ({selectedEmployee.role}) - Onboarding Dashboard</>
+                                : 'Overview of all employee onboarding progress'
                         }
                     </p>
                 </div>
-                {user?.role === 'HR_ADMIN' && (
+                {isAdmin && (
                     <div className="flex items-center gap-3">
+                        {selectedEmployeeId && (
+                            <button
+                                onClick={() => setSelectedEmployeeId(null)}
+                                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark transition-colors"
+                            >
+                                <ArrowLeft size={16} />
+                                Back to Overview
+                            </button>
+                        )}
+                        <Dropdown
+                            options={employeeDropdownOptions}
+                            value={selectedEmployeeId ?? '__overview__'}
+                            onChange={(val) => setSelectedEmployeeId(val === '__overview__' ? null : val)}
+                            width="w-56"
+                        />
                         <button
                             onClick={handleSaveTemplate}
                             className="px-4 py-2 bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -396,75 +455,86 @@ export const Onboarding: React.FC = () => {
                 )}
             </div>
 
-            {/* Tab Switcher */}
-            <div className="flex items-center gap-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-1.5 shadow-sm w-fit">
-                <button
-                    onClick={() => setActiveTab('checklist')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        activeTab === 'checklist'
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark'
-                    }`}
-                >
-                    <ListChecks size={16} />
-                    Checklist
-                </button>
-                <button
-                    onClick={() => setActiveTab('flow')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        activeTab === 'flow'
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark'
-                    }`}
-                >
-                    <GitBranch size={16} />
-                    Onboarding Flow
-                </button>
-            </div>
-
-            {/* ==================== FLOW TAB ==================== */}
-            {activeTab === 'flow' && (
-                <FlowGraph tasks={tasks} />
-            )}
-
-            {/* ==================== CHECKLIST TAB ==================== */}
-            {activeTab === 'checklist' && <>
-                <TaskList
+            {/* ==================== ADMIN OVERVIEW (no employee selected) ==================== */}
+            {isAdmin && !selectedEmployeeId ? (
+                <OnboardingOverview
+                    employees={allEmployees}
                     tasks={tasks}
-                    filteredTasks={filteredTasks}
-                    groupedTasks={groupedTasks}
-                    userRole={user?.role}
-                    progress={calculateProgress()}
-                    assigneeFilter={assigneeFilter}
-                    priorityFilter={priorityFilter}
-                    dateFilter={dateFilter}
-                    onSetAssigneeFilter={setAssigneeFilter}
-                    onSetPriorityFilter={setPriorityFilter}
-                    onSetDateFilter={setDateFilter}
-                    onToggleTask={toggleTask}
-                    onCyclePriority={cyclePriority}
-                    getStageIcon={getStageIcon}
-                    formatDate={formatDate}
-                    isDueSoon={isDueSoon}
-                    isOverdue={isOverdue}
-                    getPriorityBadgeClass={getPriorityBadgeClass}
-                >
-                    <KeyContacts contacts={keyContacts} showToast={showToast} />
-                    <DocumentChecklist
-                        documents={onboardingDocs}
+                    documents={onboardingDocs}
+                    onSelectEmployee={(id) => setSelectedEmployeeId(id)}
+                />
+            ) : (<>
+                {/* Tab Switcher */}
+                <div className="flex items-center gap-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-1.5 shadow-sm w-fit">
+                    <button
+                        onClick={() => setActiveTab('checklist')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            activeTab === 'checklist'
+                                ? 'bg-primary text-white shadow-sm'
+                                : 'text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark'
+                        }`}
+                    >
+                        <ListChecks size={16} />
+                        Checklist
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('flow')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            activeTab === 'flow'
+                                ? 'bg-primary text-white shadow-sm'
+                                : 'text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark'
+                        }`}
+                    >
+                        <GitBranch size={16} />
+                        Onboarding Flow
+                    </button>
+                </div>
+
+                {/* ==================== FLOW TAB ==================== */}
+                {activeTab === 'flow' && (
+                    <FlowGraph tasks={visibleTasks} />
+                )}
+
+                {/* ==================== CHECKLIST TAB ==================== */}
+                {activeTab === 'checklist' && <>
+                    <TaskList
+                        tasks={visibleTasks}
+                        filteredTasks={filteredTasks}
+                        groupedTasks={groupedTasks}
                         userRole={user?.role}
-                        uploadingDocId={uploadingDocId}
-                        reviewNoteDocId={reviewNoteDocId}
-                        reviewNote={reviewNote}
-                        onSetUploadingDocId={setUploadingDocId}
-                        onSetReviewNoteDocId={setReviewNoteDocId}
-                        onSetReviewNote={setReviewNote}
-                        onDocUpload={handleDocUpload}
-                        onDocDownload={handleDocDownload}
-                        onDocReview={handleDocReview}
-                    />
-                </TaskList>
-            </>}
+                        progress={calculateProgress()}
+                        readOnly={isAdmin && !!selectedEmployeeId}
+                        assigneeFilter={assigneeFilter}
+                        priorityFilter={priorityFilter}
+                        dateFilter={dateFilter}
+                        onSetAssigneeFilter={setAssigneeFilter}
+                        onSetPriorityFilter={setPriorityFilter}
+                        onSetDateFilter={setDateFilter}
+                        onToggleTask={toggleTask}
+                        onCyclePriority={cyclePriority}
+                        getStageIcon={getStageIcon}
+                        formatDate={formatDate}
+                        isDueSoon={isDueSoon}
+                        isOverdue={isOverdue}
+                        getPriorityBadgeClass={getPriorityBadgeClass}
+                    >
+                        <KeyContacts contacts={keyContacts} showToast={showToast} />
+                        <DocumentChecklist
+                            documents={visibleDocs}
+                            userRole={user?.role}
+                            uploadingDocId={uploadingDocId}
+                            reviewNoteDocId={reviewNoteDocId}
+                            reviewNote={reviewNote}
+                            onSetUploadingDocId={setUploadingDocId}
+                            onSetReviewNoteDocId={setReviewNoteDocId}
+                            onSetReviewNote={setReviewNote}
+                            onDocUpload={handleDocUpload}
+                            onDocDownload={handleDocDownload}
+                            onDocReview={handleDocReview}
+                        />
+                    </TaskList>
+                </>}
+            </>)}
 
             {/* Invite Employee Modal */}
             <InviteModal

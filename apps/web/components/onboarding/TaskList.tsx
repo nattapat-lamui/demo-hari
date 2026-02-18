@@ -17,6 +17,7 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
     groupedTasks,
     userRole,
     progress,
+    readOnly = false,
     assigneeFilter,
     priorityFilter,
     dateFilter,
@@ -49,6 +50,12 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
         { value: 'Due Soon', label: 'Due Soon' },
     ];
 
+    // Breakdown by assignee type (admin only)
+    const employeeTasks = filteredTasks.filter(t => t.assignee === 'Employee');
+    const adminTasks = filteredTasks.filter(t => t.assignee !== 'Employee');
+    const employeeCompleted = employeeTasks.filter(t => t.completed).length;
+    const adminCompleted = adminTasks.filter(t => t.completed).length;
+
     return (
         <>
             {/* Progress Overview Card */}
@@ -65,12 +72,27 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
                 </div>
                 {/* Detailed breakdown */}
                 <div className="flex gap-8 mt-6 text-sm">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-primary"></div>
-                        <span className="text-text-muted-light dark:text-text-muted-dark">
-                            Tasks ({filteredTasks.filter(t => t.completed).length}/{filteredTasks.length})
-                        </span>
-                    </div>
+                    {userRole === 'HR_ADMIN' ? (<>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-primary"></div>
+                            <span className="text-text-muted-light dark:text-text-muted-dark">
+                                Employee Tasks ({employeeCompleted}/{employeeTasks.length})
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                            <span className="text-text-muted-light dark:text-text-muted-dark">
+                                IT/HR Tasks ({adminCompleted}/{adminTasks.length})
+                            </span>
+                        </div>
+                    </>) : (
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-primary"></div>
+                            <span className="text-text-muted-light dark:text-text-muted-dark">
+                                Tasks ({filteredTasks.filter(t => t.completed).length}/{filteredTasks.length})
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -157,11 +179,12 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
                                                 return (
                                                     <div key={task.id} className={`flex items-start gap-3 group ${task.completed ? 'opacity-60' : ''}`}>
                                                         <button
-                                                            onClick={() => onToggleTask(task.id)}
+                                                            onClick={() => !readOnly && onToggleTask(task.id)}
+                                                            disabled={readOnly}
                                                             className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border transition-colors flex items-center justify-center ${task.completed
                                                                 ? 'bg-primary border-primary text-white'
                                                                 : 'border-gray-300 dark:border-gray-600 hover:border-primary'
-                                                                }`}
+                                                                } ${readOnly ? 'cursor-default opacity-70' : ''}`}
                                                         >
                                                             {task.completed && <CheckCircle2 size={14} />}
                                                         </button>
@@ -180,9 +203,10 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
                                                         <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-text-muted-light dark:text-text-muted-dark">
                                                             {userRole === 'HR_ADMIN' && (
                                                                 <button
-                                                                    onClick={() => onCyclePriority(task.id)}
-                                                                    className={`px-2 py-0.5 rounded border font-medium transition-colors ${getPriorityBadgeClass(task.priority)}`}
-                                                                    title="Click to change priority"
+                                                                    onClick={() => !readOnly && onCyclePriority(task.id)}
+                                                                    disabled={readOnly}
+                                                                    className={`px-2 py-0.5 rounded border font-medium transition-colors ${getPriorityBadgeClass(task.priority)} ${readOnly ? 'cursor-default' : ''}`}
+                                                                    title={readOnly ? task.priority : 'Click to change priority'}
                                                                 >
                                                                     {task.priority}
                                                                 </button>

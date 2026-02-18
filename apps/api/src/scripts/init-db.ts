@@ -82,7 +82,7 @@ CREATE TABLE employees (
     department VARCHAR(100),
     avatar TEXT,
     status VARCHAR(50) DEFAULT 'Active',
-    onboarding_status VARCHAR(50) DEFAULT 'Completed',
+    onboarding_status VARCHAR(50) DEFAULT 'Not Started',
     join_date DATE,
     location VARCHAR(100),
     skills TEXT[],

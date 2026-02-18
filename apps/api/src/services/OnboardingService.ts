@@ -334,10 +334,22 @@ export class OnboardingService {
 
   // Delete a task
   async deleteTask(id: string): Promise<boolean> {
+    // Get employee_id before deleting so we can recalculate progress
+    const taskResult = await query(
+      `SELECT employee_id FROM tasks WHERE id = $1`,
+      [id]
+    );
+    const employeeId = taskResult.rows[0]?.employee_id;
+
     const result = await query(
       `DELETE FROM tasks WHERE id = $1 RETURNING id`,
       [id]
     );
+
+    if ((result.rowCount ?? 0) > 0 && employeeId) {
+      await this.recalculateProgress(employeeId);
+    }
+
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -411,11 +423,8 @@ export class OnboardingService {
       docParams
     );
 
-    // Update employee onboarding_status
-    await query(
-      `UPDATE employees SET onboarding_status = 'In Progress', onboarding_percentage = 0 WHERE id = $1`,
-      [employeeId]
-    );
+    // Recalculate onboarding progress from the newly seeded tasks
+    await this.recalculateProgress(employeeId);
 
     // Send notification to the employee (if they have a user account)
     if (employeeUserId) {

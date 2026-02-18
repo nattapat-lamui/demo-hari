@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { Dropdown, DropdownOption } from './Dropdown';
 import { DatePicker } from './DatePicker';
+import { dayjs } from '../lib/date';
 import type { AdminAttendanceRecord, AttendanceStatus, Employee } from '../types';
 
 interface UpsertAttendanceModalProps {
@@ -61,10 +62,7 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
   }, [editingRecord, isOpen]);
 
   const extractTime = (dateTimeStr: string): string => {
-    const d = new Date(dateTimeStr);
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return dayjs(dateTimeStr).tz('Asia/Bangkok').format('HH:mm');
   };
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -102,6 +102,9 @@ const buildTree = (nodes: OrgNode[]): OrgNode[] => {
       const parent = nodeMap.get(node.parentId);
       if (parent) {
         parent.children?.push(node);
+      } else {
+        // Parent not in dataset (terminated/deleted) — show as root
+        roots.push(node);
       }
     } else {
       roots.push(node);

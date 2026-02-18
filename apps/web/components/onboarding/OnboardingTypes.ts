@@ -22,6 +22,7 @@ export interface TaskListProps {
     groupedTasks: Record<string, OnboardingTask[]>;
     userRole: string | undefined;
     progress: number;
+    readOnly?: boolean;
     assigneeFilter: string;
     priorityFilter: string;
     dateFilter: string;
@@ -54,6 +55,13 @@ export interface DocumentChecklistProps {
     onDocUpload: (docId: string, file: File) => void;
     onDocDownload: (docId: string) => void;
     onDocReview: (docId: string, status: 'Approved' | 'Rejected', note?: string) => void;
+}
+
+export interface OnboardingOverviewProps {
+    employees: Employee[];
+    tasks: OnboardingTask[];
+    documents: OnboardingDocument[];
+    onSelectEmployee: (id: string) => void;
 }
 
 export interface InviteModalProps {

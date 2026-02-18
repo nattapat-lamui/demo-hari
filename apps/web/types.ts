@@ -174,6 +174,7 @@ export interface Announcement {
 
 export interface OnboardingTask {
   id: string;
+  employeeId?: string | null;
   title: string;
   description: string;
   stage: 'Pre-boarding' | 'Week 1' | 'Month 1';
