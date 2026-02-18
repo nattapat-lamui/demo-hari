@@ -49,7 +49,7 @@ describe('Auth Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(403);
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Invalid or expired token' });
       expect(mockNext).not.toHaveBeenCalled();
     });

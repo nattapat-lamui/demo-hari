@@ -1,14 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
 import { asyncHandler } from '../asyncHandler';
 import { Request, Response, NextFunction } from 'express';
 
 describe('asyncHandler', () => {
   it('should call the async function with req, res, next', async () => {
     const mockReq = {} as Request;
-    const mockRes = { json: vi.fn() } as unknown as Response;
-    const mockNext = vi.fn() as NextFunction;
+    const mockRes = { json: jest.fn() } as unknown as Response;
+    const mockNext = jest.fn() as NextFunction;
 
-    const asyncFn = vi.fn().mockResolvedValue(undefined);
+    const asyncFn = jest.fn().mockResolvedValue(undefined);
     const wrappedFn = asyncHandler(asyncFn);
 
     await wrappedFn(mockReq, mockRes, mockNext);
@@ -20,10 +19,10 @@ describe('asyncHandler', () => {
   it('should pass errors to next function', async () => {
     const mockReq = {} as Request;
     const mockRes = {} as Response;
-    const mockNext = vi.fn() as NextFunction;
+    const mockNext = jest.fn() as NextFunction;
 
     const error = new Error('Test error');
-    const asyncFn = vi.fn().mockRejectedValue(error);
+    const asyncFn = jest.fn().mockRejectedValue(error);
     const wrappedFn = asyncHandler(asyncFn);
 
     await wrappedFn(mockReq, mockRes, mockNext);
@@ -34,10 +33,10 @@ describe('asyncHandler', () => {
   it('should handle successful async operations', async () => {
     const mockReq = {} as Request;
     const mockRes = {
-      json: vi.fn(),
-      status: vi.fn().mockReturnThis(),
+      json: jest.fn(),
+      status: jest.fn().mockReturnThis(),
     } as unknown as Response;
-    const mockNext = vi.fn() as NextFunction;
+    const mockNext = jest.fn() as NextFunction;
 
     const asyncFn = async (req: Request, res: Response) => {
       res.status(200).json({ success: true });
@@ -52,8 +51,8 @@ describe('asyncHandler', () => {
 
   it('should work with Promise.resolve', async () => {
     const mockReq = {} as Request;
-    const mockRes = { json: vi.fn() } as unknown as Response;
-    const mockNext = vi.fn() as NextFunction;
+    const mockRes = { json: jest.fn() } as unknown as Response;
+    const mockNext = jest.fn() as NextFunction;
 
     const asyncFn = () => Promise.resolve('data');
     const wrappedFn = asyncHandler(asyncFn);
@@ -66,7 +65,7 @@ describe('asyncHandler', () => {
   it('should work with Promise.reject', async () => {
     const mockReq = {} as Request;
     const mockRes = {} as Response;
-    const mockNext = vi.fn() as NextFunction;
+    const mockNext = jest.fn() as NextFunction;
 
     const error = new Error('Rejected');
     const asyncFn = () => Promise.reject(error);
