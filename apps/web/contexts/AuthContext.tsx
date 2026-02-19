@@ -111,6 +111,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateUser = (updates: Partial<User>) => {
     if (!user) return;
 
+    // Resolve relative avatar path to absolute URL (consistent with login/init)
+    if (updates.avatar && updates.avatar.startsWith('/')) {
+      updates = { ...updates, avatar: `${API_HOST}${updates.avatar}` };
+    }
+
     const updatedUser = { ...user, ...updates };
     setUser(updatedUser);
     // Update whichever storage holds the current session

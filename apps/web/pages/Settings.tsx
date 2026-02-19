@@ -47,6 +47,7 @@ export const Settings: React.FC = () => {
   });
   const [countryCode, setCountryCode] = useState('+66'); // Default to Thailand
   const [avatarPreview, setAvatarPreview] = useState('https://picsum.photos/id/338/200/200');
+  const [avatarRawPath, setAvatarRawPath] = useState<string | null>(null);
 
   // Password state
   const [passwords, setPasswords] = useState({
@@ -201,21 +202,24 @@ export const Settings: React.FC = () => {
       // Combine country code and phone number
       const fullPhoneNumber = profile.phone ? `${countryCode}${profile.phone}` : '';
 
+      // Save the relative path to DB (not the full resolved URL)
+      const avatarToSave = avatarRawPath ?? (avatarPreview.startsWith('blob:') ? undefined : avatarPreview);
+
       await api.patch(`/employees/${user.employeeId}`, {
         name: fullName,
         email: profile.email,
         phone: fullPhoneNumber,
         bio: profile.bio,
-        avatar: avatarPreview.startsWith('blob:') ? undefined : avatarPreview,
+        avatar: avatarToSave,
       });
 
-      // Update AuthContext with new user data
+      // Update AuthContext with the relative path so resolveAvatarUrl works correctly
       updateUser({
         name: fullName,
         email: profile.email,
         phone: fullPhoneNumber,
         bio: profile.bio,
-        avatar: avatarPreview.startsWith('blob:') ? undefined : avatarPreview,
+        avatar: avatarToSave,
       });
 
       showToast('Profile saved successfully!', 'success');
@@ -278,7 +282,8 @@ export const Settings: React.FC = () => {
 
       const data = await response.json();
 
-      // Update preview with the server URL (prepend API URL if relative path)
+      // Store the raw relative path for DB save, but display with full URL
+      setAvatarRawPath(data.avatarUrl);
       const fullAvatarUrl = data.avatarUrl.startsWith('/')
         ? `${API_HOST}${data.avatarUrl}`
         : data.avatarUrl;
