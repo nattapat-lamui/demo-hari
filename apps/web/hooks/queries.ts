@@ -436,7 +436,10 @@ export const useEmployeeDocuments = (id: string | undefined) => {
 export const useEmployeeManager = (id: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.employeeManager.byEmployee(id!),
-    queryFn: () => api.get<Employee>(`/employees/${id}/manager`).catch(() => null),
+    queryFn: async () => {
+      const data = await api.get<Employee>(`/employees/${id}/manager`).catch(() => null);
+      return data ? transformAvatarUrl(data) : null;
+    },
     enabled: !!id,
   });
 };
@@ -444,7 +447,10 @@ export const useEmployeeManager = (id: string | undefined) => {
 export const useEmployeeDirectReports = (id: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.employeeDirectReports.byEmployee(id!),
-    queryFn: () => api.get<Employee[]>(`/employees/${id}/direct-reports`).catch(() => []),
+    queryFn: async () => {
+      const data = await api.get<Employee[]>(`/employees/${id}/direct-reports`).catch(() => []);
+      return data.map(transformAvatarUrl);
+    },
     enabled: !!id,
   });
 };
