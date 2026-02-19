@@ -328,6 +328,8 @@ const runLightMigrations = async () => {
     }
     // Mark remaining records as processed (admin-created or non-UTC server records)
     await query(`UPDATE attendance_records SET tz_fixed = TRUE WHERE tz_fixed = FALSE`);
+    // Change default to TRUE so NEW inserts are pre-marked — prevents re-processing on restart
+    await query(`ALTER TABLE attendance_records ALTER COLUMN tz_fixed SET DEFAULT TRUE`);
 
     await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id) ON DELETE SET NULL`);
     await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
