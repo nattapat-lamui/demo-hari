@@ -11,6 +11,10 @@ import bcrypt from "bcrypt";
 
 const schema = `
 -- Clean up existing tables
+DROP TABLE IF EXISTS survey_completions CASCADE;
+DROP TABLE IF EXISTS survey_responses CASCADE;
+DROP TABLE IF EXISTS survey_questions CASCADE;
+DROP TABLE IF EXISTS surveys CASCADE;
 DROP TABLE IF EXISTS personal_notes CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS upcoming_events CASCADE;
@@ -460,6 +464,52 @@ CREATE INDEX idx_personal_notes_updated_at ON personal_notes(updated_at DESC);
 -- Upcoming events indexes
 CREATE INDEX idx_upcoming_events_date ON upcoming_events(date);
 CREATE INDEX idx_upcoming_events_type ON upcoming_events(type);
+
+-- ==========================================
+-- SURVEY TABLES
+-- ==========================================
+
+-- Surveys
+CREATE TABLE surveys (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    status VARCHAR(20) DEFAULT 'active',
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    closed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Survey Questions
+CREATE TABLE survey_questions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    survey_id UUID NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
+    question_text VARCHAR(500) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0
+);
+
+-- Survey Responses (ANONYMOUS — no employee_id)
+CREATE TABLE survey_responses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    question_id UUID NOT NULL REFERENCES survey_questions(id) ON DELETE CASCADE,
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Survey Completions (tracks who completed, prevents double-submit)
+CREATE TABLE survey_completions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    survey_id UUID NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_survey_completion UNIQUE (survey_id, employee_id)
+);
+
+-- Survey indexes
+CREATE INDEX idx_survey_questions_survey ON survey_questions(survey_id);
+CREATE INDEX idx_survey_responses_question ON survey_responses(question_id);
+CREATE INDEX idx_survey_completions_survey ON survey_completions(survey_id);
+CREATE INDEX idx_survey_completions_employee ON survey_completions(employee_id);
 `;
 
 export const runMigration = async () => {
@@ -496,6 +546,49 @@ INSERT INTO job_history (employee_id, role, department, start_date, end_date, de
 ('00000000-0000-0000-0000-000000000001', 'HR Admin', 'Human Resources', '2024-01-01', NULL, 'Leading HR operations, managing employee data and overseeing recruitment processes.'),
 ('00000000-0000-0000-0000-000000000001', 'HR Specialist', 'Human Resources', '2022-06-01', '2023-12-31', 'Handled employee onboarding, benefits administration, and HR policy implementation.'),
 ('00000000-0000-0000-0000-000000000001', 'HR Assistant', 'Human Resources', '2021-01-15', '2022-05-31', 'Supported HR team with administrative tasks, scheduling interviews, and maintaining employee records.');
+
+-- ==========================================
+-- ISO 45003 Psychosocial Health & Safety Survey (Seed)
+-- ==========================================
+
+INSERT INTO surveys (id, title, status, created_by)
+VALUES ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'ISO 45003 — Psychosocial Health & Safety Assessment', 'active', '11111111-1111-1111-1111-111111111111');
+
+INSERT INTO survey_questions (survey_id, question_text, category, sort_order) VALUES
+  -- Workload  (ISO 45003 §A3 Job Demands, §A6 Workload, §A1 Role Clarity, §A2 Autonomy, §C1 Tools)
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'My workload is manageable within normal working hours', 'Workload', 1),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'Deadlines and sprint commitments set for my work are realistic', 'Workload', 2),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I have autonomy in deciding how to approach and complete my tasks', 'Workload', 3),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'My roles and responsibilities are clearly defined', 'Workload', 4),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I have the tools, equipment, and software I need to do my job effectively', 'Workload', 5),
+
+  -- Team  (ISO 45003 §B1 Relationships, §B7 Civility/Trust, §B10 Harassment, §A5 Remote Work)
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I have positive and supportive working relationships with my colleagues', 'Team', 6),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I feel psychologically safe to voice opinions, ask questions, and admit mistakes', 'Team', 7),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'Disagreements and conflicts within my team are resolved constructively', 'Team', 8),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I am treated with respect and fairness by my peers', 'Team', 9),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I feel connected to my team and not isolated, even when working remotely', 'Team', 10),
+
+  -- Growth  (ISO 45003 §B5 Career Development, §B4 Recognition, §A4 Change Mgmt, §A8 Job Security)
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I see a clear path for career advancement in this organization', 'Growth', 11),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I have regular opportunities to learn new skills and technologies', 'Growth', 12),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'My contributions and achievements are recognized and valued', 'Growth', 13),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I feel secure and stable in my current role', 'Growth', 14),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'Organizational changes are communicated transparently and with adequate notice', 'Growth', 15),
+
+  -- Work-Life Balance  (ISO 45003 §B8 Boundaries, §A7 Work Schedule, §C2 Workspace)
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I can disconnect from work communications outside of working hours', 'Work-Life Balance', 16),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'The organization genuinely respects my personal time and boundaries', 'Work-Life Balance', 17),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I feel able to take leave or time off when I need it without guilt or pressure', 'Work-Life Balance', 18),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'My work schedule allows me to maintain a healthy personal life', 'Work-Life Balance', 19),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'My workspace (office or home) is comfortable, ergonomic, and conducive to focus', 'Work-Life Balance', 20),
+
+  -- Management  (ISO 45003 §B2 Leadership, §B6 Support, §B3 Culture, §B7 Trust)
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'My direct manager provides regular and constructive feedback', 'Management', 21),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'I feel genuinely supported by my manager when I face challenges', 'Management', 22),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'Senior leadership communicates a clear vision and strategic direction', 'Management', 23),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'Decisions about people (promotions, assignments, evaluations) are made fairly', 'Management', 24),
+  ('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'There is a culture of transparency, honesty, and trust at all levels', 'Management', 25);
 `;
 
     await pool.query(seededSchema);

@@ -1,15 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Megaphone, ScrollText, PartyPopper, ChevronLeft, ChevronRight, Plus, X, Check, Calendar, Type, AlignLeft } from 'lucide-react';
+import { Megaphone, ScrollText, PartyPopper, ChevronLeft, ChevronRight, Plus, X, Check, Calendar, Type, AlignLeft, BarChart3, Users, TrendingUp } from 'lucide-react';
 import { Announcement, UpcomingEvent } from '../types';
 import { Toast } from '../components/Toast';
 import { Dropdown } from '../components/Dropdown';
 import { DatePicker } from '../components/DatePicker';
-import { useAnnouncements, useUpcomingEvents, useAddAnnouncement, useAddEvent, useDeleteEvent } from '../hooks/queries';
+import { useAnnouncements, useUpcomingEvents, useAddAnnouncement, useAddEvent, useDeleteEvent, useSentimentOverview } from '../hooks/queries';
 
 export const Wellbeing: React.FC = () => {
   const { data: announcementsList = [] } = useAnnouncements();
   const { data: upcomingEvents = [] } = useUpcomingEvents();
+  const { data: sentiment } = useSentimentOverview();
   const addAnnouncementMutation = useAddAnnouncement();
   const addEventMutation = useAddEvent();
   const deleteEventMutation = useDeleteEvent();
@@ -241,27 +242,154 @@ export const Wellbeing: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 flex flex-col gap-6">
-          {/* Employee Sentiment Section - WIP */}
+          {/* Employee Sentiment Section */}
           <section className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">Employee Sentiment</h2>
-              <span className="px-2.5 py-1 text-xs font-medium bg-accent-orange/10 text-accent-orange rounded-full">
-                Coming Soon
-              </span>
+              {sentiment && sentiment.totalResponses > 0 && (
+                <span className="px-2.5 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full flex items-center gap-1">
+                  <TrendingUp size={12} /> Live
+                </span>
+              )}
             </div>
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+
+            {!sentiment || sentiment.totalResponses === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                  <BarChart3 size={32} className="text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">No Survey Data Yet</h3>
+                <p className="text-sm text-text-muted-light dark:text-text-muted-dark max-w-sm">
+                  Sentiment scores will appear here once employees start completing surveys.
+                </p>
               </div>
-              <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
-                Sentiment Analytics
-              </h3>
-              <p className="text-sm text-text-muted-light dark:text-text-muted-dark max-w-sm">
-                Employee sentiment tracking and analytics will be available soon. Stay tuned for insights into team morale and engagement.
-              </p>
-            </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Donut Chart + Stats Row */}
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                  {/* Donut Chart */}
+                  {(() => {
+                    const { positive, neutral, negative } = sentiment.distribution;
+                    const size = 160;
+                    const strokeWidth = 22;
+                    const radius = (size - strokeWidth) / 2;
+                    const circumference = 2 * Math.PI * radius;
+
+                    // Segments: positive (green), neutral (orange), negative (red)
+                    const segments = [
+                      { pct: positive, color: '#4ade80' },
+                      { pct: neutral,  color: '#f59e0b' },
+                      { pct: negative, color: '#ef4444' },
+                    ];
+
+                    let offset = 0;
+                    const arcs = segments.map((seg) => {
+                      const dash = (seg.pct / 100) * circumference;
+                      const gap = circumference - dash;
+                      const currentOffset = offset;
+                      offset += dash;
+                      return { ...seg, dash, gap, offset: currentOffset };
+                    });
+
+                    // Label color based on overall score
+                    const scoreColor = sentiment.overallScore >= 70 ? 'text-green-500'
+                      : sentiment.overallScore >= 50 ? 'text-amber-500' : 'text-red-500';
+                    const sentimentLabel = sentiment.overallScore >= 70 ? 'Positive'
+                      : sentiment.overallScore >= 50 ? 'Neutral' : 'Needs Work';
+
+                    return (
+                      <div className="relative flex-shrink-0">
+                        <svg width={size} height={size} className="-rotate-90">
+                          {/* Background track */}
+                          <circle
+                            cx={size / 2} cy={size / 2} r={radius}
+                            fill="none" strokeWidth={strokeWidth}
+                            className="stroke-gray-200 dark:stroke-gray-700"
+                          />
+                          {/* Segments */}
+                          {arcs.map((arc, i) => arc.pct > 0 && (
+                            <circle
+                              key={i}
+                              cx={size / 2} cy={size / 2} r={radius}
+                              fill="none" stroke={arc.color} strokeWidth={strokeWidth}
+                              strokeDasharray={`${arc.dash} ${arc.gap}`}
+                              strokeDashoffset={-arc.offset}
+                              strokeLinecap="round"
+                              className="transition-all duration-700 ease-out"
+                            />
+                          ))}
+                        </svg>
+                        {/* Center text */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className={`text-3xl font-bold ${scoreColor}`}>{sentiment.overallScore}%</span>
+                          <span className={`text-xs font-medium ${scoreColor} opacity-80`}>{sentimentLabel}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Right side: Legend + Stats */}
+                  <div className="flex-1 space-y-4 w-full">
+                    {/* Distribution Legend */}
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark">Positive {sentiment.distribution.positive}%</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark">Neutral {sentiment.distribution.neutral}%</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark">Negative {sentiment.distribution.negative}%</span>
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-background-light dark:bg-background-dark rounded-lg">
+                        <div className="text-2xl font-bold text-accent-teal">{sentiment.responseRate}%</div>
+                        <div className="text-xs text-text-muted-light mt-0.5">Response Rate</div>
+                      </div>
+                      <div className="p-3 bg-background-light dark:bg-background-dark rounded-lg">
+                        <div className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-1">
+                          <Users size={18} className="text-text-muted-light" />
+                          {sentiment.totalResponses}/{sentiment.totalEmployees}
+                        </div>
+                        <div className="text-xs text-text-muted-light mt-0.5">Respondents</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Category Breakdown */}
+                <div>
+                  <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-3">Category Breakdown</h3>
+                  <div className="space-y-3">
+                    {sentiment.categoryBreakdown.map((cat) => (
+                      <div key={cat.category}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-medium text-text-light dark:text-text-dark">{cat.category}</span>
+                          <span className="text-xs font-semibold text-text-light dark:text-text-dark">{cat.score}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-background-light dark:bg-background-dark rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              cat.score >= 80 ? 'bg-accent-green' :
+                              cat.score >= 60 ? 'bg-primary' :
+                              cat.score >= 40 ? 'bg-accent-orange' :
+                              'bg-accent-red'
+                            }`}
+                            style={{ width: `${cat.score}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Announcements & Policies */}

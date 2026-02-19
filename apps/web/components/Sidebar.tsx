@@ -34,12 +34,13 @@ export const Sidebar: React.FC = () => {
 
     // Admin Attendance — right below Dashboard for admins
     { icon: <Clock size={20} />, label: 'Attendance', path: '/admin-attendance', allowed: isAdmin },
+    { icon: <Calendar size={20} />, label: 'Leave Requests', path: '/leave-requests', allowed: isAdmin },
 
     // Employee Focused Tools
     { icon: <Clock size={20} />, label: 'Attendance', path: '/attendance', allowed: !isAdmin },
     { icon: <Calendar size={20} />, label: 'Time Off', path: '/time-off', allowed: !isAdmin },
     { icon: <DollarSign size={20} />, label: 'Expenses', path: '/expenses', allowed: false }, // Hidden - not yet implemented
-    // { icon: <MessageSquare size={20} />, label: 'Surveys', path: '/surveys', allowed: !isAdmin }, // Hidden - not yet implemented
+    { icon: <MessageSquare size={20} />, label: 'Surveys', path: '/surveys', allowed: true },
 
     { icon: <Smile size={20} />, label: 'Well-being', path: '/wellbeing', allowed: true },
     { icon: <Users size={20} />, label: 'Employees', path: '/employees', allowed: true },
@@ -47,7 +48,6 @@ export const Sidebar: React.FC = () => {
     { icon: <ClipboardList size={20} />, label: 'Onboarding', path: '/onboarding', allowed: true },
 
     // Admin Specific
-    { icon: <Calendar size={20} />, label: 'Leave Requests', path: '/leave-requests', allowed: isAdmin },
     { icon: <ShieldCheck size={20} />, label: 'Compliance', path: '/compliance', allowed: isAdmin },
     { icon: <BarChart2 size={20} />, label: 'Analytics', path: '/analytics', allowed: isAdmin },
 

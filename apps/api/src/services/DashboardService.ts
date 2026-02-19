@@ -170,23 +170,20 @@ export class DashboardService {
    * Get count of pending surveys for employee
    */
   private async getPendingSurveysCount(employeeId: string): Promise<number> {
-    // Check if surveys table exists and get pending count
     try {
       const result = await query(
-        `SELECT COUNT(*) as pending_count
+        `SELECT COUNT(*)::int AS pending_count
          FROM surveys s
-         WHERE s.status = 'Active'
-         AND s.end_date >= CURRENT_DATE
+         WHERE s.status = 'active'
          AND NOT EXISTS (
-           SELECT 1 FROM survey_responses sr
-           WHERE sr.survey_id = s.id
-           AND sr.employee_id = $1
+           SELECT 1 FROM survey_completions sc
+           WHERE sc.survey_id = s.id
+           AND sc.employee_id = $1
          )`,
         [employeeId]
       );
-      return parseInt(result.rows[0]?.pending_count || '0', 10);
+      return result.rows[0]?.pending_count ?? 0;
     } catch {
-      // Table doesn't exist yet
       return 0;
     }
   }

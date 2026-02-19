@@ -98,4 +98,10 @@ export const queryKeys = {
     snapshot: () => [...queryKeys.adminAttendance.all, 'snapshot'] as const,
     records: (filters: Record<string, unknown>) => [...queryKeys.adminAttendance.all, 'records', filters] as const,
   },
+  surveys: {
+    all: ['surveys'] as const,
+    list: () => [...queryKeys.surveys.all, 'list'] as const,
+    detail: (id: string) => [...queryKeys.surveys.all, 'detail', id] as const,
+    sentiment: () => [...queryKeys.surveys.all, 'sentiment'] as const,
+  },
 } as const;

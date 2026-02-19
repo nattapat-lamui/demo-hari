@@ -5,11 +5,11 @@ import {
   Users,
   Plane,
   Palmtree,
-  FileText,
   Wallet,
   Clock,
   StickyNote,
   Megaphone,
+  MessageSquare,
   Pin,
   Send,
   Trash2
@@ -257,8 +257,7 @@ export const EmployeeDashboard: React.FC = () => {
           </div>
           <span className="font-medium text-text-light dark:text-text-dark">Expenses</span>
         </button> */}
-        {/* Surveys - Hidden until implemented */}
-        {/* <button
+          <button
           onClick={() => navigate('/surveys')}
           className="flex items-center justify-center gap-3 p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
         >
@@ -266,7 +265,7 @@ export const EmployeeDashboard: React.FC = () => {
             <MessageSquare size={20} />
           </div>
           <span className="font-medium text-text-light dark:text-text-dark">Surveys</span>
-        </button> */}
+        </button>
       </div>
 
       {/* Employee Stats */}
@@ -292,16 +291,13 @@ export const EmployeeDashboard: React.FC = () => {
             <Wallet size={20} className="sm:w-6 sm:h-6" />
           </div>
         </div>
-        <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between relative opacity-60">
+        <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate('/surveys')}>
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium">Pending Reviews</p>
-              <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">WIP</span>
-            </div>
-            <h3 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark">{employeeStats.pendingReviews}</h3>
+            <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium mb-1">Pending Surveys</p>
+            <h3 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark">{employeeStats.pendingSurveys}</h3>
           </div>
           <div className="p-2 sm:p-3 bg-orange-50 dark:bg-orange-900/20 text-orange-500 rounded-lg">
-            <FileText size={20} className="sm:w-6 sm:h-6" />
+            <MessageSquare size={20} className="sm:w-6 sm:h-6" />
           </div>
         </div>
       </div>

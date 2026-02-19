@@ -32,6 +32,7 @@ import eventsRoutes from "./routes/eventsRoutes";
 import announcementsRoutes from "./routes/announcementsRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import adminAttendanceRoutes from "./routes/adminAttendanceRoutes";
+import surveyRoutes from "./routes/surveyRoutes";
 import { runMigration } from "./scripts/init-db";
 import { initAttendanceScheduler } from "./services/AttendanceScheduler";
 
@@ -148,6 +149,7 @@ app.use("/api/events", eventsRoutes);
 app.use("/api/announcements", announcementsRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/admin/attendance", adminAttendanceRoutes);
+app.use("/api/surveys", surveyRoutes);
 
 // Backward compatibility for leave balances endpoint
 // Old: GET /api/leave-balances/:employeeId
@@ -470,6 +472,48 @@ const runLightMigrations = async () => {
     await query(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS early_departure BOOLEAN DEFAULT FALSE`);
     await query(`ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS overtime_hours DECIMAL(5,2) DEFAULT 0`);
 
+    // Survey tables
+    await query(`
+      CREATE TABLE IF NOT EXISTS surveys (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        title VARCHAR(255) NOT NULL,
+        status VARCHAR(20) DEFAULT 'active',
+        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        closed_at TIMESTAMP WITH TIME ZONE
+      )
+    `);
+    await query(`
+      CREATE TABLE IF NOT EXISTS survey_questions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        survey_id UUID NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
+        question_text VARCHAR(500) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        sort_order INT NOT NULL DEFAULT 0
+      )
+    `);
+    await query(`
+      CREATE TABLE IF NOT EXISTS survey_responses (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        question_id UUID NOT NULL REFERENCES survey_questions(id) ON DELETE CASCADE,
+        rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+        submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await query(`
+      CREATE TABLE IF NOT EXISTS survey_completions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        survey_id UUID NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_survey_completion UNIQUE (survey_id, employee_id)
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_survey_questions_survey ON survey_questions(survey_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_survey_responses_question ON survey_responses(question_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_survey_completions_survey ON survey_completions(survey_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_survey_completions_employee ON survey_completions(employee_id)`);
+
     // Seed work schedule configs
     await query(`
       INSERT INTO system_configs (category, key, value, data_type, description) VALUES
@@ -478,6 +522,60 @@ const runLightMigrations = async () => {
         ('attendance', 'standard_hours', '8', 'number', 'Standard working hours per day')
       ON CONFLICT (category, key) DO NOTHING
     `);
+
+    // Seed ISO 45003 Psychosocial Health & Safety Survey (only if no surveys exist)
+    const surveyCount = await query(`SELECT COUNT(*)::int AS c FROM surveys`);
+    if (surveyCount.rows[0].c === 0) {
+      const adminUser = await query(`SELECT id FROM users WHERE role = 'HR_ADMIN' LIMIT 1`);
+      const createdBy = adminUser.rows[0]?.id ?? null;
+
+      const surveyRes = await query(
+        `INSERT INTO surveys (title, status, created_by)
+         VALUES ('ISO 45003 — Psychosocial Health & Safety Assessment', 'active', $1)
+         RETURNING id`,
+        [createdBy]
+      );
+      const sid = surveyRes.rows[0].id;
+
+      await query(
+        `INSERT INTO survey_questions (survey_id, question_text, category, sort_order) VALUES
+          -- Workload  (ISO 45003 §A3 Job Demands, §A6 Workload, §A1 Role Clarity, §A2 Autonomy, §C1 Tools)
+          ($1, 'My workload is manageable within normal working hours', 'Workload', 1),
+          ($1, 'Deadlines and sprint commitments set for my work are realistic', 'Workload', 2),
+          ($1, 'I have autonomy in deciding how to approach and complete my tasks', 'Workload', 3),
+          ($1, 'My roles and responsibilities are clearly defined', 'Workload', 4),
+          ($1, 'I have the tools, equipment, and software I need to do my job effectively', 'Workload', 5),
+
+          -- Team  (ISO 45003 §B1 Relationships, §B7 Civility/Trust, §B10 Harassment, §A5 Remote Work)
+          ($1, 'I have positive and supportive working relationships with my colleagues', 'Team', 6),
+          ($1, 'I feel psychologically safe to voice opinions, ask questions, and admit mistakes', 'Team', 7),
+          ($1, 'Disagreements and conflicts within my team are resolved constructively', 'Team', 8),
+          ($1, 'I am treated with respect and fairness by my peers', 'Team', 9),
+          ($1, 'I feel connected to my team and not isolated, even when working remotely', 'Team', 10),
+
+          -- Growth  (ISO 45003 §B5 Career Development, §B4 Recognition, §A4 Change Mgmt, §A8 Job Security)
+          ($1, 'I see a clear path for career advancement in this organization', 'Growth', 11),
+          ($1, 'I have regular opportunities to learn new skills and technologies', 'Growth', 12),
+          ($1, 'My contributions and achievements are recognized and valued', 'Growth', 13),
+          ($1, 'I feel secure and stable in my current role', 'Growth', 14),
+          ($1, 'Organizational changes are communicated transparently and with adequate notice', 'Growth', 15),
+
+          -- Work-Life Balance  (ISO 45003 §B8 Boundaries, §A7 Work Schedule, §C2 Workspace)
+          ($1, 'I can disconnect from work communications outside of working hours', 'Work-Life Balance', 16),
+          ($1, 'The organization genuinely respects my personal time and boundaries', 'Work-Life Balance', 17),
+          ($1, 'I feel able to take leave or time off when I need it without guilt or pressure', 'Work-Life Balance', 18),
+          ($1, 'My work schedule allows me to maintain a healthy personal life', 'Work-Life Balance', 19),
+          ($1, 'My workspace (office or home) is comfortable, ergonomic, and conducive to focus', 'Work-Life Balance', 20),
+
+          -- Management  (ISO 45003 §B2 Leadership, §B6 Support, §B3 Culture, §B7 Trust)
+          ($1, 'My direct manager provides regular and constructive feedback', 'Management', 21),
+          ($1, 'I feel genuinely supported by my manager when I face challenges', 'Management', 22),
+          ($1, 'Senior leadership communicates a clear vision and strategic direction', 'Management', 23),
+          ($1, 'Decisions about people (promotions, assignments, evaluations) are made fairly', 'Management', 24),
+          ($1, 'There is a culture of transparency, honesty, and trust at all levels', 'Management', 25)`,
+        [sid]
+      );
+    }
   } catch (err) {
     // Table may not exist yet — ignore
   }

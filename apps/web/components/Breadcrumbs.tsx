@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
-import { useEmployeeDetail } from '../hooks/queries';
+import { useEmployeeDetail, useSurveyDetail } from '../hooks/queries';
 
 /**
  * Route name mapping configuration
@@ -21,6 +21,7 @@ const ROUTE_NAME_MAP: Record<string, string> = {
   'settings': 'Settings',
   'notifications': 'Notifications',
   'help': 'Help & Support',
+  'surveys': 'Surveys',
 };
 
 /**
@@ -132,10 +133,18 @@ export const Breadcrumbs: React.FC = () => {
   const { data: employeeData } = useEmployeeDetail(employeeId ?? undefined);
   const employeeName = employeeId ? (employeeData?.name ?? null) : null;
 
+  // Detect survey detail page and fetch title via React Query
+  const surveyId = pathSegments[0] === 'surveys' && pathSegments[1] ? pathSegments[1] : null;
+  const { data: surveyData } = useSurveyDetail(surveyId ?? undefined);
+  const surveyTitle = surveyId ? (surveyData?.title ?? null) : null;
+
   const getDisplayName = (pathSegment: string, segmentIndex: number) => {
     const previousSegment = segmentIndex > 0 ? pathSegments[segmentIndex - 1] : undefined;
     if (isEmployeeDetailPage(previousSegment)) {
       return employeeName || 'Employee Details';
+    }
+    if (previousSegment === 'surveys') {
+      return surveyTitle || 'Survey';
     }
     return ROUTE_NAME_MAP[pathSegment] || formatPathSegment(pathSegment);
   };

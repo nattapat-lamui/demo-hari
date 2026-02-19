@@ -557,6 +557,65 @@ export interface AdminAttendanceUpsertData {
   notes?: string;
 }
 
+// ============================================================================
+// Survey & Sentiment Types
+// ============================================================================
+
+export type SurveyCategory = 'Workload' | 'Team' | 'Growth' | 'Work-Life Balance' | 'Management';
+
+export const SURVEY_CATEGORIES: SurveyCategory[] = [
+  'Workload', 'Team', 'Growth', 'Work-Life Balance', 'Management',
+];
+
+export interface SurveyQuestion {
+  id: string;
+  questionText: string;
+  category: SurveyCategory;
+  sortOrder: number;
+}
+
+export interface SurveyListItem {
+  id: string;
+  title: string;
+  status: 'active' | 'closed';
+  createdAt: string;
+  closedAt: string | null;
+  questionCount: number;
+  responseCount: number;
+  hasCompleted: boolean;
+}
+
+export interface SurveyDetail {
+  id: string;
+  title: string;
+  status: 'active' | 'closed';
+  createdAt: string;
+  closedAt: string | null;
+  questions: SurveyQuestion[];
+  hasCompleted: boolean;
+}
+
+export interface CategoryScore {
+  category: string;
+  score: number;
+  responseCount: number;
+}
+
+export interface SentimentDistribution {
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+export interface SentimentOverview {
+  overallScore: number;
+  responseRate: number;
+  totalResponses: number;
+  totalEmployees: number;
+  categoryBreakdown: CategoryScore[];
+  distribution: SentimentDistribution;
+}
+
 export interface AdminAttendanceFilters {
   search?: string;
   department?: string;
