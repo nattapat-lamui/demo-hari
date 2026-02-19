@@ -30,6 +30,7 @@ const LEAVE_TYPE_COLORS: Record<string, string> = {
   'Maternity Leave': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-200',
   'Compensatory Leave': 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200',
   'Military Leave': 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-200',
+  'Leave Without Pay': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
 };
 
 const STATUS_OPTIONS = [
@@ -48,6 +49,7 @@ const LEAVE_TYPE_OPTIONS = [
   { value: 'Maternity Leave', label: 'Maternity Leave' },
   { value: 'Compensatory Leave', label: 'Compensatory Leave' },
   { value: 'Military Leave', label: 'Military Leave' },
+  { value: 'Leave Without Pay', label: 'Leave Without Pay' },
 ];
 
 const SORT_OPTIONS = [

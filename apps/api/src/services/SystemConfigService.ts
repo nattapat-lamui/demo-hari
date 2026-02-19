@@ -115,6 +115,7 @@ export class SystemConfigService {
                 { type: 'Vacation', total: 7 },
                 { type: 'Sick Leave', total: 30 },
                 { type: 'Personal Day', total: 6 },
+                { type: 'Leave Without Pay', total: -1 },
             ];
         }
         return quotasConfig;

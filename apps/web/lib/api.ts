@@ -157,6 +157,7 @@ export const api = {
                 {
                     method: 'GET',
                     headers: getHeaders(),
+                    cache: 'no-store',
                 },
                 {
                     maxRetries: 3,
@@ -170,7 +171,7 @@ export const api = {
                 }
             );
             return handleResponse(response, () =>
-                retryFetch(`${BASE_URL}${endpoint}`, { method: 'GET', headers: getHeaders() }, { maxRetries: 0 })
+                retryFetch(`${BASE_URL}${endpoint}`, { method: 'GET', headers: getHeaders(), cache: 'no-store' }, { maxRetries: 0 })
             );
         } catch (error: any) {
             errorLogging.logError(error, { endpoint, method: 'GET' });

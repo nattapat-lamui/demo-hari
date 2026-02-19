@@ -36,6 +36,7 @@ const LEAVE_OPTIONS = [
   { value: 'Maternity Leave', label: 'Maternity Leave' },
   { value: 'Compensatory Leave', label: 'Compensatory Leave' },
   { value: 'Military Leave', label: 'Military Leave' },
+  { value: 'Leave Without Pay', label: 'Leave Without Pay' },
 ];
 
 const initialForm: FormState = {
@@ -422,6 +423,7 @@ export function LeaveRequestForm() {
                     'Maternity Leave': 'bg-pink-500',
                     'Compensatory Leave': 'bg-teal-500',
                     'Military Leave': 'bg-slate-500',
+                    'Leave Without Pay': 'bg-orange-500',
                   };
                   const colorClass = BALANCE_COLORS[bal.type] || 'bg-gray-500';
 
