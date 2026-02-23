@@ -37,7 +37,9 @@ export const EmployeeDetail: React.FC = () => {
     const qc = useQueryClient();
 
     // Permissions Logic
-    const isOwnProfile = user?.id === id;
+    // Compare both employeeId and id — user.id may be a users-table UUID
+    // while the URL param is always an employees-table UUID
+    const isOwnProfile = user?.employeeId === id || user?.id === id;
     const isAdmin = user?.role === 'HR_ADMIN';
     const canEditBasicInfo = isOwnProfile;
     const canEditSensitiveInfo = isAdmin;
