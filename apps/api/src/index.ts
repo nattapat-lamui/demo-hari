@@ -576,6 +576,12 @@ const runLightMigrations = async () => {
         [sid]
       );
     }
+    // Fix avatar URLs: strip absolute host prefix, keep only relative path
+    await query(`
+      UPDATE employees
+      SET avatar = SUBSTRING(avatar FROM '/uploads/')
+      WHERE avatar LIKE 'http%/uploads/%'
+    `);
   } catch (err) {
     // Table may not exist yet — ignore
   }

@@ -202,25 +202,31 @@ export const Settings: React.FC = () => {
       // Combine country code and phone number
       const fullPhoneNumber = profile.phone ? `${countryCode}${profile.phone}` : '';
 
-      // Save the relative path to DB (not the full resolved URL)
-      const avatarToSave = avatarRawPath ?? (avatarPreview.startsWith('blob:') ? undefined : avatarPreview);
-
-      await api.patch(`/employees/${user.employeeId}`, {
+      // Only include avatar if user uploaded a new one this session
+      const patchPayload: Record<string, unknown> = {
         name: fullName,
         email: profile.email,
         phone: fullPhoneNumber,
         bio: profile.bio,
-        avatar: avatarToSave,
-      });
+      };
 
-      // Update AuthContext with the relative path so resolveAvatarUrl works correctly
-      updateUser({
+      if (avatarRawPath) {
+        patchPayload.avatar = avatarRawPath; // relative path from upload
+      }
+
+      await api.patch(`/employees/${user.employeeId}`, patchPayload);
+
+      // Update AuthContext (only include avatar if changed)
+      const contextUpdate: Record<string, unknown> = {
         name: fullName,
         email: profile.email,
         phone: fullPhoneNumber,
         bio: profile.bio,
-        avatar: avatarToSave,
-      });
+      };
+      if (avatarRawPath) {
+        contextUpdate.avatar = avatarRawPath;
+      }
+      updateUser(contextUpdate as any);
 
       showToast('Profile saved successfully!', 'success');
 

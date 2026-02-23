@@ -171,8 +171,14 @@ export class EmployeeService {
             values.push(data.phone);
         }
         if (data.avatar && !data.avatar.startsWith('blob:')) {
+            // Normalize: strip any absolute host prefix so we always store relative paths
+            let avatarPath = data.avatar;
+            const uploadIdx = avatarPath.indexOf('/uploads/');
+            if (uploadIdx > 0) {
+                avatarPath = avatarPath.slice(uploadIdx);
+            }
             updates.push(`avatar = $${paramIndex++}`);
-            values.push(data.avatar);
+            values.push(avatarPath);
         }
         if (data.location !== undefined) {
             updates.push(`location = $${paramIndex++}`);

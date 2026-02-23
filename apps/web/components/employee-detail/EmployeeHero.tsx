@@ -14,7 +14,11 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
 }) => {
     const { canEditBasicInfo, isAdmin } = permissions;
     const [actionsOpen, setActionsOpen] = useState(false);
+    const [imgError, setImgError] = useState(false);
     const actionsRef = useRef<HTMLDivElement>(null);
+
+    // Reset image error state when avatar URL changes
+    useEffect(() => { setImgError(false); }, [avatar]);
 
     useEffect(() => {
         if (!actionsOpen) return;
@@ -34,11 +38,20 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end -mt-14 mb-2">
                     <div className="flex items-end gap-4">
                         <div className="relative group cursor-pointer">
-                            <img
-                                src={avatar}
-                                alt={employee.name}
-                                className="w-24 h-24 rounded-xl object-cover border-4 border-white dark:border-card-dark shadow-md bg-white dark:bg-gray-800"
-                            />
+                            {!imgError && avatar ? (
+                                <img
+                                    src={avatar}
+                                    alt={employee.name}
+                                    onError={() => setImgError(true)}
+                                    className="w-24 h-24 rounded-xl object-cover border-4 border-white dark:border-card-dark shadow-md bg-white dark:bg-gray-800"
+                                />
+                            ) : (
+                                <div className="w-24 h-24 rounded-xl border-4 border-white dark:border-card-dark shadow-md bg-primary/10 flex items-center justify-center">
+                                    <span className="text-2xl font-bold text-primary">
+                                        {employee.name.split(' ').map(p => p.charAt(0)).join('').toUpperCase().slice(0, 2)}
+                                    </span>
+                                </div>
+                            )}
                             {canEditBasicInfo && (
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-xl transition-opacity">
                                     <label htmlFor="avatar-upload" className="cursor-pointer text-white flex flex-col items-center">
