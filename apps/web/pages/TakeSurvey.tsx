@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Star, Send, Shield, CheckCircle2 } from 'lucide-react';
 import { Toast } from '../components/Toast';
@@ -37,8 +37,25 @@ export const TakeSurvey: React.FC = () => {
   const { data: survey, isLoading } = useSurveyDetail(id);
   const submitMutation = useSubmitSurveyResponse();
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [ratings, setRatings] = useState<Record<string, number>>({});
+  // --- Draft persistence via localStorage ---
+  const draftKey = id ? `survey-draft-${id}` : '';
+
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (!draftKey) return 0;
+    try {
+      const draft = JSON.parse(localStorage.getItem(draftKey) || '{}');
+      return typeof draft.currentIndex === 'number' ? draft.currentIndex : 0;
+    } catch { return 0; }
+  });
+
+  const [ratings, setRatings] = useState<Record<string, number>>(() => {
+    if (!draftKey) return {};
+    try {
+      const draft = JSON.parse(localStorage.getItem(draftKey) || '{}');
+      return draft.ratings && typeof draft.ratings === 'object' ? draft.ratings : {};
+    } catch { return {}; }
+  });
+
   const [hoveredStar, setHoveredStar] = useState(0);
   const [submitted, setSubmitted] = useState(false);
 
@@ -51,6 +68,12 @@ export const TakeSurvey: React.FC = () => {
   const current = questions[currentIndex];
   const answeredCount = Object.keys(ratings).length;
   const allAnswered = answeredCount === total;
+
+  // Save draft to localStorage whenever ratings or currentIndex change
+  useEffect(() => {
+    if (!draftKey || submitted) return;
+    localStorage.setItem(draftKey, JSON.stringify({ ratings, currentIndex }));
+  }, [ratings, currentIndex, draftKey, submitted]);
 
   // Group questions by category for the mini-map
   const categoryGroups = useMemo(() => {
@@ -69,9 +92,10 @@ export const TakeSurvey: React.FC = () => {
   const handleRate = useCallback((rating: number) => {
     if (!current) return;
     setRatings((prev) => ({ ...prev, [current.id]: rating }));
-    // Auto-advance after a short delay
+    // Auto-advance after a short delay, reset hoveredStar so next question shows clean stars
     setTimeout(() => {
       if (currentIndex < total - 1) {
+        setHoveredStar(0);
         setCurrentIndex((i) => i + 1);
       }
     }, 300);
@@ -87,6 +111,8 @@ export const TakeSurvey: React.FC = () => {
           rating: ratings[q.id]!,
         })),
       });
+      // Clear draft on successful submission
+      if (draftKey) localStorage.removeItem(draftKey);
       setSubmitted(true);
     } catch (err: any) {
       setToast({ show: true, message: err.message || 'Failed to submit', type: 'error' });
