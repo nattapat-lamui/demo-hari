@@ -1,12 +1,23 @@
 import { Request, Response } from 'express';
-import LeaveRequestService from '../services/LeaveRequestService';
+import LeaveRequestService, { LeaveRequestService as LeaveRequestServiceClass } from '../services/LeaveRequestService';
 import { emitLeaveRequestCreated, emitLeaveRequestUpdated, emitLeaveRequestDeleted } from '../socket';
 import { getPaginationParams, getSortParams } from '../utils/pagination';
+import type { LeaveRequest } from '../models/LeaveRequest';
 
 export class LeaveRequestController {
     async getAllLeaveRequests(req: Request, res: Response): Promise<void> {
         try {
+            const user = (req as any).user;
             const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
+
+            const sanitize = (requests: LeaveRequest[]) => {
+                if (user?.role === 'HR_ADMIN') return requests;
+                return requests.map((r) =>
+                    r.employeeId === user?.employeeId
+                        ? r
+                        : LeaveRequestServiceClass.stripSensitiveLeaveFields(r)
+                );
+            };
 
             if (usePagination) {
                 const paginationParams = getPaginationParams(req);
@@ -30,10 +41,11 @@ export class LeaveRequestController {
                     sortParams.order
                 );
 
+                result.data = sanitize(result.data);
                 res.json(result);
             } else {
                 const requests = await LeaveRequestService.getAllLeaveRequests();
-                res.json(requests);
+                res.json(sanitize(requests));
             }
         } catch (error: any) {
             console.error('Get leave requests error:', error);

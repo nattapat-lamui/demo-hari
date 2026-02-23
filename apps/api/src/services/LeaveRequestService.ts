@@ -15,6 +15,17 @@ const BASE_SELECT = `
     LEFT JOIN employees he ON lr.handover_employee_id = he.id`;
 
 export class LeaveRequestService {
+    static stripSensitiveLeaveFields(request: LeaveRequest): LeaveRequest {
+        return {
+            ...request,
+            type: 'Leave',
+            reason: undefined,
+            medicalCertificatePath: undefined,
+            handoverNotes: undefined,
+            rejectionReason: undefined,
+        };
+    }
+
     async getAllLeaveRequests(): Promise<LeaveRequest[]> {
         const result = await query(`
             ${BASE_SELECT}

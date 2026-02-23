@@ -144,7 +144,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         <Clock className="text-accent-orange" size={20} />
                         <p className="font-semibold text-text-light dark:text-text-dark">Work Schedule</p>
                     </div>
-                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">Mon-Fri • 9:00 AM - 5:00 PM</p>
+                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">Mon-Fri • 09:00 - 18:00</p>
                 </div>
                 <div className="p-4 bg-background-light dark:bg-background-dark/50 rounded-lg border border-border-light dark:border-border-dark">
                     <div className="flex items-center gap-3 mb-2">

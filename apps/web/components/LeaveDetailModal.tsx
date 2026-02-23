@@ -30,12 +30,13 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({
   onApprove,
   onReject,
 }) => {
+  const isSensitiveHidden = request?.type === 'Leave';
   const { data: balances = [] } = useLeaveBalance(request?.employeeId);
 
   if (!request) return null;
 
   const days = request.days ?? 1;
-  const balance = balances.find((b) => b.type === request.type);
+  const balance = isSensitiveHidden ? undefined : balances.find((b) => b.type === request.type);
   const hasMedicalCert = !!request.medicalCertificatePath;
   const hasHandover = !!request.handoverEmployeeName || !!request.handoverNotes;
   const isPending = request.status === 'Pending';
