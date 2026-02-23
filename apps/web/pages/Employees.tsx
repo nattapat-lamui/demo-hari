@@ -12,8 +12,8 @@ import { FilterToolbar } from '../components/FilterToolbar';
 import QueryErrorState from '../components/QueryErrorState';
 
 export const Employees: React.FC = () => {
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'HR_ADMIN';
+  const { user, isAdminView } = useAuth();
+  const isAdmin = isAdminView;
 
   // Toast state
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({

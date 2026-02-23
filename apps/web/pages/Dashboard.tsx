@@ -4,7 +4,7 @@ import { EmployeeDashboard } from './EmployeeDashboard';
 import { AdminDashboard } from './AdminDashboard';
 
 export const Dashboard: React.FC = () => {
-  const { user } = useAuth();
-  if (user?.role === 'EMPLOYEE') return <EmployeeDashboard />;
+  const { isAdminView } = useAuth();
+  if (!isAdminView) return <EmployeeDashboard />;
   return <AdminDashboard />;
 };

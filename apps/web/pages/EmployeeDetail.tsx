@@ -33,14 +33,14 @@ export const EmployeeDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, isAdminView } = useAuth();
     const qc = useQueryClient();
 
     // Permissions Logic
     // Compare both employeeId and id — user.id may be a users-table UUID
     // while the URL param is always an employees-table UUID
     const isOwnProfile = user?.employeeId === id || user?.id === id;
-    const isAdmin = user?.role === 'HR_ADMIN';
+    const isAdmin = isAdminView;
     const canEditBasicInfo = isOwnProfile;
     const canEditSensitiveInfo = isAdmin;
     const canViewSensitiveTabs = isAdmin || isOwnProfile;

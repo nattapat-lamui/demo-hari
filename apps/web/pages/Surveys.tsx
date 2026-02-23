@@ -172,9 +172,9 @@ const CreateSurveyModal: React.FC<{
 // ---------------------------------------------------------------------------
 
 export const Surveys: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAdminView } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = user?.role === 'HR_ADMIN';
+  const isAdmin = isAdminView;
   const { data: surveys = [], isLoading } = useSurveyList();
   const closeMutation = useCloseSurvey();
   const reopenMutation = useReopenSurvey();

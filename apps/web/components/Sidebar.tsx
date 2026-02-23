@@ -21,10 +21,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLeaveRequests } from '../hooks/queries';
 
 export const Sidebar: React.FC = () => {
-  const { user, logout } = useAuth();
-  const isAdmin = user?.role === 'HR_ADMIN';
+  const { user, logout, isAdminView } = useAuth();
   const { data: leaveRequests = [] } = useLeaveRequests();
-  const hasPendingLeaves = isAdmin && leaveRequests.some(
+  const hasPendingLeaves = isAdminView && leaveRequests.some(
     (r) => r.status === 'Pending' || r.status === 'Cancel Requested',
   );
 
@@ -33,12 +32,12 @@ export const Sidebar: React.FC = () => {
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/', allowed: true },
 
     // Admin Attendance — right below Dashboard for admins
-    { icon: <Clock size={20} />, label: 'Attendance', path: '/admin-attendance', allowed: isAdmin },
-    { icon: <Calendar size={20} />, label: 'Leave Requests', path: '/leave-requests', allowed: isAdmin },
+    { icon: <Clock size={20} />, label: 'Attendance', path: '/admin-attendance', allowed: isAdminView },
+    { icon: <Calendar size={20} />, label: 'Leave Requests', path: '/leave-requests', allowed: isAdminView },
 
     // Employee Focused Tools
-    { icon: <Clock size={20} />, label: 'Attendance', path: '/attendance', allowed: !isAdmin },
-    { icon: <Calendar size={20} />, label: 'Time Off', path: '/time-off', allowed: !isAdmin },
+    { icon: <Clock size={20} />, label: 'Attendance', path: '/attendance', allowed: !isAdminView },
+    { icon: <Calendar size={20} />, label: 'Time Off', path: '/time-off', allowed: !isAdminView },
     { icon: <DollarSign size={20} />, label: 'Expenses', path: '/expenses', allowed: false }, // Hidden - not yet implemented
     { icon: <MessageSquare size={20} />, label: 'Surveys', path: '/surveys', allowed: true },
 
@@ -48,8 +47,8 @@ export const Sidebar: React.FC = () => {
     { icon: <ClipboardList size={20} />, label: 'Onboarding', path: '/onboarding', allowed: true },
 
     // Admin Specific
-    { icon: <ShieldCheck size={20} />, label: 'Compliance', path: '/compliance', allowed: isAdmin },
-    { icon: <BarChart2 size={20} />, label: 'Analytics', path: '/analytics', allowed: isAdmin },
+    { icon: <ShieldCheck size={20} />, label: 'Compliance', path: '/compliance', allowed: isAdminView },
+    { icon: <BarChart2 size={20} />, label: 'Analytics', path: '/analytics', allowed: isAdminView },
 
     { icon: <FileText size={20} />, label: 'Documents', path: '/documents', allowed: true },
   ];
@@ -67,7 +66,7 @@ export const Sidebar: React.FC = () => {
           </div>
           <div className="flex flex-col">
             <h1 className="text-white text-base font-bold leading-tight group-hover:text-gray-200 transition-colors">HARI</h1>
-            <p className="text-gray-400 text-xs font-medium">by AIYA • {isAdmin ? 'Admin' : 'Employee'}</p>
+            <p className="text-gray-400 text-xs font-medium">by AIYA • {isAdminView ? 'Admin' : 'Employee'}</p>
           </div>
         </Link>
       </div>

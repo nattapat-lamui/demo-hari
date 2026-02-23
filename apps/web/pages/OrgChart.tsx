@@ -133,8 +133,8 @@ interface ModalState {
 }
 
 export const OrgChart: React.FC = () => {
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'HR_ADMIN';
+  const { user, isAdminView } = useAuth();
+  const isAdmin = isAdminView;
   const { nodes, addNode, updateNode, deleteNode, fetchSubTree, fetchAllNodes, isSubTreeView } =
     useOrg();
 

@@ -9,6 +9,9 @@ interface AuthContextType {
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
   loading: boolean;
+  viewMode: 'admin' | 'employee';
+  isAdminView: boolean;
+  toggleViewMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,6 +19,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'admin' | 'employee'>(
+    () => (sessionStorage.getItem('viewMode') as 'admin' | 'employee') || 'admin'
+  );
+
+  const isAdminView = user?.role === 'HR_ADMIN' && viewMode === 'admin';
+
+  const toggleViewMode = () => {
+    setViewMode(prev => {
+      const next = prev === 'admin' ? 'employee' : 'admin';
+      sessionStorage.setItem('viewMode', next);
+      return next;
+    });
+  };
 
   // Initialize from localStorage or sessionStorage
   React.useEffect(() => {
@@ -103,7 +119,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('refreshToken');
     sessionStorage.removeItem('user');
+    sessionStorage.removeItem('viewMode');
     setUser(null);
+    setViewMode('admin');
     // Force redirect to login if needed, or let the ProtectedRoute handle it
     window.location.href = '/#/login';
   };
@@ -124,7 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated: !!user, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated: !!user, loading, viewMode, isAdminView, toggleViewMode }}>
       {children}
     </AuthContext.Provider>
   );

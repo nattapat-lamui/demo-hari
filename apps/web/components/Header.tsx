@@ -32,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isAdminView, toggleViewMode } = useAuth();
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useNotifications();
   const notificationRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -348,6 +348,25 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             )}
           </div>
 
+          {/* Admin/Employee Toggle — only for HR_ADMIN */}
+          {user?.role === "HR_ADMIN" && (
+            <button
+              onClick={() => {
+                toggleViewMode();
+                navigate("/");
+              }}
+              className="hidden sm:flex items-center gap-1.5 group"
+              title={isAdminView ? "Switch to Employee View" : "Switch to Admin View"}
+            >
+              <span className="text-[11px] font-medium text-text-muted-light dark:text-text-muted-dark">
+                {isAdminView ? "Admin" : "Employee"}
+              </span>
+              <div className={`relative w-8 h-[18px] rounded-full transition-colors duration-200 ${isAdminView ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform duration-200 ${isAdminView ? 'translate-x-[15px]' : 'translate-x-[2px]'}`} />
+              </div>
+            </button>
+          )}
+
           <div className="h-8 w-px bg-border-light dark:bg-border-dark mx-2"></div>
 
           <div className="relative" ref={profileRef}>
@@ -366,7 +385,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                   {user?.name}
                 </p>
                 <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 flex items-center gap-1">
-                  {user?.role === "HR_ADMIN" && (
+                  {isAdminView && (
                     <Shield size={10} className="text-primary" />
                   )}
                   {user?.jobTitle}

@@ -21,7 +21,7 @@ import { useOnboardingTasks, useOnboardingContacts, useOnboardingDocuments, useA
 import { FlowGraph, TaskList, KeyContacts, DocumentChecklist, InviteModal, OnboardingOverview } from '../components/onboarding';
 
 export const Onboarding: React.FC = () => {
-    const { user } = useAuth();
+    const { user, isAdminView } = useAuth();
     const { addNode } = useOrg();
     const qc = useQueryClient();
 
@@ -67,7 +67,7 @@ export const Onboarding: React.FC = () => {
 
     // Employee selector state (admin only — synced with URL ?employee=<id>)
     const [searchParams, setSearchParams] = useSearchParams();
-    const isAdmin = user?.role === 'HR_ADMIN';
+    const isAdmin = isAdminView;
     const selectedEmployeeId = searchParams.get('employee');
     const setSelectedEmployeeId = useCallback((id: string | null) => {
         setSearchParams(prev => {
@@ -148,7 +148,7 @@ export const Onboarding: React.FC = () => {
     };
 
     const calculateProgress = () => {
-        const relevantTasks = user?.role === 'EMPLOYEE'
+        const relevantTasks = !isAdminView
             ? visibleTasks.filter(t => t.assignee === 'Employee')
             : visibleTasks;
         const completed = relevantTasks.filter(t => t.completed).length;
@@ -188,7 +188,7 @@ export const Onboarding: React.FC = () => {
 
     // Filtering Logic
     const filteredTasks = visibleTasks.filter(task => {
-        if (user?.role === 'EMPLOYEE' && task.assignee !== 'Employee') {
+        if (!isAdminView && task.assignee !== 'Employee') {
             return false;
         }
 
@@ -411,10 +411,10 @@ export const Onboarding: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-6 items-start justify-between">
                 <div className="flex-1">
                     <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight mb-1">
-                        {user?.role === 'EMPLOYEE' ? 'My Onboarding Checklist' : 'Onboarding Center'}
+                        {!isAdminView ? 'My Onboarding Checklist' : 'Onboarding Center'}
                     </h1>
                     <p className="text-text-muted-light dark:text-text-muted-dark">
-                        {user?.role === 'EMPLOYEE'
+                        {!isAdminView
                             ? `Welcome aboard, ${user?.name?.split(' ')[0] || 'User'}! Complete these tasks to get started.`
                             : selectedEmployee
                                 ? <><span className="font-semibold text-text-light dark:text-text-dark">{selectedEmployee.name}</span> ({selectedEmployee.role}) - Onboarding Dashboard</>

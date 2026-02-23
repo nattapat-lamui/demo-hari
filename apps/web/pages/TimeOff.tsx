@@ -104,7 +104,7 @@ function canCancel(req: LeaveRequest): boolean {
 // ---------------------------------------------------------------------------
 export const TimeOff: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdminView } = useAuth();
   const { showToast } = useToast();
   const { updateRequestStatus } = useLeave();
   const { data: allRequests = [], isPending, isError: isLeaveError, error: leaveError, refetch: refetchLeave } = useLeaveRequests();
@@ -112,7 +112,7 @@ export const TimeOff: React.FC = () => {
   const { data: empDetail } = useEmployeeDetail(user?.employeeId);
   const cancelMutation = useCancelLeaveRequest();
 
-  const isManager = user?.role === 'HR_ADMIN';
+  const isManager = isAdminView;
   const [cancelModalRequest, setCancelModalRequest] = useState<LeaveRequest | null>(null);
   const [detailRequest, setDetailRequest] = useState<LeaveRequest | null>(null);
   const [rejectingRequest, setRejectingRequest] = useState<LeaveRequest | null>(null);
