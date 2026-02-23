@@ -1,4 +1,4 @@
-# HARI HR System v1.1 🚀
+# HARI HR System v1.1
 
 <div align="center">
 
@@ -8,253 +8,229 @@
 
 **A Modern, Enterprise-Grade HR Management Platform**
 
-Built with React, TypeScript, Express.js, and PostgreSQL
+Built with React 19, TypeScript, Express.js, PostgreSQL, and Socket.io
 
-[Features](#-features) • [Getting Started](#-getting-started) • [Tech Stack](#-tech-stack) • [Documentation](#-documentation)
+[Features](#-features) | [Getting Started](#-getting-started) | [Tech Stack](#-tech-stack) | [Architecture](#-system-architecture) | [API Docs](#-api-endpoints)
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#-overview)
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [System Architecture](#-system-architecture)
 - [Getting Started](#-getting-started)
+- [API Endpoints](#-api-endpoints)
 - [Security](#-security)
 - [Performance](#-performance)
 - [Testing](#-testing)
-- [Documentation](#-documentation)
+- [Deployment](#-deployment)
+- [Roadmap](#-roadmap)
 - [License](#-license)
 
 ---
 
-## 🌟 Overview
+## Overview
 
-HARI (Human Affairs & Resource Integration) is a comprehensive HR management system designed to streamline employee management, onboarding, leave tracking, document management, and compliance monitoring. Built with modern technologies and enterprise-grade security features.
+HARI (Human Affairs & Resource Integration) is a comprehensive HR management system designed to streamline employee management, attendance tracking, leave management, onboarding, document management, surveys, and compliance monitoring.
 
 **Key Highlights:**
-- 🎨 Beautiful, responsive UI with dark mode support
-- 🔒 Enterprise-grade security (JWT, 2FA-ready, Audit Logging)
-- ⚡ Optimized performance with code splitting and caching
-- 📱 Fully responsive design (Mobile, Tablet, Desktop)
-- 🔄 Real-time data synchronization with PostgreSQL
-- 📊 Interactive dashboards and analytics
+- Beautiful, responsive UI with dark mode support
+- Enterprise-grade security (JWT, session management, audit logging)
+- Real-time updates via Socket.io
+- Server-side caching and React Query for optimal data fetching
+- Fully responsive design (Mobile, Tablet, Desktop)
+- Interactive dashboards, org charts, and analytics
+- ISO 45003 psychosocial wellbeing surveys
 
 ---
 
-## ✨ Features
+## Features
 
-### 👥 Employee Management
-- **Employee Directory**: Searchable employee database with filtering
-- **Employee Profiles**: Comprehensive profiles with job history, performance reviews, and training records
-- **Org Chart**: Interactive organizational hierarchy visualization
-- **Bulk Operations**: Import/export employee data
+### Employee Management
+- **Employee Directory** with search, filter, and pagination
+- **Employee Profiles** with job history, performance reviews, training records, skills, and documents
+- **Employee Actions**: Promote, Transfer, Terminate with automatic job history tracking
+- **Interactive Org Chart** with drill-down hierarchy
+- **Profile Avatars** with upload, fallback initials, and automatic URL normalization
 
-### 📝 Leave Management
-- **Leave Requests**: Submit and track vacation, sick leave, and personal days
-- **Approval Workflow**: Multi-level approval system
-- **Balance Tracking**: Real-time leave balance calculation
-- **Calendar Integration**: Visual leave calendar
-- **Leave History**: Complete audit trail of all requests
+### Attendance System
+- **Clock In / Clock Out** with real-time status
+- **Auto-Checkout** at end of day via scheduled cron jobs
+- **Auto-Absent** marking for no-shows
+- **Overtime & Early Departure** detection
+- **Admin Attendance Management** with manual override
+- **Timezone-aware** records (UTC storage, local display)
 
-### 📄 Document Management
-- **Secure Storage**: Upload and manage HR documents (policies, contracts, forms)
-- **Access Control**: Role-based document permissions
-- **Version Control**: Track document changes
-- **Quick Search**: Full-text search across all documents
-- **Grid/List Views**: Flexible viewing options
-- **File Preview**: In-browser document preview
+### Leave Management
+- **Leave Request Workflow**: Submit, approve/reject with rejection reasons
+- **Leave Types**: Annual, Sick, Personal, Leave Without Pay
+- **Medical Certificate Upload** for sick leave
+- **Leave Balance Tracking** with real-time calculation
+- **Leave Calendar** with visual date range display
+- **Leave History** with full audit trail
 
-### 🎯 Onboarding
-- **Digital Checklists**: Automated onboarding tasks
-- **New Hire Portal**: Self-service onboarding experience
-- **Document Collection**: Automated document gathering
-- **Task Assignment**: Assign onboarding tasks to HR and managers
-- **Progress Tracking**: Real-time onboarding progress monitoring
+### Document Management
+- **Secure File Storage**: Upload and manage HR documents (policies, contracts, forms)
+- **Role-based Access Control** for document permissions
+- **Grid/List Views** with file type icons
+- **In-browser Preview** and download
+- **50MB upload limit** with type validation
 
-### 📊 Analytics & Reporting
-- **Dashboard**: Real-time HR metrics and KPIs
-- **Headcount Analytics**: Department-wise employee distribution
-- **Leave Analytics**: Absence trends and patterns
-- **Custom Reports**: Generate compliance and audit reports
-- **Data Visualization**: Interactive charts using Recharts
+### Onboarding
+- **Digital Checklists**: Automated onboarding task management
+- **Document Collection**: Gather required documents from new hires
+- **Task Assignment**: Assign tasks to HR, managers, and employees
+- **Progress Tracking**: Real-time onboarding completion monitoring
+- **Admin Overview**: Dashboard for all active onboarding processes
 
-### 🏥 Wellbeing & Surveys
-- **Wellness Programs**: Mental health and fitness tracking
-- **Employee Surveys**: Pulse surveys and feedback collection
-- **Sentiment Analysis**: Employee satisfaction monitoring
+### Surveys & Sentiment
+- **ISO 45003 Psychosocial Wellbeing Survey**: Seed survey with 25 questions across 5 categories (Workload, Team, Growth, Work-Life Balance, Management)
+- **Anonymous Responses** with Likert scale (1-5)
+- **Sentiment Analytics**: Department-wise and category-wise breakdown
+- **Survey Management**: Create, activate, close surveys (Admin)
 
-### ⚙️ Settings & Configuration
-- **User Preferences**: Personalize experience
-- **Notification Settings**: Configure alerts and reminders
-- **Theme Customization**: Light/dark mode toggle
-- **Profile Management**: Update personal information
+### Analytics & Dashboards
+- **HR Admin Dashboard**: Headcount, department distribution, leave trends, attendance stats
+- **Employee Dashboard**: Personal attendance, leave balance, upcoming events
+- **Interactive Charts**: Bar, line, pie, and area charts via Recharts
+- **Team Hierarchy View**: My-team view with direct reports
 
-### 📋 Compliance & Audit
-- **Compliance Tracking**: Monitor regulatory requirements
-- **Audit Logs**: Complete activity logging (see [Security](#-security))
-- **Report Generation**: Automated compliance reports
+### Real-time Notifications
+- **Socket.io Integration** for live updates
+- **Leave Request Notifications**: Instant alerts on submit/approve/reject
+- **Query Sync Bridge**: Automatic React Query cache invalidation on socket events
 
----
+### Settings & Configuration
+- **Profile Management**: Update name, email, phone, bio, avatar
+- **Theme Customization**: Light / Dark / System mode
+- **Language Selection**: English / Thai
+- **Notification Preferences**: Email, push, Slack toggles
+- **Password Management**: Change password with strength validation
+- **System Config**: Admin-configurable default password for new employees
 
-## 🔒 Security
-
-### Authentication & Authorization
-- ✅ **JWT Authentication**: Secure token-based authentication
-- ✅ **Password Strength Meter**: Real-time password strength validation
-  - Requirements: 8+ chars, uppercase, lowercase, numbers, special characters
-  - Visual feedback with color-coded strength indicator
-- ✅ **Session Management**: Auto-logout after 30 minutes of inactivity
-  - Warning modal at 25 minutes with countdown
-  - Activity tracking (mouse, keyboard, scroll, touch)
-  - "Stay Logged In" option
-- 🔜 **Two-Factor Authentication (2FA)**: TOTP-based 2FA (infrastructure ready)
-- ✅ **Role-Based Access Control (RBAC)**: HR Admin vs Employee permissions
-
-### Data Security
-- ✅ **Rate Limiting**:
-  - General: 100 requests/15 min
-  - Auth: 5 attempts/15 min
-  - API: 30 requests/min
-- ✅ **Input Validation & Sanitization**: Express-validator with XSS protection
-- ✅ **Security Headers**: Helmet.js for HTTP security headers
-- ✅ **CORS Configuration**: Strict origin control
-- ✅ **Password Hashing**: bcrypt with salt rounds
-- ✅ **File Upload Validation**: Type and size restrictions (50MB limit)
-
-### Audit & Compliance
-- ✅ **Comprehensive Audit Logging**:
-  - Tracks: Login, logout, password changes, CRUD operations
-  - Captures: Timestamp, user, action, resource, IP, user agent
-  - Sanitizes sensitive data (passwords redacted)
-  - In-memory store with auto-cleanup (1000 entries)
-  - Real-time viewing in Compliance page
+### Compliance & Audit
+- **Comprehensive Audit Logging**: Tracks login, logout, password changes, CRUD operations
+- **IP & User Agent Capture** for security monitoring
+- **Sensitive Data Sanitization**: Passwords redacted in logs
+- **Real-time Log Viewing** in Compliance page
 
 ---
 
-## ⚡ Performance
+## Tech Stack
 
-### Code Splitting & Optimization
-- ✅ **Route-based Code Splitting**:
-  - Main bundle reduced from **240KB → 66KB** (gzipped) - **72% reduction!**
-  - Lazy-loaded routes with React.lazy()
-  - Each page loads on-demand (1-46 KB per chunk)
-- ✅ **Vendor Chunk Splitting**:
-  - React vendor: 48KB (gzipped)
-  - Chart vendor: 115KB (gzipped) - loads only when needed
-  - UI vendor: 8KB (gzipped)
-- ✅ **Build Optimizations**:
-  - esbuild minification
-  - Tree shaking
-  - Content hashing for cache busting
+### Frontend
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 19.2 | UI framework |
+| TypeScript | 5.x | Type safety |
+| Vite | 6.x | Build tool & dev server |
+| TailwindCSS | 3.4 | Utility-first styling |
+| TanStack React Query | 5.x | Server state management & caching |
+| React Router | 7.x | Client-side routing |
+| Socket.io Client | 4.8 | Real-time communication |
+| Recharts | 3.4 | Data visualization |
+| Lucide React | 0.554 | Icon library |
+| Day.js | 1.11 | Date manipulation |
 
-### Asset Optimization
-- ✅ **Image Lazy Loading**:
-  - LazyImage component with native browser lazy loading
-  - Intersection Observer fallback for older browsers
-  - Smooth fade-in animations
-  - Placeholder support
+### Backend
+| Technology | Version | Purpose |
+|---|---|---|
+| Node.js + Express | 4.19 | HTTP server & routing |
+| TypeScript | 5.x | Type safety |
+| PostgreSQL (Neon) | - | Database |
+| pg | 8.11 | PostgreSQL client |
+| Socket.io | 4.8 | Real-time WebSocket server |
+| JWT (jsonwebtoken) | 9.x | Authentication tokens |
+| bcrypt | 6.x | Password hashing |
+| Multer | 2.x | File uploads |
+| Helmet | 8.x | HTTP security headers |
+| express-rate-limit | - | Rate limiting |
+| express-validator | 7.x | Input validation |
+| node-cron | 4.x | Scheduled tasks (attendance) |
+| Swagger (jsdoc + UI) | 6.x / 5.x | API documentation |
+| Nodemailer | 8.x | Email notifications |
 
-### Caching Strategy
-- ✅ **API Response Caching**:
-  - In-memory cache with configurable TTL
-  - Presets: SHORT (1min), MEDIUM (5min), LONG (15min), VERY_LONG (1hr)
-  - Automatic expired entry cleanup
-  - Cache statistics for monitoring
-
-### Results
-- ⚡ **Initial Load Time**: Significantly reduced with code splitting
-- ⚡ **Time to Interactive (TTI)**: Improved by ~70%
-- ⚡ **Bundle Size**: 66KB initial (vs 240KB before)
-
----
-
-## 📱 Responsive Design
-
-### Mobile-First Approach
-- ✅ **Dashboard**: Responsive charts and stat cards
-  - Breakpoints: mobile (1 col), tablet (2 cols), desktop (4 cols)
-  - Responsive chart heights and padding
-- ✅ **Documents**: Mobile card view for list mode
-  - Desktop: Traditional table
-  - Mobile: Beautiful cards with action buttons
-- ✅ **Time Off**: Mobile-friendly leave requests
-  - Desktop table + mobile cards
-  - Type icons and status badges
-- ✅ **Employee Directory**: Card-based mobile layout
-- ✅ **Navigation**: Responsive sidebar with drawer for mobile
-  - Desktop: Persistent sidebar
-  - Mobile: Slide-out drawer with overlay
-
-### Breakpoints
-- `sm`: 640px (Small devices)
-- `md`: 768px (Tablets)
-- `lg`: 1024px (Laptops)
-- `xl`: 1280px (Desktops)
-- `2xl`: 1536px (Large screens)
+### Shared
+| Package | Purpose |
+|---|---|
+| `@hari/shared-types` | Shared TypeScript interfaces (employee, leave, auth, dashboard, etc.) |
 
 ---
 
-## 🏗 System Architecture
+## System Architecture
 
 ### Monorepo Structure
 ```
 HARI-V1.1/
 ├── apps/
-│   ├── web/              # Frontend React App
-│   │   ├── components/   # Reusable UI components
-│   │   ├── pages/        # Route pages
-│   │   ├── contexts/     # React Context providers
-│   │   ├── hooks/        # Custom React hooks
-│   │   ├── lib/          # Utilities & helpers
-│   │   └── types/        # TypeScript type definitions
+│   ├── web/                    # Frontend (React + Vite)
+│   │   ├── components/
+│   │   │   ├── ui/             # Reusable UI (Avatar, Modal, Pagination, Toast, etc.)
+│   │   │   ├── layout/         # Layout shells (Header, Sidebar, Breadcrumbs, etc.)
+│   │   │   ├── dashboard/      # Dashboard-specific components
+│   │   │   ├── onboarding/     # Onboarding-specific components
+│   │   │   └── employee-detail/# Employee detail sub-components
+│   │   ├── features/
+│   │   │   └── employees/      # Feature module (EmployeeList, AddEmployeeModal, etc.)
+│   │   ├── pages/              # Route pages (27 pages)
+│   │   ├── contexts/           # React Contexts (Auth, Leave, Notification)
+│   │   ├── hooks/              # Custom hooks (queries.ts, useSocketQuerySync, etc.)
+│   │   ├── lib/                # API client, query keys, query client config
+│   │   ├── services/           # Error logging
+│   │   └── types.ts            # Frontend type definitions
 │   │
-│   └── api/              # Backend Express API
+│   └── api/                    # Backend (Express + TypeScript)
 │       ├── src/
-│       │   ├── middlewares/  # Auth, security, audit logging
-│       │   ├── db.ts         # Database connection
-│       │   └── index.ts      # API routes
-│       └── uploads/      # File storage
+│       │   ├── routes/         # Route definitions (20 route files)
+│       │   ├── controllers/    # Request handlers
+│       │   ├── services/       # Business logic
+│       │   ├── modules/
+│       │   │   └── employees/  # Feature module (controller, service, routes)
+│       │   ├── middlewares/    # Auth, security, cache, audit
+│       │   ├── models/         # TypeScript interfaces & DTOs
+│       │   ├── scripts/        # DB initialization & seed data
+│       │   ├── config/         # Swagger, Sentry config
+│       │   ├── socket.ts       # Socket.io event handlers
+│       │   ├── db.ts           # PostgreSQL connection pool
+│       │   └── index.ts        # App entry point, middleware, migrations
+│       └── uploads/            # File storage (avatars, documents, medical certs)
 │
-├── node_modules/         # Shared dependencies
-└── package.json          # Root workspace config
+├── packages/
+│   └── shared-types/           # @hari/shared-types (cross-app TypeScript interfaces)
+│       └── src/                # auth, employee, leave, dashboard, etc.
+│
+└── package.json                # Workspace root config
 ```
 
-### Tech Stack
+### Data Flow
+```
+Browser (React)
+    ↕ HTTP/REST (fetch via lib/api.ts)
+    ↕ WebSocket (Socket.io for real-time)
+Express API (localhost:3001)
+    ↕ SQL (pg pool)
+PostgreSQL (Neon cloud)
+```
 
-#### Frontend
-- **Framework**: React 19 with TypeScript
-- **Build Tool**: Vite 6.x
-- **Styling**: TailwindCSS 3.x
-- **State Management**: React Context API
-- **Routing**: React Router v6
-- **Charts**: Recharts
-- **Icons**: Lucide React
-- **Testing**: Playwright (E2E)
-
-#### Backend
-- **Runtime**: Node.js with Express.js
-- **Language**: TypeScript
-- **Database**: PostgreSQL (Neon DB)
-- **Authentication**: JWT (jsonwebtoken)
-- **Security**:
-  - Helmet.js (HTTP headers)
-  - express-rate-limit (Rate limiting)
-  - express-validator (Input validation)
-  - bcrypt (Password hashing)
-- **File Upload**: Multer
+### State Management
+- **Server State**: TanStack React Query v5 — all API data fetching, caching, and invalidation
+- **Auth State**: React Context (`AuthContext`) — user session, login/logout
+- **Leave State**: React Context (`LeaveContext`) — leave balance, request management
+- **Notification State**: React Context (`NotificationContext`) — in-app notifications
+- **Real-time Sync**: Socket.io events bridge to React Query cache via `useSocketQuerySync`
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-- **Node.js**: v18 or higher
-- **npm**: v8 or higher
-- **PostgreSQL**: Database connection (Neon DB recommended)
+- **Node.js** v18+
+- **npm** v8+
+- **PostgreSQL** database (Neon DB recommended)
 
 ### Installation
 
@@ -267,7 +243,6 @@ HARI-V1.1/
 2. **Install dependencies**
    ```bash
    npm install
-   # Installs dependencies for root, web, and api workspaces
    ```
 
 3. **Setup Environment Variables**
@@ -275,197 +250,266 @@ HARI-V1.1/
    **Backend** (`apps/api/.env`):
    ```env
    PORT=3001
-   DATABASE_URL=postgresql://user:password@host:port/database
-   JWT_SECRET=your_super_secret_jwt_key_change_in_production
+   DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+   JWT_SECRET=your_super_secret_jwt_key
+   JWT_REFRESH_SECRET=your_refresh_secret_key
    FRONTEND_URL=http://localhost:5173
    ```
 
-   **Frontend** (`apps/web/.env.local`) - Optional:
+   **Frontend** (`apps/web/.env.local`) — optional for local dev:
    ```env
-   VITE_API_URL=http://localhost:3001
+   VITE_API_URL=http://localhost:3001/api
    ```
+   > If omitted, the Vite dev server proxies `/api` and `/uploads` to `localhost:3001` automatically.
 
 4. **Database Setup**
-   - Create a PostgreSQL database on [Neon](https://neon.tech) or local PostgreSQL
-   - Copy the connection string to `DATABASE_URL` in `.env`
-   - Tables will be created automatically on first API request (seed data included)
+   - Create a PostgreSQL database on [Neon](https://neon.tech) or locally
+   - Copy the connection string to `DATABASE_URL`
+   - Navigate to `http://localhost:3001/api/setup` to initialize tables and seed data
 
 ### Running the Application
 
-#### Option 1: Concurrent (Recommended)
+**Concurrent (recommended):**
 ```bash
 npm run dev
-# Runs both frontend and backend concurrently
+# Frontend: http://localhost:5173
+# Backend:  http://localhost:3001
+# API Docs: http://localhost:3001/api-docs
 ```
 
-#### Option 2: Separate Terminals
-
-**Terminal 1 - Backend API:**
+**Separate terminals:**
 ```bash
-npm run dev:api
-# Server runs at http://localhost:3001
+npm run dev:api   # Terminal 1 — Backend on :3001
+npm run dev:web   # Terminal 2 — Frontend on :5173
 ```
 
-**Terminal 2 - Frontend:**
-```bash
-npm run dev:web
-# App runs at http://localhost:5173
-```
-
-### Default Login Credentials
-
-**HR Admin:**
-- Email: `admin@hari.com`
-- Password: `admin123`
-
-**Employee:**
-- Email: `employee@hari.com`
-- Password: `employee123`
+### Default Credentials
+After running `/api/setup`, use the admin account created by the seed data to log in.
 
 ---
 
-## 🧪 Testing
+## API Endpoints
 
-### End-to-End Testing (Playwright)
+Base URL: `http://localhost:3001/api`
 
+### Authentication
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/auth/login` | Login (returns JWT + refresh token) |
+| POST | `/auth/refresh-token` | Refresh access token |
+| POST | `/auth/logout` | Revoke refresh token |
+| POST | `/auth/change-password` | Change password |
+
+### Employees
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/employees` | List all employees |
+| GET | `/employees/:id` | Get employee by ID |
+| GET | `/employees/:id/manager` | Get employee's manager |
+| GET | `/employees/:id/direct-reports` | Get direct reports |
+| POST | `/employees` | Create employee (Admin) |
+| POST | `/employees/upload-avatar` | Upload avatar image |
+| PATCH | `/employees/:id` | Update employee |
+| DELETE | `/employees/:id` | Delete employee (Admin) |
+
+### Leave Requests
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/leave-requests` | List all leave requests |
+| POST | `/leave-requests` | Create leave request (with medical cert upload) |
+| PUT | `/leave-requests/:id` | Approve/Reject (Admin) |
+| DELETE | `/leave-requests/:id` | Delete request |
+
+### Attendance
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/attendance` | Get own attendance records |
+| POST | `/attendance/clock-in` | Clock in |
+| POST | `/attendance/clock-out` | Clock out |
+| GET | `/admin/attendance` | All attendance records (Admin) |
+| PATCH | `/admin/attendance/:id` | Override attendance (Admin) |
+
+### Documents
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/documents` | List documents |
+| POST | `/documents` | Upload document |
+| GET | `/documents/:id/download` | Download file |
+| DELETE | `/documents/:id` | Delete document |
+
+### Surveys
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/surveys` | List all surveys |
+| GET | `/surveys/:id` | Get survey with questions |
+| POST | `/surveys` | Create survey (Admin) |
+| POST | `/surveys/:id/responses` | Submit survey response |
+| GET | `/surveys/:id/results` | Get survey results (Admin) |
+
+### Other Endpoints
+| Resource | Endpoints |
+|---|---|
+| **Dashboard** | `GET /dashboard/stats`, `GET /dashboard/my-team-hierarchy` |
+| **Org Chart** | `GET /org-chart` |
+| **Job History** | `GET /job-history/:employeeId`, `POST /job-history` |
+| **Training** | `GET /training/:employeeId`, `POST /training` |
+| **Performance** | `GET /performance/:employeeId`, `POST /performance` |
+| **Onboarding** | `GET /onboarding`, `POST /onboarding`, `PATCH /onboarding/:id/tasks/:taskId` |
+| **Announcements** | `GET /announcements`, `POST /announcements` |
+| **Events** | `GET /events`, `POST /events` |
+| **Notifications** | `GET /notifications`, `PATCH /notifications/:id/read` |
+| **Analytics** | `GET /analytics/headcount`, `GET /analytics/leave-trends` |
+| **Audit Logs** | `GET /audit-logs` (Admin) |
+| **Payroll** | `GET /payroll`, `POST /payroll` |
+
+Full Swagger documentation available at `/api-docs` when the server is running.
+
+---
+
+## Security
+
+### Authentication & Authorization
+- **JWT Authentication** with access + refresh token rotation
+- **Password Strength Validation**: 8+ chars, uppercase, lowercase, numbers, special characters
+- **Session Management**: Auto-logout after 30 min inactivity with 5-min warning countdown
+- **Role-Based Access Control (RBAC)**: HR Admin vs Employee permissions
+- **Refresh Token Revocation** on logout
+
+### Data Security
+- **Rate Limiting**: General (5000/15min), Auth (5/15min), API (30/min)
+- **Input Validation & Sanitization**: express-validator with XSS protection
+- **Security Headers**: Helmet.js
+- **CORS Configuration**: Configurable allowed origins
+- **Password Hashing**: bcrypt with salt rounds
+- **File Upload Validation**: Type whitelist + size limits
+
+### Audit & Compliance
+- **Comprehensive Audit Logging**: Login, logout, password changes, CRUD operations
+- **Captures**: Timestamp, user, action, resource, IP, user agent
+- **Sensitive Data Sanitization**: Passwords redacted in logs
+- **Real-time Log Viewing** in Compliance page
+
+---
+
+## Performance
+
+### Code Splitting
+- **Route-based Lazy Loading**: React.lazy() for all pages
+- **Vendor Chunk Splitting**: react-vendor (48KB gz), chart-vendor (115KB gz), ui-vendor (8KB gz)
+- **Initial Bundle**: ~66KB gzipped (down from 240KB — 72% reduction)
+
+### Caching
+- **React Query**: Automatic caching, background refetching, stale-while-revalidate
+- **Server-side Cache**: In-memory response cache with configurable TTL (1min–1hr)
+- **Cache Invalidation**: Automatic on mutations + Socket.io events
+
+### Asset Optimization
+- **Image Lazy Loading**: LazyImage component with Intersection Observer
+- **esbuild Minification**: Fast production builds
+- **Content Hashing**: Long-term cache busting
+
+---
+
+## Responsive Design
+
+- **Dashboard**: 1-col mobile, 2-col tablet, 4-col desktop
+- **Employee Directory**: Card view (mobile) / Table view (desktop)
+- **Documents**: Card view (mobile) / Grid+Table view (desktop)
+- **Leave Requests**: Card view (mobile) / Table view (desktop)
+- **Navigation**: Slide-out drawer (mobile) / Persistent sidebar (desktop)
+
+Breakpoints: `sm` 640px | `md` 768px | `lg` 1024px | `xl` 1280px | `2xl` 1536px
+
+---
+
+## Testing
+
+### Backend Unit Tests (Jest)
 ```bash
-# Run all E2E tests
+npm run test:api
+```
+
+### End-to-End Tests (Playwright)
+```bash
 npm run test:e2e
-
-# Run tests in UI mode (interactive)
-npx playwright test --ui
-
-# Run specific test file
-npx playwright test tests/login.spec.ts
-
-# Generate test report
-npx playwright show-report
+npx playwright test --ui    # Interactive mode
+npx playwright show-report  # View report
 ```
 
-### Test Coverage
-- ✅ Authentication flow (login/logout)
-- ✅ Employee management (CRUD operations)
-- ✅ Leave request workflow
-- ✅ Document upload and management
-- ✅ Onboarding process
-- ✅ Org chart navigation
-
 ---
 
-## 📚 Documentation
+## Deployment
 
-### API Documentation
-- **Endpoint Reference**: [API Docs (Thai)](./docs/api_docs_th.md)
-- **Authentication**: JWT-based authentication
-- **Base URL**: `http://localhost:3001/api`
-
-### Key API Endpoints
-
-**Authentication:**
-- `POST /api/auth/login` - User login
-- `POST /api/auth/change-password` - Change password
-
-**Employees:**
-- `GET /api/employees` - List all employees
-- `GET /api/employees/:id` - Get employee details
-- `POST /api/employees` - Create employee (Admin)
-- `PUT /api/employees/:id` - Update employee (Admin)
-- `DELETE /api/employees/:id` - Delete employee (Admin)
-
-**Leave Requests:**
-- `GET /api/leave-requests` - List all requests
-- `POST /api/leave-requests` - Create request
-- `PUT /api/leave-requests/:id` - Update status (Admin)
-- `DELETE /api/leave-requests/:id` - Delete request
-
-**Documents:**
-- `GET /api/documents` - List documents
-- `POST /api/documents` - Upload document
-- `GET /api/documents/:id/download` - Download document
-- `DELETE /api/documents/:id` - Delete document
-
-**Audit Logs:**
-- `GET /api/audit-logs` - View audit logs (Admin)
-
----
-
-## 🔧 Development
-
-### Available Scripts
-
-**Root Level:**
-- `npm run dev` - Run both frontend and backend
-- `npm run dev:web` - Run frontend only
-- `npm run dev:api` - Run backend only
-- `npm run build` - Build both apps
-- `npm run test:e2e` - Run E2E tests
-
-**Frontend (`apps/web`):**
-- `npm run dev` - Start dev server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-
-**Backend (`apps/api`):**
-- `npm run dev` - Start with nodemon (auto-reload)
-- `npm start` - Start production server
-
-### Code Style
-- **ESLint**: Configured for TypeScript
-- **Prettier**: Code formatting (optional)
-- **TypeScript**: Strict mode enabled
-
----
-
-## 📦 Deployment
-
-### Frontend (Vercel/Netlify)
+### Frontend (Vercel / Netlify)
 ```bash
-cd apps/web
-npm run build
-# Deploy 'dist' folder
+cd apps/web && npm run build
+# Deploy the dist/ folder
+# Set VITE_API_URL to your production API
 ```
 
-### Backend (Railway/Render/Heroku)
+### Backend (Railway / Render)
 ```bash
-cd apps/api
-npm start
-# Ensure DATABASE_URL and JWT_SECRET are set
+cd apps/api && npm start
+# Set environment variables: DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, FRONTEND_URL
 ```
 
-### Environment Variables for Production
+### Production Environment Variables
 ```env
 NODE_ENV=production
-DATABASE_URL=your_production_db_url
-JWT_SECRET=your_very_secure_secret_key
-FRONTEND_URL=https://your-frontend-domain.com
+DATABASE_URL=postgresql://...
+JWT_SECRET=<secure-random-string>
+JWT_REFRESH_SECRET=<secure-random-string>
+FRONTEND_URL=https://your-frontend.com
 ```
 
 ---
 
-## 🛣 Roadmap
+## Available Scripts
 
-### Upcoming Features
-- [ ] **Advanced Analytics**: Predictive analytics and ML insights
-- [ ] **Two-Factor Authentication (2FA)**: Complete TOTP implementation
-- [ ] **Email Notifications**: Automated email alerts
-- [ ] **Mobile App**: React Native mobile application
-- [ ] **Advanced Reporting**: Custom report builder
-- [ ] **Payroll Integration**: Salary and payroll management
-- [ ] **Performance Reviews**: 360-degree feedback system
-- [ ] **Training Management**: Course tracking and certifications
-
-### Future Enhancements
-- [ ] **Multi-language Support**: i18n implementation
-- [ ] **API Rate Limiting Dashboard**: Visual monitoring
-- [ ] **Slack/Teams Integration**: Bot notifications
-- [ ] **Advanced Search**: Elasticsearch integration
-- [ ] **Calendar Integration**: Google/Outlook sync
+| Script | Description |
+|---|---|
+| `npm run dev` | Run frontend + backend concurrently |
+| `npm run dev:web` | Frontend only |
+| `npm run dev:api` | Backend only |
+| `npm run build:web` | Build frontend for production |
+| `npm run test:api` | Run backend unit tests |
+| `npm run test:e2e` | Run Playwright E2E tests |
+| `npm run lint` | Lint all workspaces |
+| `npm run format` | Format code with Prettier |
 
 ---
 
-## 🤝 Contributing
+## Roadmap
 
-Contributions are welcome! Please follow these steps:
+### Completed
+- [x] Employee CRUD with search, filter, pagination
+- [x] Interactive Org Chart
+- [x] Leave management with approval workflow
+- [x] Document management with upload/download
+- [x] Onboarding checklist system
+- [x] Attendance (clock in/out, auto-checkout, auto-absent)
+- [x] ISO 45003 psychosocial wellbeing surveys
+- [x] Real-time notifications via Socket.io
+- [x] Dark mode / theme system
+- [x] React Query migration (from custom cache)
+- [x] Shared types package (`@hari/shared-types`)
+- [x] Swagger API documentation
+- [x] Audit logging & compliance
+
+### Upcoming
+- [ ] Two-Factor Authentication (2FA) — TOTP implementation
+- [ ] Email notifications via SMTP
+- [ ] Advanced analytics & predictive insights
+- [ ] Mobile app (React Native)
+- [ ] Payroll integration
+- [ ] 360-degree performance reviews
+- [ ] Multi-language (i18n) support
+- [ ] Slack / Teams bot integration
+- [ ] Calendar sync (Google / Outlook)
+
+---
+
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -475,34 +519,29 @@ Contributions are welcome! Please follow these steps:
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 **AiYa Internship Team**
-- Project: HARI HR System v1.1
 - Repository: [github.com/isola513i/hari-hr-system](https://github.com/isola513i/hari-hr-system)
 
----
-
-## 🙏 Acknowledgments
-
-- Built with ❤️ using modern web technologies
+### Acknowledgments
 - Powered by Neon PostgreSQL
-- UI Components inspired by shadcn/ui
+- UI inspired by shadcn/ui
 - Icons by Lucide React
-- Co-developed with Claude Sonnet 4.5
+- Co-developed with Claude Code (Opus 4.6)
 
 ---
 
 <div align="center">
 
-**Made with 💙 by AiYa Internship Team**
+**Made with care by AiYa Internship Team**
 
-[⬆ Back to Top](#hari-hr-system-v11-)
+[Back to Top](#hari-hr-system-v11)
 
 </div>
