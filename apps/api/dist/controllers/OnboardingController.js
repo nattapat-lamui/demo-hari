@@ -278,18 +278,31 @@ class OnboardingController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { id } = req.params;
+                const user = req.user;
                 const result = yield OnboardingService_1.default.getDocumentFilePath(id);
                 if (!result || !result.filePath) {
                     res.status(404).json({ error: "File not found" });
                     return;
                 }
-                if (!fs_1.default.existsSync(result.filePath)) {
+                // Ownership check
+                if (user.role !== "HR_ADMIN" && user.employeeId !== result.employeeId) {
+                    res.status(403).json({ error: "Access denied" });
+                    return;
+                }
+                // Path traversal protection
+                const uploadsDir = path_1.default.resolve(__dirname, "../../uploads/onboarding");
+                const resolved = path_1.default.resolve(result.filePath);
+                if (!resolved.startsWith(uploadsDir + path_1.default.sep) && resolved !== uploadsDir) {
                     res.status(404).json({ error: "File not found on disk" });
                     return;
                 }
-                const ext = path_1.default.extname(result.filePath);
+                if (!fs_1.default.existsSync(resolved)) {
+                    res.status(404).json({ error: "File not found on disk" });
+                    return;
+                }
+                const ext = path_1.default.extname(resolved);
                 const filename = result.name.replace(/[^a-zA-Z0-9-_ ]/g, "") + ext;
-                res.download(result.filePath, filename);
+                res.download(resolved, filename);
             }
             catch (error) {
                 console.error("Error downloading onboarding document:", error);

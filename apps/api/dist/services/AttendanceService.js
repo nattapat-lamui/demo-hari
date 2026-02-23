@@ -11,6 +11,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AttendanceService = void 0;
 const db_1 = require("../db");
+const CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+let configCache = null;
+function getWorkSchedule() {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (configCache && Date.now() - configCache.fetchedAt < CONFIG_CACHE_TTL) {
+            return configCache.data;
+        }
+        const result = yield (0, db_1.query)(`SELECT key, value FROM system_configs WHERE category = 'attendance'`);
+        const map = {};
+        for (const row of result.rows) {
+            map[row.key] = row.value;
+        }
+        const data = {
+            lateThreshold: map['late_threshold'] || '09:00',
+            workEnd: map['work_end'] || '18:00',
+            standardHours: parseFloat(map['standard_hours'] || '8'),
+        };
+        configCache = { data, fetchedAt: Date.now() };
+        return data;
+    });
+}
 class AttendanceService {
     /**
      * Clock in for an employee
@@ -27,8 +48,9 @@ class AttendanceService {
             if (existing.rows.length > 0 && existing.rows[0].clock_in) {
                 throw new Error('Already clocked in for today');
             }
-            // Determine if late (after 9:00 AM Bangkok = 02:00 AM UTC)
-            const lateThreshold = new Date(`${today}T09:00:00+07:00`);
+            // Determine if late using configurable threshold
+            const config = yield getWorkSchedule();
+            const lateThreshold = new Date(`${today}T${config.lateThreshold}:00+07:00`);
             const status = now > lateThreshold ? 'Late' : 'On-time';
             if (existing.rows.length > 0) {
                 // Update existing record
@@ -67,11 +89,17 @@ class AttendanceService {
             const breakDuration = existing.rows[0].break_duration || 0;
             const totalMinutes = (now.getTime() - clockIn.getTime()) / 1000 / 60 - breakDuration;
             const totalHours = Math.round(totalMinutes / 60 * 100) / 100;
+            // Compute overtime and early departure
+            const config = yield getWorkSchedule();
+            const overtimeHours = Math.max(0, Math.round((totalHours - config.standardHours) * 100) / 100);
+            const workEndTime = new Date(`${today}T${config.workEnd}:00+07:00`);
+            const earlyDeparture = now < workEndTime;
             const status = existing.rows[0].status;
             const result = yield (0, db_1.query)(`UPDATE attendance_records
-       SET clock_out = $1, total_hours = $2, status = $3, notes = COALESCE($4, notes), updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5
-       RETURNING *`, [now, totalHours, status, notes, existing.rows[0].id]);
+       SET clock_out = $1, total_hours = $2, status = $3, notes = COALESCE($4, notes),
+           overtime_hours = $5, early_departure = $6, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7
+       RETURNING *`, [now, totalHours, status, notes, overtimeHours, earlyDeparture, existing.rows[0].id]);
             return this.mapRowToAttendance(result.rows[0]);
         });
     }
@@ -121,7 +149,8 @@ class AttendanceService {
         COUNT(*) FILTER (WHERE status = 'Absent') as absent_days,
         COUNT(*) FILTER (WHERE status = 'Late') as late_days,
         COUNT(*) FILTER (WHERE status = 'On-leave') as on_leave_days,
-        COALESCE(SUM(total_hours), 0) as total_hours
+        COALESCE(SUM(total_hours), 0) as total_hours,
+        COALESCE(SUM(overtime_hours), 0) as overtime_hours
        FROM attendance_records
        WHERE employee_id = $1 AND date BETWEEN $2 AND $3`, [employeeId, startDate, endDate]);
             const row = result.rows[0];
@@ -132,6 +161,7 @@ class AttendanceService {
                 lateDays: parseInt(row.late_days, 10),
                 onLeaveDays: parseInt(row.on_leave_days, 10),
                 totalHours: parseFloat(row.total_hours),
+                overtimeHours: parseFloat(row.overtime_hours),
             };
         });
     }
@@ -236,6 +266,7 @@ class AttendanceService {
         ar.id AS ar_id, ar.date AS ar_date, ar.clock_in, ar.clock_out,
         ar.break_duration, ar.total_hours, ar.status AS ar_status,
         ar.notes, ar.modified_by, ar.created_at AS ar_created_at,
+        ar.auto_checkout, ar.early_departure, ar.overtime_hours,
         e.id AS employee_id, e.name AS employee_name,
         e.department AS employee_department, e.avatar AS employee_avatar,
         CASE WHEN lr.id IS NOT NULL THEN true ELSE false END AS is_on_leave
@@ -285,6 +316,9 @@ class AttendanceService {
                     employeeDepartment: row.employee_department,
                     employeeAvatar: row.employee_avatar,
                     displayStatus,
+                    autoCheckout: row.auto_checkout === true,
+                    earlyDeparture: row.early_departure === true,
+                    overtimeHours: row.overtime_hours != null ? parseFloat(row.overtime_hours) : null,
                 };
             });
             return { data, total, page, limit, totalPages };
@@ -297,17 +331,23 @@ class AttendanceService {
     adminUpsertAttendance(data) {
         return __awaiter(this, void 0, void 0, function* () {
             const { employeeId, date, clockIn, clockOut, status, notes, modifiedBy } = data;
-            // Auto-compute totalHours when both clock in and out are provided
+            // Auto-compute totalHours, overtime, early departure when both clock times provided
             let totalHours = null;
+            let overtimeHours = null;
+            let earlyDeparture = false;
             if (clockIn && clockOut) {
                 const inTime = new Date(clockIn).getTime();
                 const outTime = new Date(clockOut).getTime();
                 if (outTime > inTime) {
                     totalHours = Math.round((outTime - inTime) / 1000 / 60 / 60 * 100) / 100;
+                    const config = yield getWorkSchedule();
+                    overtimeHours = Math.max(0, Math.round((totalHours - config.standardHours) * 100) / 100);
+                    const workEndTime = new Date(`${date}T${config.workEnd}:00+07:00`);
+                    earlyDeparture = new Date(clockOut) < workEndTime;
                 }
             }
-            const result = yield (0, db_1.query)(`INSERT INTO attendance_records (employee_id, date, clock_in, clock_out, total_hours, status, notes, modified_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            const result = yield (0, db_1.query)(`INSERT INTO attendance_records (employee_id, date, clock_in, clock_out, total_hours, status, notes, modified_by, overtime_hours, early_departure)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (employee_id, date)
        DO UPDATE SET
          clock_in = COALESCE($3, attendance_records.clock_in),
@@ -316,8 +356,10 @@ class AttendanceService {
          status = COALESCE($6, attendance_records.status),
          notes = COALESCE($7, attendance_records.notes),
          modified_by = $8,
+         overtime_hours = COALESCE($9, attendance_records.overtime_hours),
+         early_departure = COALESCE($10, attendance_records.early_departure),
          updated_at = CURRENT_TIMESTAMP
-       RETURNING *`, [employeeId, date, clockIn || null, clockOut || null, totalHours, status || 'On-time', notes || null, modifiedBy]);
+       RETURNING *`, [employeeId, date, clockIn || null, clockOut || null, totalHours, status || 'On-time', notes || null, modifiedBy, overtimeHours, earlyDeparture]);
             return this.mapRowToAttendance(result.rows[0]);
         });
     }
@@ -345,6 +387,9 @@ class AttendanceService {
             notes: row.notes,
             modifiedBy: row.modified_by,
             createdAt: row.created_at,
+            autoCheckout: row.auto_checkout === true,
+            earlyDeparture: row.early_departure === true,
+            overtimeHours: row.overtime_hours != null ? parseFloat(row.overtime_hours) : null,
         };
     }
 }

@@ -512,13 +512,13 @@ export class OnboardingService {
     return mapDocumentRow(result.rows[0]);
   }
 
-  async getDocumentFilePath(id: string): Promise<{ filePath: string | null; name: string } | null> {
+  async getDocumentFilePath(id: string): Promise<{ filePath: string | null; name: string; employeeId: string } | null> {
     const result = await query(
-      `SELECT file_path, name FROM onboarding_documents WHERE id = $1`,
+      `SELECT file_path, name, employee_id FROM onboarding_documents WHERE id = $1`,
       [id]
     );
     if (result.rows.length === 0) return null;
-    return { filePath: result.rows[0].file_path, name: result.rows[0].name };
+    return { filePath: result.rows[0].file_path, name: result.rows[0].name, employeeId: result.rows[0].employee_id };
   }
 }
 

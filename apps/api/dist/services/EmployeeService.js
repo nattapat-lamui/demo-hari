@@ -115,6 +115,7 @@ class EmployeeService {
     }
     updateEmployee(updateData) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             const { id } = updateData, data = __rest(updateData, ["id"]);
             // Check if employee exists
             const existing = yield this.getEmployeeById(id);
@@ -133,9 +134,9 @@ class EmployeeService {
                 updates.push(`email = $${paramIndex++}`);
                 values.push(data.email);
             }
-            if (data.role) {
+            if (data.role !== undefined) {
                 updates.push(`role = $${paramIndex++}`);
-                values.push(data.role);
+                values.push(data.role || null);
             }
             if (data.department) {
                 updates.push(`department = $${paramIndex++}`);
@@ -158,8 +159,14 @@ class EmployeeService {
                 values.push(data.phone);
             }
             if (data.avatar && !data.avatar.startsWith('blob:')) {
+                // Normalize: strip any absolute host prefix so we always store relative paths
+                let avatarPath = data.avatar;
+                const uploadIdx = avatarPath.indexOf('/uploads/');
+                if (uploadIdx > 0) {
+                    avatarPath = avatarPath.slice(uploadIdx);
+                }
                 updates.push(`avatar = $${paramIndex++}`);
-                values.push(data.avatar);
+                values.push(avatarPath);
             }
             if (data.location !== undefined) {
                 updates.push(`location = $${paramIndex++}`);
@@ -189,8 +196,18 @@ class EmployeeService {
                 updates.push(`address = $${paramIndex++}`);
                 values.push(data.address || null);
             }
+            if (data.status !== undefined) {
+                updates.push(`status = $${paramIndex++}`);
+                values.push(data.status);
+            }
             if (updates.length === 0) {
                 return existing;
+            }
+            // If terminating, reassign subordinates to the employee's manager
+            if (data.status === 'Terminated' && existing.status !== 'Terminated') {
+                const emp = yield (0, db_1.query)('SELECT manager_id FROM employees WHERE id = $1', [id]);
+                const parentManagerId = ((_a = emp.rows[0]) === null || _a === void 0 ? void 0 : _a.manager_id) || null;
+                yield (0, db_1.query)('UPDATE employees SET manager_id = $1 WHERE manager_id = $2', [parentManagerId, id]);
             }
             values.push(id);
             const updateQuery = `UPDATE employees SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
@@ -200,10 +217,15 @@ class EmployeeService {
     }
     deleteEmployee(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            const result = yield (0, db_1.query)('DELETE FROM employees WHERE id = $1', [id]);
-            if (result.rowCount === 0) {
+            // Get the employee's manager so subordinates can be reassigned
+            const emp = yield (0, db_1.query)('SELECT manager_id FROM employees WHERE id = $1', [id]);
+            if (emp.rowCount === 0) {
                 throw new Error('Employee not found');
             }
+            const parentManagerId = emp.rows[0].manager_id || null;
+            // Reassign subordinates to the deleted employee's manager (move up one level)
+            yield (0, db_1.query)('UPDATE employees SET manager_id = $1 WHERE manager_id = $2', [parentManagerId, id]);
+            yield (0, db_1.query)('DELETE FROM employees WHERE id = $1', [id]);
         });
     }
     mapRowToEmployee(row) {

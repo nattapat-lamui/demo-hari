@@ -256,6 +256,7 @@ export class OnboardingController {
   async downloadDocument(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const user = (req as any).user;
       const result = await OnboardingService.getDocumentFilePath(id);
 
       if (!result || !result.filePath) {
@@ -263,14 +264,28 @@ export class OnboardingController {
         return;
       }
 
-      if (!fs.existsSync(result.filePath)) {
+      // Ownership check
+      if (user.role !== "HR_ADMIN" && user.employeeId !== result.employeeId) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      // Path traversal protection
+      const uploadsDir = path.resolve(__dirname, "../../uploads/onboarding");
+      const resolved = path.resolve(result.filePath);
+      if (!resolved.startsWith(uploadsDir + path.sep) && resolved !== uploadsDir) {
         res.status(404).json({ error: "File not found on disk" });
         return;
       }
 
-      const ext = path.extname(result.filePath);
+      if (!fs.existsSync(resolved)) {
+        res.status(404).json({ error: "File not found on disk" });
+        return;
+      }
+
+      const ext = path.extname(resolved);
       const filename = result.name.replace(/[^a-zA-Z0-9-_ ]/g, "") + ext;
-      res.download(result.filePath, filename);
+      res.download(resolved, filename);
     } catch (error) {
       console.error("Error downloading onboarding document:", error);
       res.status(500).json({ error: "Failed to download document" });

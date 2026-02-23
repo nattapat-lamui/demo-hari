@@ -135,12 +135,21 @@ class DocumentService {
             if (!document) {
                 throw new Error('Document not found');
             }
-            if (!document.filePath || !fs_1.default.existsSync(document.filePath)) {
+            if (!document.filePath) {
+                throw new Error('File not found on disk');
+            }
+            // Path traversal protection: ensure resolved path is within uploads dir
+            const uploadsDir = path_1.default.resolve(__dirname, '../../uploads');
+            const resolved = path_1.default.resolve(document.filePath);
+            if (!resolved.startsWith(uploadsDir + path_1.default.sep) && resolved !== uploadsDir) {
+                throw new Error('File not found on disk');
+            }
+            if (!fs_1.default.existsSync(resolved)) {
                 throw new Error('File not found on disk');
             }
             // Update last accessed time
             yield (0, db_1.query)('UPDATE documents SET last_accessed = $1 WHERE id = $2', [new Date().toISOString(), id]);
-            return document.filePath;
+            return resolved;
         });
     }
     // Get storage statistics

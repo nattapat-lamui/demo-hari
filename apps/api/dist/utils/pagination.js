@@ -59,7 +59,10 @@ function getSortParams(req, allowedFields, defaultField = 'created_at', defaultO
 /**
  * Build SQL ORDER BY clause
  */
-function buildSortClause(field, order, fieldMapping = {}) {
-    const dbField = fieldMapping[field] || field;
+function buildSortClause(field, order, fieldMapping) {
+    const dbField = fieldMapping[field];
+    if (!dbField) {
+        throw new Error(`Invalid sort field: ${field}`);
+    }
     return `ORDER BY ${dbField} ${order}`;
 }

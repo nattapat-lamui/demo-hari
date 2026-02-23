@@ -92,8 +92,11 @@ export function getSortParams(
 export function buildSortClause(
   field: string,
   order: 'ASC' | 'DESC',
-  fieldMapping: Record<string, string> = {}
+  fieldMapping: Record<string, string>
 ): string {
-  const dbField = fieldMapping[field] || field;
+  const dbField = fieldMapping[field];
+  if (!dbField) {
+    throw new Error(`Invalid sort field: ${field}`);
+  }
   return `ORDER BY ${dbField} ${order}`;
 }

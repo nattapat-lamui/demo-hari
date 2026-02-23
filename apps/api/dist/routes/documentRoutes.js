@@ -45,8 +45,7 @@ const upload = (0, multer_1.default)({
             cb(null, true);
         }
         else {
-            cb(null, true); // Allow all for demo, log warning
-            console.warn('File type may not be supported:', file.mimetype);
+            cb(new Error('File type not allowed. Accepted: PDF, DOC, DOCX, XLS, XLSX, JPEG, PNG, GIF'));
         }
     },
 });

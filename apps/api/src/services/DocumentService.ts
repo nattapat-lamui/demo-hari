@@ -156,7 +156,18 @@ export class DocumentService {
             throw new Error('Document not found');
         }
 
-        if (!document.filePath || !fs.existsSync(document.filePath)) {
+        if (!document.filePath) {
+            throw new Error('File not found on disk');
+        }
+
+        // Path traversal protection: ensure resolved path is within uploads dir
+        const uploadsDir = path.resolve(__dirname, '../../uploads');
+        const resolved = path.resolve(document.filePath);
+        if (!resolved.startsWith(uploadsDir + path.sep) && resolved !== uploadsDir) {
+            throw new Error('File not found on disk');
+        }
+
+        if (!fs.existsSync(resolved)) {
             throw new Error('File not found on disk');
         }
 
@@ -166,7 +177,7 @@ export class DocumentService {
             [new Date().toISOString(), id]
         );
 
-        return document.filePath;
+        return resolved;
     }
 
     // Get storage statistics

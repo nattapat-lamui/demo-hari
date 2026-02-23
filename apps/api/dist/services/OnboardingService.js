@@ -290,9 +290,15 @@ class OnboardingService {
     // Delete a task
     deleteTask(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
+            var _a, _b, _c;
+            // Get employee_id before deleting so we can recalculate progress
+            const taskResult = yield (0, db_1.query)(`SELECT employee_id FROM tasks WHERE id = $1`, [id]);
+            const employeeId = (_a = taskResult.rows[0]) === null || _a === void 0 ? void 0 : _a.employee_id;
             const result = yield (0, db_1.query)(`DELETE FROM tasks WHERE id = $1 RETURNING id`, [id]);
-            return ((_a = result.rowCount) !== null && _a !== void 0 ? _a : 0) > 0;
+            if (((_b = result.rowCount) !== null && _b !== void 0 ? _b : 0) > 0 && employeeId) {
+                yield this.recalculateProgress(employeeId);
+            }
+            return ((_c = result.rowCount) !== null && _c !== void 0 ? _c : 0) > 0;
         });
     }
     // Seed default tasks for an employee
@@ -334,8 +340,8 @@ class OnboardingService {
             }
             yield (0, db_1.query)(`INSERT INTO onboarding_documents (employee_id, name, description)
        VALUES ${docValuesClauses.join(", ")}`, docParams);
-            // Update employee onboarding_status
-            yield (0, db_1.query)(`UPDATE employees SET onboarding_status = 'In Progress', onboarding_percentage = 0 WHERE id = $1`, [employeeId]);
+            // Recalculate onboarding progress from the newly seeded tasks
+            yield this.recalculateProgress(employeeId);
             // Send notification to the employee (if they have a user account)
             if (employeeUserId) {
                 try {
@@ -407,10 +413,10 @@ class OnboardingService {
     }
     getDocumentFilePath(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            const result = yield (0, db_1.query)(`SELECT file_path, name FROM onboarding_documents WHERE id = $1`, [id]);
+            const result = yield (0, db_1.query)(`SELECT file_path, name, employee_id FROM onboarding_documents WHERE id = $1`, [id]);
             if (result.rows.length === 0)
                 return null;
-            return { filePath: result.rows[0].file_path, name: result.rows[0].name };
+            return { filePath: result.rows[0].file_path, name: result.rows[0].name, employeeId: result.rows[0].employee_id };
         });
     }
 }

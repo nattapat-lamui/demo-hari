@@ -1,9 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// Security: Fail fast if JWT_SECRET is not set
+// Security: Fail fast if JWT_SECRET is not set or too weak
 if (!process.env.JWT_SECRET) {
     console.error('FATAL: JWT_SECRET environment variable is not set');
+    process.exit(1);
+}
+if (process.env.JWT_SECRET.length < 32) {
+    console.error('FATAL: JWT_SECRET must be at least 32 characters long');
     process.exit(1);
 }
 const JWT_SECRET: string = process.env.JWT_SECRET;

@@ -94,12 +94,28 @@ export class DocumentController {
     async downloadDocument(req: Request, res: Response): Promise<void> {
         try {
             const { id } = req.params;
+            const user = (req as any).user;
+
+            // Ownership check: fetch document first to verify access
+            const document = await DocumentService.getDocumentById(id);
+            if (!document) {
+                res.status(404).json({ error: 'Document not found' });
+                return;
+            }
+
+            if (user.role !== 'HR_ADMIN' && user.employeeId !== document.employeeId) {
+                res.status(403).json({ error: 'Access denied' });
+                return;
+            }
+
             const filePath = await DocumentService.getDocumentFilePath(id);
 
             res.download(filePath, (err) => {
                 if (err) {
                     console.error('Download error:', err);
-                    res.status(500).json({ error: 'Failed to download file' });
+                    if (!res.headersSent) {
+                        res.status(500).json({ error: 'Failed to download file' });
+                    }
                 }
             });
         } catch (error: any) {

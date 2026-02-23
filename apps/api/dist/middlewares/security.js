@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sanitizeHtml = exports.validateFileUpload = exports.validateLeaveRequest = exports.validateLogin = exports.validateEmployeeCreation = exports.validateRequest = exports.helmetConfig = exports.apiLimiter = exports.authLimiter = exports.generalLimiter = void 0;
+exports.sanitizeHtml = exports.validateResetPassword = exports.validateForgotPassword = exports.validateFileUpload = exports.validateLeaveRequest = exports.validateLogin = exports.validateEmployeeCreation = exports.validateRequest = exports.helmetConfig = exports.apiLimiter = exports.forgotPasswordLimiter = exports.authLimiter = exports.generalLimiter = void 0;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const helmet_1 = __importDefault(require("helmet"));
 const express_validator_1 = require("express-validator");
@@ -28,6 +28,14 @@ exports.authLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     skipSuccessfulRequests: true, // Don't count successful requests
 });
+// Stricter rate limit for forgot password
+exports.forgotPasswordLimiter = (0, express_rate_limit_1.default)({
+    windowMs: isDevelopment ? 1 * 60 * 1000 : 15 * 60 * 1000, // 1 min (dev) / 15 min (prod)
+    max: isDevelopment ? 50 : 5, // 50 attempts (dev) / 5 attempts (prod)
+    message: 'Too many password reset requests. Please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 // API rate limiter
 exports.apiLimiter = (0, express_rate_limit_1.default)({
     windowMs: 1 * 60 * 1000,
@@ -41,7 +49,12 @@ exports.helmetConfig = (0, helmet_1.default)({
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
             scriptSrc: ["'self'"],
-            imgSrc: ["'self'", 'data:', 'https:'],
+            imgSrc: ["'self'", 'data:', 'https://ui-avatars.com'],
+            connectSrc: ["'self'", 'wss:', 'ws:'],
+            objectSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+            formAction: ["'self'"],
+            baseUri: ["'self'"],
         },
     },
     crossOriginEmbedderPolicy: false, // Allow embedding
@@ -176,6 +189,33 @@ const validateFileUpload = (req, res, next) => {
     next();
 };
 exports.validateFileUpload = validateFileUpload;
+// Forgot password validation rules
+exports.validateForgotPassword = [
+    (0, express_validator_1.body)('email')
+        .trim()
+        .notEmpty()
+        .withMessage('Email is required')
+        .isEmail()
+        .withMessage('Invalid email format')
+        .normalizeEmail(),
+];
+// Reset password validation rules
+exports.validateResetPassword = [
+    (0, express_validator_1.body)('token')
+        .trim()
+        .notEmpty()
+        .withMessage('Token is required')
+        .isLength({ min: 64, max: 64 })
+        .withMessage('Invalid token format'),
+    (0, express_validator_1.body)('newPassword')
+        .notEmpty()
+        .withMessage('New password is required')
+        .isLength({ min: 8 })
+        .withMessage('Password must be at least 8 characters'),
+    (0, express_validator_1.body)('confirmPassword')
+        .notEmpty()
+        .withMessage('Confirm password is required'),
+];
 // Sanitize HTML to prevent XSS
 const sanitizeHtml = (text) => {
     return text

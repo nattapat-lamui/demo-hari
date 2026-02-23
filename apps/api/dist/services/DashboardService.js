@@ -138,22 +138,19 @@ class DashboardService {
      */
     getPendingSurveysCount(employeeId) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
-            // Check if surveys table exists and get pending count
+            var _a, _b;
             try {
-                const result = yield (0, db_1.query)(`SELECT COUNT(*) as pending_count
+                const result = yield (0, db_1.query)(`SELECT COUNT(*)::int AS pending_count
          FROM surveys s
-         WHERE s.status = 'Active'
-         AND s.end_date >= CURRENT_DATE
+         WHERE s.status = 'active'
          AND NOT EXISTS (
-           SELECT 1 FROM survey_responses sr
-           WHERE sr.survey_id = s.id
-           AND sr.employee_id = $1
+           SELECT 1 FROM survey_completions sc
+           WHERE sc.survey_id = s.id
+           AND sc.employee_id = $1
          )`, [employeeId]);
-                return parseInt(((_a = result.rows[0]) === null || _a === void 0 ? void 0 : _a.pending_count) || '0', 10);
+                return (_b = (_a = result.rows[0]) === null || _a === void 0 ? void 0 : _a.pending_count) !== null && _b !== void 0 ? _b : 0;
             }
-            catch (_b) {
-                // Table doesn't exist yet
+            catch (_c) {
                 return 0;
             }
         });

@@ -9,6 +9,7 @@ import swaggerUi from "swagger-ui-express";
 import { generalLimiter, helmetConfig, apiLimiter } from "./middlewares/security";
 import { auditLogMiddleware } from "./middlewares/auditLog";
 import { authenticateToken, requireAdmin } from "./middlewares/auth";
+import { errorHandler, notFoundHandler } from "./middlewares/errorHandler";
 import { swaggerSpec } from "./config/swagger";
 import { initializeSocket } from "./socket";
 
@@ -81,7 +82,7 @@ const corsOptions = {
       callback(null, true);
     } else {
       console.warn(`CORS blocked origin: ${origin}`);
-      callback(null, true); // Allow anyway for now, log for debugging
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
@@ -586,6 +587,10 @@ const runLightMigrations = async () => {
     // Table may not exist yet — ignore
   }
 };
+
+// Global error handlers (must be after all routes)
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 // Create HTTP server for Socket.io
 const httpServer = http.createServer(app);

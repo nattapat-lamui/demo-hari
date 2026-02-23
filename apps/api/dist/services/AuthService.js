@@ -15,11 +15,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const NotificationService_1 = __importDefault(require("./NotificationService"));
-// Security: Fail fast if JWT_SECRET is not set
+const EmailService_1 = __importDefault(require("./EmailService"));
+// Security: Fail fast if JWT_SECRET is not set or too weak
 if (!process.env.JWT_SECRET) {
     console.error("FATAL: JWT_SECRET environment variable is not set");
+    process.exit(1);
+}
+if (process.env.JWT_SECRET.length < 32) {
+    console.error("FATAL: JWT_SECRET must be at least 32 characters long");
     process.exit(1);
 }
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -42,7 +48,24 @@ function validatePasswordComplexity(password) {
     return { valid: true };
 }
 class AuthService {
-    login(credentials) {
+    /**
+     * Generate an access + refresh token pair.
+     * Access token: short-lived JWT (15 min).
+     * Refresh token: opaque random bytes stored as SHA-256 hash in DB.
+     */
+    generateTokenPair(payload, rememberMe) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Short-lived access token
+            const accessToken = jsonwebtoken_1.default.sign(payload, JWT_SECRET, { expiresIn: "15m" });
+            // Opaque refresh token
+            const rawRefreshToken = crypto_1.default.randomBytes(32).toString("hex");
+            const tokenHash = crypto_1.default.createHash("sha256").update(rawRefreshToken).digest("hex");
+            const expiresAt = new Date(Date.now() + (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000); // 30d or 7d
+            yield (0, db_1.query)(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`, [payload.userId, tokenHash, expiresAt.toISOString()]);
+            return { accessToken, refreshToken: rawRefreshToken };
+        });
+    }
+    login(credentials, rememberMe) {
         return __awaiter(this, void 0, void 0, function* () {
             const { email, password } = credentials;
             // 1. Find User in users table
@@ -61,13 +84,14 @@ class AuthService {
             // 3. Get Employee Info (for frontend convenience)
             const empResult = yield (0, db_1.query)("SELECT id, name, role, department, avatar, bio, phone FROM employees WHERE user_id = $1", [user.id]);
             const employee = empResult.rows[0] || {};
-            // 4. Generate JWT token
-            const token = jsonwebtoken_1.default.sign({
+            // 4. Generate token pair
+            const jwtPayload = {
                 userId: user.id,
                 email: user.email,
                 role: user.role,
                 employeeId: employee.id || null,
-            }, JWT_SECRET, { expiresIn: "8h" });
+            };
+            const { accessToken, refreshToken } = yield this.generateTokenPair(jwtPayload, rememberMe);
             // Return user info (without password)
             const userResponse = {
                 userId: user.id,
@@ -83,7 +107,9 @@ class AuthService {
                 phone: employee.phone,
             };
             return {
-                token,
+                token: accessToken,
+                accessToken,
+                refreshToken,
                 user: userResponse,
             };
         });
@@ -196,13 +222,14 @@ class AuthService {
                 // Don't fail registration if notification fails
                 console.error("Failed to create notifications:", notifError);
             }
-            // 10. Generate JWT token and return
-            const token = jsonwebtoken_1.default.sign({
+            // 10. Generate token pair and return
+            const jwtPayload = {
                 userId: newUser.id,
                 email: newUser.email,
                 role: newUser.role,
                 employeeId: employee.id,
-            }, JWT_SECRET, { expiresIn: "8h" });
+            };
+            const { accessToken, refreshToken } = yield this.generateTokenPair(jwtPayload);
             const userResponse = {
                 userId: newUser.id,
                 employeeId: employee.id,
@@ -216,9 +243,85 @@ class AuthService {
                 phone: employee.phone,
             };
             return {
-                token,
+                token: accessToken,
+                accessToken,
+                refreshToken,
                 user: userResponse,
             };
+        });
+    }
+    /**
+     * Forgot password — generate reset token and send email.
+     * Always returns silently to prevent user enumeration.
+     */
+    forgotPassword(email) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Look up user + employee name
+            const result = yield (0, db_1.query)(`SELECT u.id AS user_id, e.name
+       FROM users u
+       LEFT JOIN employees e ON e.user_id = u.id
+       WHERE u.email = $1`, [email]);
+            if (result.rows.length === 0) {
+                // No user found — return silently (no enumeration)
+                return;
+            }
+            const { user_id, name } = result.rows[0];
+            // Invalidate existing unused tokens for this user
+            yield (0, db_1.query)(`UPDATE password_reset_tokens SET used = TRUE WHERE user_id = $1 AND used = FALSE`, [user_id]);
+            // Generate token
+            const token = crypto_1.default.randomBytes(32).toString("hex");
+            const tokenHash = crypto_1.default.createHash("sha256").update(token).digest("hex");
+            const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+            yield (0, db_1.query)(`INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`, [user_id, tokenHash, expiresAt.toISOString()]);
+            // Send email (silent fail — don't expose errors)
+            try {
+                yield EmailService_1.default.sendPasswordResetEmail(email, token, name || undefined);
+            }
+            catch (err) {
+                console.error("Failed to send password reset email:", err);
+            }
+        });
+    }
+    /**
+     * Reset password using token
+     */
+    resetPassword(token, newPassword) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Validate password complexity
+            const passwordValidation = validatePasswordComplexity(newPassword);
+            if (!passwordValidation.valid) {
+                throw new Error(passwordValidation.message);
+            }
+            // Hash incoming token and look up
+            const tokenHash = crypto_1.default.createHash("sha256").update(token).digest("hex");
+            const result = yield (0, db_1.query)(`SELECT prt.id AS token_id, prt.user_id, prt.used, prt.expires_at,
+              u.password_hash, u.email, e.name
+       FROM password_reset_tokens prt
+       JOIN users u ON u.id = prt.user_id
+       LEFT JOIN employees e ON e.user_id = u.id
+       WHERE prt.token_hash = $1`, [tokenHash]);
+            if (result.rows.length === 0) {
+                throw new Error("Invalid or expired reset link. Please request a new one.");
+            }
+            const row = result.rows[0];
+            if (row.used) {
+                throw new Error("This reset link has already been used. Please request a new one.");
+            }
+            if (new Date(row.expires_at) < new Date()) {
+                throw new Error("This reset link has expired. Please request a new one.");
+            }
+            // Prevent same password reuse
+            const isSamePassword = yield bcrypt_1.default.compare(newPassword, row.password_hash);
+            if (isSamePassword) {
+                throw new Error("New password must be different from your current password.");
+            }
+            // Hash new password and update
+            const hashedPassword = yield bcrypt_1.default.hash(newPassword, 10);
+            yield (0, db_1.query)(`UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [hashedPassword, row.user_id]);
+            // Mark token as used + invalidate all remaining tokens for this user
+            yield (0, db_1.query)(`UPDATE password_reset_tokens SET used = TRUE WHERE user_id = $1 AND used = FALSE`, [row.user_id]);
+            // Send confirmation email (non-blocking)
+            EmailService_1.default.sendPasswordResetConfirmation(row.email, row.name || undefined).catch((err) => console.error("Failed to send reset confirmation email:", err));
         });
     }
     /**
@@ -248,6 +351,73 @@ class AuthService {
                 message: "Email eligible for registration",
                 employeeName: employeeResult.rows.length > 0 ? employeeResult.rows[0].name : undefined
             };
+        });
+    }
+    /**
+     * Refresh access token using a valid refresh token.
+     * Implements token rotation: old token is revoked, new pair is issued.
+     * If a revoked token is reused, ALL user tokens are revoked (theft detection).
+     */
+    refreshAccessToken(rawRefreshToken) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const tokenHash = crypto_1.default.createHash("sha256").update(rawRefreshToken).digest("hex");
+            const result = yield (0, db_1.query)(`SELECT rt.id, rt.user_id, rt.revoked, rt.expires_at,
+              u.email, u.role
+       FROM refresh_tokens rt
+       JOIN users u ON u.id = rt.user_id
+       WHERE rt.token_hash = $1`, [tokenHash]);
+            if (result.rows.length === 0) {
+                throw new Error("Invalid refresh token");
+            }
+            const row = result.rows[0];
+            // Theft detection: if a revoked token is reused, revoke ALL tokens for this user
+            if (row.revoked) {
+                yield (0, db_1.query)(`UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1`, [row.user_id]);
+                throw new Error("Refresh token reuse detected — all sessions revoked");
+            }
+            if (new Date(row.expires_at) < new Date()) {
+                throw new Error("Refresh token expired");
+            }
+            // Revoke the old token (rotation)
+            yield (0, db_1.query)(`UPDATE refresh_tokens SET revoked = TRUE WHERE id = $1`, [row.id]);
+            // Look up employee info for the new token payload + response
+            const empResult = yield (0, db_1.query)("SELECT id, name, role, department, avatar, bio, phone FROM employees WHERE user_id = $1", [row.user_id]);
+            const employee = empResult.rows[0] || {};
+            const jwtPayload = {
+                userId: row.user_id,
+                email: row.email,
+                role: row.role,
+                employeeId: employee.id || null,
+            };
+            const { accessToken, refreshToken } = yield this.generateTokenPair(jwtPayload);
+            const userResponse = {
+                userId: row.user_id,
+                employeeId: employee.id || row.user_id,
+                email: row.email,
+                name: employee.name || row.email,
+                role: row.role,
+                avatar: employee.avatar ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name || row.email)}&background=random`,
+                jobTitle: employee.role,
+                department: employee.department,
+                bio: employee.bio,
+                phone: employee.phone,
+            };
+            return {
+                token: accessToken,
+                accessToken,
+                refreshToken,
+                user: userResponse,
+            };
+        });
+    }
+    /**
+     * Revoke a refresh token (used during logout).
+     */
+    revokeRefreshToken(rawRefreshToken) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const tokenHash = crypto_1.default.createHash("sha256").update(rawRefreshToken).digest("hex");
+            yield (0, db_1.query)(`UPDATE refresh_tokens SET revoked = TRUE WHERE token_hash = $1`, [tokenHash]);
         });
     }
 }

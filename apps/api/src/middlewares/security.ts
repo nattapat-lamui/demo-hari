@@ -50,7 +50,12 @@ export const helmetConfig = helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
+      imgSrc: ["'self'", 'data:', 'https://ui-avatars.com'],
+      connectSrc: ["'self'", 'wss:', 'ws:'],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      formAction: ["'self'"],
+      baseUri: ["'self'"],
     },
   },
   crossOriginEmbedderPolicy: false, // Allow embedding

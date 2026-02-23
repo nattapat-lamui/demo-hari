@@ -18,12 +18,12 @@ class AuthController {
     login(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { email, password } = req.body;
+                const { email, password, rememberMe } = req.body;
                 if (!email || !password) {
                     res.status(400).json({ error: "Email and password are required" });
                     return;
                 }
-                const authResponse = yield AuthService_1.default.login({ email, password });
+                const authResponse = yield AuthService_1.default.login({ email, password }, rememberMe);
                 res.json(authResponse);
             }
             catch (error) {
@@ -82,6 +82,83 @@ class AuthController {
             catch (error) {
                 console.error("Registration error:", error);
                 res.status(400).json({ error: error.message || "Registration failed" });
+            }
+        });
+    }
+    forgotPassword(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const genericMessage = "If an account exists with this email, you will receive a password reset link shortly.";
+            try {
+                const { email } = req.body;
+                if (!email) {
+                    res.status(400).json({ error: "Email is required" });
+                    return;
+                }
+                yield AuthService_1.default.forgotPassword(email);
+                res.json({ message: genericMessage });
+            }
+            catch (error) {
+                // Always return same generic message to prevent user enumeration
+                console.error("Forgot password error:", error);
+                res.json({ message: genericMessage });
+            }
+        });
+    }
+    resetPassword(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { token, newPassword, confirmPassword } = req.body;
+                if (!token || !newPassword || !confirmPassword) {
+                    res
+                        .status(400)
+                        .json({ error: "Token, new password, and confirm password are required" });
+                    return;
+                }
+                if (newPassword !== confirmPassword) {
+                    res.status(400).json({ error: "Passwords do not match" });
+                    return;
+                }
+                yield AuthService_1.default.resetPassword(token, newPassword);
+                res.json({ message: "Password has been reset successfully." });
+            }
+            catch (error) {
+                console.error("Reset password error:", error);
+                res
+                    .status(400)
+                    .json({ error: error.message || "Failed to reset password" });
+            }
+        });
+    }
+    refresh(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { refreshToken } = req.body;
+                if (!refreshToken) {
+                    res.status(400).json({ error: "Refresh token is required" });
+                    return;
+                }
+                const authResponse = yield AuthService_1.default.refreshAccessToken(refreshToken);
+                res.json(authResponse);
+            }
+            catch (error) {
+                console.error("Token refresh error:", error);
+                res.status(401).json({ error: error.message || "Token refresh failed" });
+            }
+        });
+    }
+    logout(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { refreshToken } = req.body;
+                if (refreshToken) {
+                    yield AuthService_1.default.revokeRefreshToken(refreshToken);
+                }
+                res.json({ message: "Logged out successfully" });
+            }
+            catch (error) {
+                // Always return success for logout (best-effort)
+                console.error("Logout error:", error);
+                res.json({ message: "Logged out successfully" });
             }
         });
     }

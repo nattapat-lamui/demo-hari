@@ -5,9 +5,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireOwnerOrAdmin = exports.requireAdmin = exports.requireRole = exports.authenticateToken = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-// Security: Fail fast if JWT_SECRET is not set
+// Security: Fail fast if JWT_SECRET is not set or too weak
 if (!process.env.JWT_SECRET) {
     console.error('FATAL: JWT_SECRET environment variable is not set');
+    process.exit(1);
+}
+if (process.env.JWT_SECRET.length < 32) {
+    console.error('FATAL: JWT_SECRET must be at least 32 characters long');
     process.exit(1);
 }
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -23,7 +27,7 @@ const authenticateToken = (req, res, next) => {
     }
     jsonwebtoken_1.default.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) {
-            return res.status(403).json({ error: 'Invalid or expired token' });
+            return res.status(401).json({ error: 'Invalid or expired token' });
         }
         // Type assertion: we know the structure of our JWT payload
         req.user = decoded;

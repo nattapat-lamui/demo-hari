@@ -95,11 +95,24 @@ class DocumentController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { id } = req.params;
+                const user = req.user;
+                // Ownership check: fetch document first to verify access
+                const document = yield DocumentService_1.default.getDocumentById(id);
+                if (!document) {
+                    res.status(404).json({ error: 'Document not found' });
+                    return;
+                }
+                if (user.role !== 'HR_ADMIN' && user.employeeId !== document.employeeId) {
+                    res.status(403).json({ error: 'Access denied' });
+                    return;
+                }
                 const filePath = yield DocumentService_1.default.getDocumentFilePath(id);
                 res.download(filePath, (err) => {
                     if (err) {
                         console.error('Download error:', err);
-                        res.status(500).json({ error: 'Failed to download file' });
+                        if (!res.headersSent) {
+                            res.status(500).json({ error: 'Failed to download file' });
+                        }
                     }
                 });
             }
