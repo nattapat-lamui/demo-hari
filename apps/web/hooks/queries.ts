@@ -27,6 +27,7 @@ import type {
   SurveyListItem,
   SurveyDetail,
   SentimentOverview,
+  EffectiveLeaveQuota,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -1048,6 +1049,42 @@ export const useDeleteSurvey = () => {
     mutationFn: (id: string) => api.delete(`/surveys/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.surveys.all });
+    },
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Employee Leave Quota Queries & Mutations
+// ---------------------------------------------------------------------------
+
+export const useEmployeeLeaveQuotas = (employeeId: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.leaveQuotas.byEmployee(employeeId!),
+    queryFn: () => api.get<EffectiveLeaveQuota[]>(`/employees/${employeeId}/leave-quotas`),
+    enabled: !!employeeId,
+  });
+};
+
+export const useUpdateEmployeeLeaveQuotas = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, overrides }: { employeeId: string; overrides: Array<{ leaveType: string; total: number }> }) =>
+      api.put<EffectiveLeaveQuota[]>(`/employees/${employeeId}/leave-quotas`, { overrides } as unknown as Record<string, unknown>),
+    onSuccess: (_data, { employeeId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.leaveQuotas.byEmployee(employeeId) });
+      qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
+    },
+  });
+};
+
+export const useDeleteLeaveQuotaOverride = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, leaveType }: { employeeId: string; leaveType: string }) =>
+      api.delete<EffectiveLeaveQuota[]>(`/employees/${employeeId}/leave-quotas/${encodeURIComponent(leaveType)}`),
+    onSuccess: (_data, { employeeId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.leaveQuotas.byEmployee(employeeId) });
+      qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
     },
   });
 };

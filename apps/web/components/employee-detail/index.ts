@@ -6,4 +6,5 @@ export { DocumentsTab } from './DocumentsTab';
 export { TrainingTab } from './TrainingTab';
 export { PerformanceTab } from './PerformanceTab';
 export { EmployeeModals } from './EmployeeModals';
+export { LeaveQuotaTab } from './LeaveQuotaTab';
 export type * from './EmployeeDetailTypes';

@@ -145,6 +145,14 @@ export interface LeaveBalance {
   total: number;
   used: number;
   remaining: number;
+  isOverride?: boolean;
+}
+
+export interface EffectiveLeaveQuota {
+  type: string;
+  total: number;
+  isOverride: boolean;
+  defaultTotal: number;
 }
 
 export interface ComplianceItem {

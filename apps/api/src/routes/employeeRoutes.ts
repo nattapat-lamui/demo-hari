@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import EmployeeController from '../controllers/EmployeeController';
+import EmployeeLeaveQuotaController from '../controllers/EmployeeLeaveQuotaController';
 import { apiLimiter, validateEmployeeCreation, validateRequest } from '../middlewares/security';
 import { authenticateToken, requireAdmin } from '../middlewares/auth';
 import { cacheMiddleware, invalidateCache } from '../middlewares/cache';
@@ -63,6 +64,15 @@ router.post('/upload-avatar', apiLimiter, upload.single('avatar'), (req, res) =>
 
 // GET /api/employees - Get all employees (any authenticated user) - cached for 30s
 router.get('/', cacheMiddleware(), EmployeeController.getAllEmployees.bind(EmployeeController));
+
+// GET /api/employees/:id/leave-quotas - Get effective leave quotas for employee
+router.get('/:id/leave-quotas', EmployeeLeaveQuotaController.getEffectiveQuotas.bind(EmployeeLeaveQuotaController));
+
+// PUT /api/employees/:id/leave-quotas - Upsert leave quota overrides (Admin only)
+router.put('/:id/leave-quotas', requireAdmin, apiLimiter, EmployeeLeaveQuotaController.upsertOverrides.bind(EmployeeLeaveQuotaController));
+
+// DELETE /api/employees/:id/leave-quotas/:type - Delete a single leave quota override (Admin only)
+router.delete('/:id/leave-quotas/:type', requireAdmin, apiLimiter, EmployeeLeaveQuotaController.deleteOverride.bind(EmployeeLeaveQuotaController));
 
 // GET /api/employees/:id/manager - Get employee's manager (any authenticated user) - cached for 30s
 router.get('/:id/manager', cacheMiddleware(), EmployeeController.getEmployeeManager.bind(EmployeeController));

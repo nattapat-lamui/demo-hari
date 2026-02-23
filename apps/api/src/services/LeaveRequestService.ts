@@ -1,6 +1,7 @@
 import { query } from '../db';
 import { LeaveRequest, CreateLeaveRequestDTO, UpdateLeaveRequestDTO, EditLeaveRequestDTO } from '../models/LeaveRequest';
 import SystemConfigService from './SystemConfigService';
+import EmployeeLeaveQuotaService from './EmployeeLeaveQuotaService';
 import NotificationService from './NotificationService';
 import { withTransaction } from '../utils/transaction';
 import { PaginationParams, PaginatedResult, createPaginatedResult, buildPaginationClause, buildSortClause } from '../utils/pagination';
@@ -122,9 +123,9 @@ export class LeaveRequestService {
         const diffTime = Math.abs(end.getTime() - start.getTime());
         const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-        // Validate leave quota for limited types (Vacation, Sick Leave)
-        const leaveQuotas = await SystemConfigService.getLeaveQuotas();
-        const quota = leaveQuotas.find(q => q.type === type);
+        // Validate leave quota using effective quotas (per-employee override > global default)
+        const effectiveQuotas = await EmployeeLeaveQuotaService.getEffectiveQuotas(employeeId);
+        const quota = effectiveQuotas.find(q => q.type === type);
         if (quota && quota.total !== -1) {
             const usedResult = await query(
                 `SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
@@ -243,9 +244,9 @@ export class LeaveRequestService {
             const newEnd = new Date(editData.endDate);
             const newDays = Math.ceil(Math.abs(newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-            // Re-validate quota (exclude current request from used-days count)
-            const leaveQuotas = await SystemConfigService.getLeaveQuotas();
-            const quota = leaveQuotas.find(q => q.type === editData.type);
+            // Re-validate quota using effective quotas (exclude current request from used-days count)
+            const effectiveQuotas = await EmployeeLeaveQuotaService.getEffectiveQuotas(employeeId);
+            const quota = effectiveQuotas.find(q => q.type === editData.type);
             if (quota && quota.total !== -1) {
                 const usedResult = await query(
                     `SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
@@ -550,13 +551,14 @@ export class LeaveRequestService {
             return acc;
         }, {});
 
-        const leaveQuotas = await SystemConfigService.getLeaveQuotas();
+        const effectiveQuotas = await EmployeeLeaveQuotaService.getEffectiveQuotas(employeeId);
 
-        return leaveQuotas.map(({ type, total }) => ({
+        return effectiveQuotas.map(({ type, total, isOverride }) => ({
             type,
             total,
             used: usedDays[type] || 0,
             remaining: total === -1 ? -1 : Math.max(0, total - (usedDays[type] || 0)),
+            isOverride,
         }));
     }
 

@@ -104,4 +104,8 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.surveys.all, 'detail', id] as const,
     sentiment: () => [...queryKeys.surveys.all, 'sentiment'] as const,
   },
+  leaveQuotas: {
+    all: ['leaveQuotas'] as const,
+    byEmployee: (id: string) => [...queryKeys.leaveQuotas.all, id] as const,
+  },
 } as const;

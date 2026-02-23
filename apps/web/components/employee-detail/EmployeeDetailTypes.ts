@@ -9,7 +9,7 @@ export interface EmployeePermissions {
     canViewSensitiveTabs: boolean;
 }
 
-export type EmployeeTab = 'overview' | 'history' | 'documents' | 'training' | 'performance';
+export type EmployeeTab = 'overview' | 'history' | 'documents' | 'training' | 'performance' | 'leave-quotas';
 
 export type ShowToastFn = (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
 

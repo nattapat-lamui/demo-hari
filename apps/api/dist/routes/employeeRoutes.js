@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const EmployeeController_1 = __importDefault(require("../controllers/EmployeeController"));
+const EmployeeLeaveQuotaController_1 = __importDefault(require("../controllers/EmployeeLeaveQuotaController"));
 const security_1 = require("../middlewares/security");
 const auth_1 = require("../middlewares/auth");
 const cache_1 = require("../middlewares/cache");
@@ -63,6 +64,12 @@ router.post('/upload-avatar', security_1.apiLimiter, upload.single('avatar'), (r
 });
 // GET /api/employees - Get all employees (any authenticated user) - cached for 30s
 router.get('/', (0, cache_1.cacheMiddleware)(), EmployeeController_1.default.getAllEmployees.bind(EmployeeController_1.default));
+// GET /api/employees/:id/leave-quotas - Get effective leave quotas for employee
+router.get('/:id/leave-quotas', EmployeeLeaveQuotaController_1.default.getEffectiveQuotas.bind(EmployeeLeaveQuotaController_1.default));
+// PUT /api/employees/:id/leave-quotas - Upsert leave quota overrides (Admin only)
+router.put('/:id/leave-quotas', auth_1.requireAdmin, security_1.apiLimiter, EmployeeLeaveQuotaController_1.default.upsertOverrides.bind(EmployeeLeaveQuotaController_1.default));
+// DELETE /api/employees/:id/leave-quotas/:type - Delete a single leave quota override (Admin only)
+router.delete('/:id/leave-quotas/:type', auth_1.requireAdmin, security_1.apiLimiter, EmployeeLeaveQuotaController_1.default.deleteOverride.bind(EmployeeLeaveQuotaController_1.default));
 // GET /api/employees/:id/manager - Get employee's manager (any authenticated user) - cached for 30s
 router.get('/:id/manager', (0, cache_1.cacheMiddleware)(), EmployeeController_1.default.getEmployeeManager.bind(EmployeeController_1.default));
 // GET /api/employees/:id/direct-reports - Get employee's direct reports (any authenticated user) - cached for 30s

@@ -577,6 +577,20 @@ const runLightMigrations = async () => {
         [sid]
       );
     }
+    // Employee leave quota overrides (per-employee)
+    await query(`
+      CREATE TABLE IF NOT EXISTS employee_leave_quotas (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        leave_type VARCHAR(50) NOT NULL,
+        total INTEGER NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_employee_leave_type UNIQUE (employee_id, leave_type)
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_elq_employee_id ON employee_leave_quotas(employee_id)`);
+
     // Fix avatar URLs: strip absolute host prefix, keep only relative path
     await query(`
       UPDATE employees

@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LeaveRequestService = void 0;
 const db_1 = require("../db");
-const SystemConfigService_1 = __importDefault(require("./SystemConfigService"));
+const EmployeeLeaveQuotaService_1 = __importDefault(require("./EmployeeLeaveQuotaService"));
 const NotificationService_1 = __importDefault(require("./NotificationService"));
 const transaction_1 = require("../utils/transaction");
 const pagination_1 = require("../utils/pagination");
@@ -27,6 +27,9 @@ const BASE_SELECT = `
     LEFT JOIN employees e ON lr.employee_id = e.id
     LEFT JOIN employees he ON lr.handover_employee_id = he.id`;
 class LeaveRequestService {
+    static stripSensitiveLeaveFields(request) {
+        return Object.assign(Object.assign({}, request), { type: 'Leave', reason: undefined, medicalCertificatePath: undefined, handoverNotes: undefined, rejectionReason: undefined });
+    }
     getAllLeaveRequests() {
         return __awaiter(this, void 0, void 0, function* () {
             const result = yield (0, db_1.query)(`
@@ -103,9 +106,9 @@ class LeaveRequestService {
             const end = new Date(endDate);
             const diffTime = Math.abs(end.getTime() - start.getTime());
             const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-            // Validate leave quota for limited types (Vacation, Sick Leave)
-            const leaveQuotas = yield SystemConfigService_1.default.getLeaveQuotas();
-            const quota = leaveQuotas.find(q => q.type === type);
+            // Validate leave quota using effective quotas (per-employee override > global default)
+            const effectiveQuotas = yield EmployeeLeaveQuotaService_1.default.getEffectiveQuotas(employeeId);
+            const quota = effectiveQuotas.find(q => q.type === type);
             if (quota && quota.total !== -1) {
                 const usedResult = yield (0, db_1.query)(`SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
                  FROM leave_requests
@@ -198,9 +201,9 @@ class LeaveRequestService {
                 const newStart = new Date(editData.startDate);
                 const newEnd = new Date(editData.endDate);
                 const newDays = Math.ceil(Math.abs(newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                // Re-validate quota (exclude current request from used-days count)
-                const leaveQuotas = yield SystemConfigService_1.default.getLeaveQuotas();
-                const quota = leaveQuotas.find(q => q.type === editData.type);
+                // Re-validate quota using effective quotas (exclude current request from used-days count)
+                const effectiveQuotas = yield EmployeeLeaveQuotaService_1.default.getEffectiveQuotas(employeeId);
+                const quota = effectiveQuotas.find(q => q.type === editData.type);
                 if (quota && quota.total !== -1) {
                     const usedResult = yield (0, db_1.query)(`SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
                      FROM leave_requests
@@ -443,12 +446,13 @@ class LeaveRequestService {
                 acc[row.leave_type] = parseInt(row.used_days);
                 return acc;
             }, {});
-            const leaveQuotas = yield SystemConfigService_1.default.getLeaveQuotas();
-            return leaveQuotas.map(({ type, total }) => ({
+            const effectiveQuotas = yield EmployeeLeaveQuotaService_1.default.getEffectiveQuotas(employeeId);
+            return effectiveQuotas.map(({ type, total, isOverride }) => ({
                 type,
                 total,
                 used: usedDays[type] || 0,
                 remaining: total === -1 ? -1 : Math.max(0, total - (usedDays[type] || 0)),
+                isOverride,
             }));
         });
     }

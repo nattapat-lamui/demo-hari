@@ -510,6 +510,21 @@ CREATE INDEX idx_survey_questions_survey ON survey_questions(survey_id);
 CREATE INDEX idx_survey_responses_question ON survey_responses(question_id);
 CREATE INDEX idx_survey_completions_survey ON survey_completions(survey_id);
 CREATE INDEX idx_survey_completions_employee ON survey_completions(employee_id);
+
+-- ==========================================
+-- EMPLOYEE LEAVE QUOTA OVERRIDES
+-- ==========================================
+
+CREATE TABLE employee_leave_quotas (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    leave_type VARCHAR(50) NOT NULL,
+    total INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_employee_leave_type UNIQUE (employee_id, leave_type)
+);
+CREATE INDEX idx_elq_employee_id ON employee_leave_quotas(employee_id);
 `;
 
 export const runMigration = async () => {

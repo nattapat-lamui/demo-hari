@@ -23,6 +23,7 @@ const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const security_1 = require("./middlewares/security");
 const auditLog_1 = require("./middlewares/auditLog");
 const auth_1 = require("./middlewares/auth");
+const errorHandler_1 = require("./middlewares/errorHandler");
 const swagger_1 = require("./config/swagger");
 const socket_1 = require("./socket");
 // Import Clean Architecture routes
@@ -526,6 +527,19 @@ const runLightMigrations = () => __awaiter(void 0, void 0, void 0, function* () 
           ($1, 'Decisions about people (promotions, assignments, evaluations) are made fairly', 'Management', 24),
           ($1, 'There is a culture of transparency, honesty, and trust at all levels', 'Management', 25)`, [sid]);
         }
+        // Employee leave quota overrides (per-employee)
+        yield (0, db_1.query)(`
+      CREATE TABLE IF NOT EXISTS employee_leave_quotas (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        leave_type VARCHAR(50) NOT NULL,
+        total INTEGER NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_employee_leave_type UNIQUE (employee_id, leave_type)
+      )
+    `);
+        yield (0, db_1.query)(`CREATE INDEX IF NOT EXISTS idx_elq_employee_id ON employee_leave_quotas(employee_id)`);
         // Fix avatar URLs: strip absolute host prefix, keep only relative path
         yield (0, db_1.query)(`
       UPDATE employees
@@ -537,6 +551,9 @@ const runLightMigrations = () => __awaiter(void 0, void 0, void 0, function* () 
         // Table may not exist yet — ignore
     }
 });
+// Global error handlers (must be after all routes)
+app.use(errorHandler_1.notFoundHandler);
+app.use(errorHandler_1.errorHandler);
 // Create HTTP server for Socket.io
 const httpServer = http_1.default.createServer(app);
 // Initialize Socket.io

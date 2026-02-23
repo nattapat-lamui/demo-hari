@@ -25,6 +25,7 @@ import {
     TrainingTab,
     PerformanceTab,
     EmployeeModals,
+    LeaveQuotaTab,
 } from '../components/employee-detail';
 import type { EmployeePermissions, EmployeeTab } from '../components/employee-detail';
 
@@ -651,6 +652,14 @@ export const EmployeeDetail: React.FC = () => {
                                     </button>
                                 </>
                             )}
+                            {isAdmin && (
+                                <button
+                                    className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'leave-quotas' ? 'border-primary text-primary' : 'border-transparent text-text-muted-light hover:text-text-light dark:hover:text-text-dark'}`}
+                                    onClick={() => setActiveTab('leave-quotas')}
+                                >
+                                    Leave Quotas
+                                </button>
+                            )}
                         </div>
 
                         <div className="p-6 flex-grow">
@@ -703,6 +712,12 @@ export const EmployeeDetail: React.FC = () => {
                                     onAddReview={handleAddReview}
                                     onEditReview={handleEditReview}
                                     onDeleteReview={handleDeleteReview}
+                                />
+                            )}
+                            {activeTab === 'leave-quotas' && isAdmin && id && (
+                                <LeaveQuotaTab
+                                    employeeId={id}
+                                    showToast={showToast}
                                 />
                             )}
                         </div>
