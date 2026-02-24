@@ -21,13 +21,20 @@ import { queryKeys } from '../lib/queryKeys';
 import { LeaveTypesTab } from '../components/settings/LeaveTypesTab';
 
 export const Settings: React.FC = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, isAdminView } = useAuth();
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<
     'general' | 'notifications' | 'security' | 'appearance' | 'leaveTypes'
   >('general');
+
+  // Reset to general tab if user switches to employee view while on admin-only tab
+  useEffect(() => {
+    if (!isAdminView && activeTab === 'leaveTypes') {
+      setActiveTab('general');
+    }
+  }, [isAdminView, activeTab]);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -423,7 +430,7 @@ export const Settings: React.FC = () => {
               <Lock size={18} />
               Security
             </button>
-            {user?.role === 'HR_ADMIN' && (
+            {isAdminView && (
               <button
                 onClick={() => setActiveTab('leaveTypes')}
                 className={`flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 lg:w-full ${
@@ -861,7 +868,7 @@ export const Settings: React.FC = () => {
           )}
 
           {/* Leave Types Tab (Admin only) */}
-          {activeTab === 'leaveTypes' && <LeaveTypesTab showToast={showToast} />}
+          {activeTab === 'leaveTypes' && isAdminView && <LeaveTypesTab showToast={showToast} />}
         </div>
       </div>
 
