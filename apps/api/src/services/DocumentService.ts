@@ -175,7 +175,7 @@ export class DocumentService {
     // Get storage statistics
     async getStorageStats(): Promise<{ used: number; total: number; usedFormatted: string; totalFormatted: string; percentage: number }> {
         // Default storage limit (can be configured via env var)
-        const totalStorage = parseInt(process.env.STORAGE_LIMIT_GB || '100', 10) * 1024 * 1024 * 1024; // 100 GB default
+        const totalStorage = parseInt(process.env.STORAGE_LIMIT_GB || '10', 10) * 1024 * 1024 * 1024; // 10 GB default (R2 free tier)
 
         const usedStorage = await storageService.getStorageUsed();
 
