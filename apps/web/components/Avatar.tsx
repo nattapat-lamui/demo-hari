@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { User } from 'lucide-react';
+import { API_HOST } from '../lib/api';
 
 interface AvatarProps {
   src?: string | null;
@@ -48,6 +49,13 @@ export const Avatar: React.FC<AvatarProps> = ({
 }) => {
   const [hasError, setHasError] = useState(false);
 
+  // Resolve relative paths (e.g. /uploads/avatars/...) to full URLs
+  const resolvedSrc = useMemo(() => {
+    if (!src) return null;
+    if (src.startsWith('/')) return `${API_HOST}${src}`;
+    return src;
+  }, [src]);
+
   const getInitials = (name: string): string => {
     return name
       .split(' ')
@@ -57,7 +65,7 @@ export const Avatar: React.FC<AvatarProps> = ({
       .slice(0, 2);
   };
 
-  const showFallback = !src || hasError;
+  const showFallback = !resolvedSrc || hasError;
 
   if (showFallback) {
     return (
@@ -77,7 +85,7 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   return (
     <img
-      src={src}
+      src={resolvedSrc!}
       alt={alt}
       onError={() => setHasError(true)}
       className={`${sizeClasses[size]} rounded-full object-cover flex-shrink-0 ${className}`}
