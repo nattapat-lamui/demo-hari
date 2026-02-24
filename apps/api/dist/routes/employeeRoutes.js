@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -9,48 +18,22 @@ const EmployeeLeaveQuotaController_1 = __importDefault(require("../controllers/E
 const security_1 = require("../middlewares/security");
 const auth_1 = require("../middlewares/auth");
 const cache_1 = require("../middlewares/cache");
-const multer_1 = __importDefault(require("multer"));
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
+const upload_1 = require("../middlewares/upload");
+const StorageService_1 = require("../services/StorageService");
 const router = (0, express_1.Router)();
-// Configure multer for avatar uploads
-const storage = multer_1.default.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path_1.default.join(__dirname, '../../uploads/avatars');
-        if (!fs_1.default.existsSync(uploadDir)) {
-            fs_1.default.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = path_1.default.extname(file.originalname);
-        cb(null, `avatar-${uniqueSuffix}${ext}`);
-    },
-});
-const upload = (0, multer_1.default)({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true);
-        }
-        else {
-            cb(new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.'));
-        }
-    },
-});
 // All routes require authentication
 router.use(auth_1.authenticateToken);
 // POST /api/employees/upload-avatar - Upload avatar image
-router.post('/upload-avatar', security_1.apiLimiter, upload.single('avatar'), (req, res) => {
+router.post('/upload-avatar', security_1.apiLimiter, upload_1.avatarUpload.single('avatar'), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
-        // Return the URL to the uploaded file
-        const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+        const key = (0, upload_1.generateStorageKey)('avatars', req.file, 'avatar');
+        const buffer = (0, upload_1.getFileBuffer)(req.file);
+        yield StorageService_1.storageService.upload({ key, body: buffer, contentType: req.file.mimetype });
+        // For avatars: return public URL (R2) or relative path (local)
+        const avatarUrl = StorageService_1.storageService.getPublicUrl(key) || `/uploads/${key}`;
         res.status(200).json({
             success: true,
             avatarUrl,
@@ -61,7 +44,7 @@ router.post('/upload-avatar', security_1.apiLimiter, upload.single('avatar'), (r
         console.error('Avatar upload error:', error);
         res.status(500).json({ error: 'Failed to upload avatar' });
     }
-});
+}));
 // GET /api/employees - Get all employees (any authenticated user) - cached for 30s
 router.get('/', (0, cache_1.cacheMiddleware)(), EmployeeController_1.default.getAllEmployees.bind(EmployeeController_1.default));
 // GET /api/employees/:id/leave-quotas - Get effective leave quotas for employee

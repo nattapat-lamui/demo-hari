@@ -4,6 +4,7 @@ import compression from "compression";
 import dotenv from "dotenv";
 import http from "http";
 import { query } from "./db";
+import fs from "fs";
 import path from "path";
 import swaggerUi from "swagger-ui-express";
 import { generalLimiter, helmetConfig, apiLimiter } from "./middlewares/security";
@@ -99,6 +100,12 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Audit logging middleware
 app.use(auditLogMiddleware);
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, "../uploads/avatars");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
@@ -591,12 +598,67 @@ const runLightMigrations = async () => {
     `);
     await query(`CREATE INDEX IF NOT EXISTS idx_elq_employee_id ON employee_leave_quotas(employee_id)`);
 
+    // Deduplicate onboarding tasks: keep only the earliest set per employee
+    await query(`
+      DELETE FROM tasks t
+      USING (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY employee_id, title ORDER BY created_at ASC) AS rn
+        FROM tasks
+      ) dup
+      WHERE t.id = dup.id AND dup.rn > 1
+    `);
+
+    // Deduplicate onboarding documents: keep only the earliest set per employee
+    await query(`
+      DELETE FROM onboarding_documents d
+      USING (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY employee_id, name ORDER BY created_at ASC) AS rn
+        FROM onboarding_documents
+      ) dup
+      WHERE d.id = dup.id AND dup.rn > 1
+    `);
+
+    // Normalize document file paths: full disk paths → storage keys
+    // documents.file_path: /abs/path/to/uploads/filename.pdf → documents/filename.pdf
+    await query(`
+      UPDATE documents
+      SET file_path = 'documents/' || SUBSTRING(file_path FROM '[^/\\\\]+$')
+      WHERE file_path LIKE '/%' AND file_path NOT LIKE 'documents/%'
+    `);
+
+    // onboarding_documents.file_path: /abs/path/to/uploads/onboarding/filename.pdf → onboarding/filename.pdf
+    await query(`
+      UPDATE onboarding_documents
+      SET file_path = 'onboarding/' || SUBSTRING(file_path FROM '[^/\\\\]+$')
+      WHERE file_path IS NOT NULL AND file_path LIKE '/%' AND file_path NOT LIKE 'onboarding/%'
+    `);
+
+    // leave_requests.medical_certificate_path: /uploads/medical-certs/filename.pdf → medical-certs/filename.pdf
+    await query(`
+      UPDATE leave_requests
+      SET medical_certificate_path = REPLACE(medical_certificate_path, '/uploads/', '')
+      WHERE medical_certificate_path LIKE '/uploads/%'
+    `);
+
     // Fix avatar URLs: strip absolute host prefix, keep only relative path
     await query(`
       UPDATE employees
       SET avatar = SUBSTRING(avatar FROM '/uploads/')
       WHERE avatar LIKE 'http%/uploads/%'
     `);
+
+    // Fix stale /uploads/ avatar paths where files no longer exist (e.g. after Vercel redeployment)
+    // Only run for local disk mode (R2 avatars store full public URLs, not /uploads/ paths)
+    if (!process.env.R2_ACCOUNT_ID) {
+      const staleCheck = await query(`SELECT id, name, avatar FROM employees WHERE avatar LIKE '/uploads/%'`);
+      for (const row of staleCheck.rows) {
+        const filePath = path.join(__dirname, '..', row.avatar);
+        if (!fs.existsSync(filePath)) {
+          const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name)}&background=random`;
+          await query(`UPDATE employees SET avatar = $1 WHERE id = $2`, [fallback, row.id]);
+        }
+      }
+    }
   } catch (err) {
     // Table may not exist yet — ignore
   }

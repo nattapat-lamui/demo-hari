@@ -2,49 +2,9 @@ import { Router } from "express";
 import OnboardingController from "../controllers/OnboardingController";
 import { authenticateToken, requireAdmin } from "../middlewares/auth";
 import { apiLimiter } from "../middlewares/security";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { onboardingDocUpload } from "../middlewares/upload";
 
 const router = Router();
-
-// Multer config for onboarding document uploads
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    const uploadDir = path.join(__dirname, "../../uploads/onboarding");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, uniqueSuffix + ext);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter: (_req, file, cb) => {
-    const allowedTypes = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-    ];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("File type not allowed. Accepted: PDF, DOC, DOCX, XLS, XLSX, JPEG, PNG, GIF") as any);
-    }
-  },
-});
 
 // All onboarding routes require authentication
 router.use(authenticateToken);
@@ -107,7 +67,7 @@ router.get(
 router.post(
   "/documents/:id/upload",
   apiLimiter,
-  upload.single("file"),
+  onboardingDocUpload.single("file"),
   OnboardingController.uploadDocument.bind(OnboardingController)
 );
 

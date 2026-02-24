@@ -18,6 +18,7 @@ const compression_1 = __importDefault(require("compression"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const http_1 = __importDefault(require("http"));
 const db_1 = require("./db");
+const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const security_1 = require("./middlewares/security");
@@ -103,6 +104,11 @@ app.use(express_1.default.json({ limit: "10mb" }));
 app.use(express_1.default.urlencoded({ extended: true, limit: "10mb" }));
 // Audit logging middleware
 app.use(auditLog_1.auditLogMiddleware);
+// Ensure uploads directory exists
+const uploadsDir = path_1.default.join(__dirname, "../uploads/avatars");
+if (!fs_1.default.existsSync(uploadsDir)) {
+    fs_1.default.mkdirSync(uploadsDir, { recursive: true });
+}
 // Serve uploaded files statically
 app.use("/uploads", express_1.default.static(path_1.default.join(__dirname, "../uploads")));
 app.get("/ping", (_req, res) => res.send("pong"));
@@ -540,12 +546,61 @@ const runLightMigrations = () => __awaiter(void 0, void 0, void 0, function* () 
       )
     `);
         yield (0, db_1.query)(`CREATE INDEX IF NOT EXISTS idx_elq_employee_id ON employee_leave_quotas(employee_id)`);
+        // Deduplicate onboarding tasks: keep only the earliest set per employee
+        yield (0, db_1.query)(`
+      DELETE FROM tasks t
+      USING (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY employee_id, title ORDER BY created_at ASC) AS rn
+        FROM tasks
+      ) dup
+      WHERE t.id = dup.id AND dup.rn > 1
+    `);
+        // Deduplicate onboarding documents: keep only the earliest set per employee
+        yield (0, db_1.query)(`
+      DELETE FROM onboarding_documents d
+      USING (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY employee_id, name ORDER BY created_at ASC) AS rn
+        FROM onboarding_documents
+      ) dup
+      WHERE d.id = dup.id AND dup.rn > 1
+    `);
+        // Normalize document file paths: full disk paths → storage keys
+        // documents.file_path: /abs/path/to/uploads/filename.pdf → documents/filename.pdf
+        yield (0, db_1.query)(`
+      UPDATE documents
+      SET file_path = 'documents/' || SUBSTRING(file_path FROM '[^/\\\\]+$')
+      WHERE file_path LIKE '/%' AND file_path NOT LIKE 'documents/%'
+    `);
+        // onboarding_documents.file_path: /abs/path/to/uploads/onboarding/filename.pdf → onboarding/filename.pdf
+        yield (0, db_1.query)(`
+      UPDATE onboarding_documents
+      SET file_path = 'onboarding/' || SUBSTRING(file_path FROM '[^/\\\\]+$')
+      WHERE file_path IS NOT NULL AND file_path LIKE '/%' AND file_path NOT LIKE 'onboarding/%'
+    `);
+        // leave_requests.medical_certificate_path: /uploads/medical-certs/filename.pdf → medical-certs/filename.pdf
+        yield (0, db_1.query)(`
+      UPDATE leave_requests
+      SET medical_certificate_path = REPLACE(medical_certificate_path, '/uploads/', '')
+      WHERE medical_certificate_path LIKE '/uploads/%'
+    `);
         // Fix avatar URLs: strip absolute host prefix, keep only relative path
         yield (0, db_1.query)(`
       UPDATE employees
       SET avatar = SUBSTRING(avatar FROM '/uploads/')
       WHERE avatar LIKE 'http%/uploads/%'
     `);
+        // Fix stale /uploads/ avatar paths where files no longer exist (e.g. after Vercel redeployment)
+        // Only run for local disk mode (R2 avatars store full public URLs, not /uploads/ paths)
+        if (!process.env.R2_ACCOUNT_ID) {
+            const staleCheck = yield (0, db_1.query)(`SELECT id, name, avatar FROM employees WHERE avatar LIKE '/uploads/%'`);
+            for (const row of staleCheck.rows) {
+                const filePath = path_1.default.join(__dirname, '..', row.avatar);
+                if (!fs_1.default.existsSync(filePath)) {
+                    const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name)}&background=random`;
+                    yield (0, db_1.query)(`UPDATE employees SET avatar = $1 WHERE id = $2`, [fallback, row.id]);
+                }
+            }
+        }
     }
     catch (err) {
         // Table may not exist yet — ignore

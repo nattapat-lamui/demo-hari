@@ -8,15 +8,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DocumentService = void 0;
 const db_1 = require("../db");
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
 const pagination_1 = require("../utils/pagination");
+const StorageService_1 = require("./StorageService");
 class DocumentService {
     // Get active documents only (not deleted)
     getAllDocuments() {
@@ -121,9 +117,14 @@ class DocumentService {
             if (!document) {
                 throw new Error('Document not found');
             }
-            // Delete file from disk
-            if (document.filePath && fs_1.default.existsSync(document.filePath)) {
-                fs_1.default.unlinkSync(document.filePath);
+            // Delete file from storage
+            if (document.filePath) {
+                try {
+                    yield StorageService_1.storageService.delete(document.filePath);
+                }
+                catch (err) {
+                    console.warn('Failed to delete file from storage:', err);
+                }
             }
             // Delete from database
             yield (0, db_1.query)('DELETE FROM documents WHERE id = $1', [id]);
@@ -138,31 +139,17 @@ class DocumentService {
             if (!document.filePath) {
                 throw new Error('File not found on disk');
             }
-            // Path traversal protection: ensure resolved path is within uploads dir
-            const uploadsDir = path_1.default.resolve(__dirname, '../../uploads');
-            const resolved = path_1.default.resolve(document.filePath);
-            if (!resolved.startsWith(uploadsDir + path_1.default.sep) && resolved !== uploadsDir) {
-                throw new Error('File not found on disk');
-            }
-            if (!fs_1.default.existsSync(resolved)) {
-                throw new Error('File not found on disk');
-            }
             // Update last accessed time
             yield (0, db_1.query)('UPDATE documents SET last_accessed = $1 WHERE id = $2', [new Date().toISOString(), id]);
-            return resolved;
+            return document.filePath;
         });
     }
     // Get storage statistics
     getStorageStats() {
         return __awaiter(this, void 0, void 0, function* () {
-            const uploadDir = path_1.default.join(__dirname, '../../uploads');
             // Default storage limit (can be configured via env var)
             const totalStorage = parseInt(process.env.STORAGE_LIMIT_GB || '100', 10) * 1024 * 1024 * 1024; // 100 GB default
-            let usedStorage = 0;
-            // Calculate actual storage used
-            if (fs_1.default.existsSync(uploadDir)) {
-                usedStorage = this.getDirectorySize(uploadDir);
-            }
+            const usedStorage = yield StorageService_1.storageService.getStorageUsed();
             const percentage = Math.round((usedStorage / totalStorage) * 100);
             return {
                 used: usedStorage,
@@ -172,25 +159,6 @@ class DocumentService {
                 percentage
             };
         });
-    }
-    // Recursively calculate directory size
-    getDirectorySize(dirPath) {
-        let totalSize = 0;
-        if (!fs_1.default.existsSync(dirPath)) {
-            return 0;
-        }
-        const files = fs_1.default.readdirSync(dirPath);
-        for (const file of files) {
-            const filePath = path_1.default.join(dirPath, file);
-            const stats = fs_1.default.statSync(filePath);
-            if (stats.isDirectory()) {
-                totalSize += this.getDirectorySize(filePath);
-            }
-            else {
-                totalSize += stats.size;
-            }
-        }
-        return totalSize;
     }
     formatFileSize(bytes) {
         if (bytes === 0)

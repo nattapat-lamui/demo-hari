@@ -7,47 +7,8 @@ const express_1 = require("express");
 const OnboardingController_1 = __importDefault(require("../controllers/OnboardingController"));
 const auth_1 = require("../middlewares/auth");
 const security_1 = require("../middlewares/security");
-const multer_1 = __importDefault(require("multer"));
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
+const upload_1 = require("../middlewares/upload");
 const router = (0, express_1.Router)();
-// Multer config for onboarding document uploads
-const storage = multer_1.default.diskStorage({
-    destination: (_req, _file, cb) => {
-        const uploadDir = path_1.default.join(__dirname, "../../uploads/onboarding");
-        if (!fs_1.default.existsSync(uploadDir)) {
-            fs_1.default.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        const ext = path_1.default.extname(file.originalname);
-        cb(null, uniqueSuffix + ext);
-    },
-});
-const upload = (0, multer_1.default)({
-    storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-    fileFilter: (_req, file, cb) => {
-        const allowedTypes = [
-            "application/pdf",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-        ];
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true);
-        }
-        else {
-            cb(new Error("File type not allowed. Accepted: PDF, DOC, DOCX, XLS, XLSX, JPEG, PNG, GIF"));
-        }
-    },
-});
 // All onboarding routes require authentication
 router.use(auth_1.authenticateToken);
 // GET /api/onboarding/tasks - Get tasks (EMPLOYEE sees own, ADMIN sees all or filtered)
@@ -69,7 +30,7 @@ router.get("/contacts", OnboardingController_1.default.getContacts.bind(Onboardi
 // GET /api/onboarding/documents - Get document checklist
 router.get("/documents", OnboardingController_1.default.getDocuments.bind(OnboardingController_1.default));
 // POST /api/onboarding/documents/:id/upload - Upload file for checklist item
-router.post("/documents/:id/upload", security_1.apiLimiter, upload.single("file"), OnboardingController_1.default.uploadDocument.bind(OnboardingController_1.default));
+router.post("/documents/:id/upload", security_1.apiLimiter, upload_1.onboardingDocUpload.single("file"), OnboardingController_1.default.uploadDocument.bind(OnboardingController_1.default));
 // PATCH /api/onboarding/documents/:id/review - Approve/Reject (Admin only)
 router.patch("/documents/:id/review", auth_1.requireAdmin, security_1.apiLimiter, OnboardingController_1.default.reviewDocument.bind(OnboardingController_1.default));
 // GET /api/onboarding/documents/:id/download - Download uploaded file

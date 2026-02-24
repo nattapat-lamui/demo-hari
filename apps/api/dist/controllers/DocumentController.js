@@ -16,6 +16,8 @@ exports.DocumentController = void 0;
 const DocumentService_1 = __importDefault(require("../services/DocumentService"));
 const path_1 = __importDefault(require("path"));
 const pagination_1 = require("../utils/pagination");
+const StorageService_1 = require("../services/StorageService");
+const upload_1 = require("../middlewares/upload");
 // Fix UTF-8 filename encoding from multipart form
 const fixFilename = (filename) => {
     try {
@@ -73,6 +75,9 @@ class DocumentController {
                     return;
                 }
                 const originalName = fixFilename(file.originalname);
+                const key = (0, upload_1.generateStorageKey)('documents', file);
+                const buffer = (0, upload_1.getFileBuffer)(file);
+                yield StorageService_1.storageService.upload({ key, body: buffer, contentType: file.mimetype });
                 const documentData = {
                     name: originalName,
                     type: path_1.default.extname(originalName).substring(1).toUpperCase(),
@@ -80,7 +85,7 @@ class DocumentController {
                     category,
                     ownerName,
                     employeeId,
-                    filePath: file.path,
+                    filePath: key,
                 };
                 const document = yield DocumentService_1.default.createDocument(documentData);
                 res.status(201).json(document);
@@ -106,15 +111,13 @@ class DocumentController {
                     res.status(403).json({ error: 'Access denied' });
                     return;
                 }
-                const filePath = yield DocumentService_1.default.getDocumentFilePath(id);
-                res.download(filePath, (err) => {
-                    if (err) {
-                        console.error('Download error:', err);
-                        if (!res.headersSent) {
-                            res.status(500).json({ error: 'Failed to download file' });
-                        }
-                    }
-                });
+                const key = yield DocumentService_1.default.getDocumentFilePath(id);
+                const { body, contentType, contentLength } = yield StorageService_1.storageService.download(key);
+                res.setHeader('Content-Type', contentType);
+                if (contentLength)
+                    res.setHeader('Content-Length', contentLength);
+                res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.name)}"`);
+                body.pipe(res);
             }
             catch (error) {
                 console.error('Download document error:', error);

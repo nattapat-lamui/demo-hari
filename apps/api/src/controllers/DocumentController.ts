@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import DocumentService from '../services/DocumentService';
 import path from 'path';
 import { getPaginationParams, getSortParams } from '../utils/pagination';
+import { storageService } from '../services/StorageService';
+import { generateStorageKey, getFileBuffer } from '../middlewares/upload';
 
 // Fix UTF-8 filename encoding from multipart form
 const fixFilename = (filename: string): string => {
@@ -73,6 +75,10 @@ export class DocumentController {
             }
 
             const originalName = fixFilename(file.originalname);
+            const key = generateStorageKey('documents', file);
+            const buffer = getFileBuffer(file);
+            await storageService.upload({ key, body: buffer, contentType: file.mimetype });
+
             const documentData = {
                 name: originalName,
                 type: path.extname(originalName).substring(1).toUpperCase(),
@@ -80,7 +86,7 @@ export class DocumentController {
                 category,
                 ownerName,
                 employeeId,
-                filePath: file.path,
+                filePath: key,
             };
 
             const document = await DocumentService.createDocument(documentData);
@@ -108,16 +114,14 @@ export class DocumentController {
                 return;
             }
 
-            const filePath = await DocumentService.getDocumentFilePath(id);
+            const key = await DocumentService.getDocumentFilePath(id);
+            const { body, contentType, contentLength } = await storageService.download(key);
 
-            res.download(filePath, (err) => {
-                if (err) {
-                    console.error('Download error:', err);
-                    if (!res.headersSent) {
-                        res.status(500).json({ error: 'Failed to download file' });
-                    }
-                }
-            });
+            res.setHeader('Content-Type', contentType);
+            if (contentLength) res.setHeader('Content-Length', contentLength);
+            res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.name)}"`);
+
+            body.pipe(res);
         } catch (error: any) {
             console.error('Download document error:', error);
             if (error.message === 'Document not found' || error.message === 'File not found on disk') {

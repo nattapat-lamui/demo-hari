@@ -27,7 +27,8 @@ exports.OnboardingController = void 0;
 const OnboardingService_1 = __importDefault(require("../services/OnboardingService"));
 const Onboarding_1 = require("../models/Onboarding");
 const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
+const StorageService_1 = require("../services/StorageService");
+const upload_1 = require("../middlewares/upload");
 class OnboardingController {
     // GET /api/onboarding/tasks?employeeId=xxx
     getTasks(req, res) {
@@ -234,9 +235,12 @@ class OnboardingController {
                     res.status(400).json({ error: "No file uploaded" });
                     return;
                 }
+                const key = (0, upload_1.generateStorageKey)("onboarding", file);
+                const buffer = (0, upload_1.getFileBuffer)(file);
+                yield StorageService_1.storageService.upload({ key, body: buffer, contentType: file.mimetype });
                 const ext = path_1.default.extname(file.originalname).replace(".", "").toUpperCase();
                 const sizeMB = (file.size / (1024 * 1024)).toFixed(1) + " MB";
-                const doc = yield OnboardingService_1.default.uploadDocument(id, file.path, ext, sizeMB);
+                const doc = yield OnboardingService_1.default.uploadDocument(id, key, ext, sizeMB);
                 if (!doc) {
                     res.status(404).json({ error: "Document checklist item not found" });
                     return;
@@ -289,20 +293,15 @@ class OnboardingController {
                     res.status(403).json({ error: "Access denied" });
                     return;
                 }
-                // Path traversal protection
-                const uploadsDir = path_1.default.resolve(__dirname, "../../uploads/onboarding");
-                const resolved = path_1.default.resolve(result.filePath);
-                if (!resolved.startsWith(uploadsDir + path_1.default.sep) && resolved !== uploadsDir) {
-                    res.status(404).json({ error: "File not found on disk" });
-                    return;
-                }
-                if (!fs_1.default.existsSync(resolved)) {
-                    res.status(404).json({ error: "File not found on disk" });
-                    return;
-                }
-                const ext = path_1.default.extname(resolved);
+                const key = result.filePath;
+                const { body, contentType, contentLength } = yield StorageService_1.storageService.download(key);
+                const ext = path_1.default.extname(key);
                 const filename = result.name.replace(/[^a-zA-Z0-9-_ ]/g, "") + ext;
-                res.download(resolved, filename);
+                res.setHeader("Content-Type", contentType);
+                if (contentLength)
+                    res.setHeader("Content-Length", contentLength);
+                res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
+                body.pipe(res);
             }
             catch (error) {
                 console.error("Error downloading onboarding document:", error);

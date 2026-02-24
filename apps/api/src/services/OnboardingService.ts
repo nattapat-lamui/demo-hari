@@ -353,8 +353,24 @@ export class OnboardingService {
     return (result.rowCount ?? 0) > 0;
   }
 
-  // Seed default tasks for an employee
+  // Seed default tasks for an employee (idempotent — skips if already seeded)
   async seedDefaultTasks(employeeId: string): Promise<OnboardingTaskResponse[]> {
+    // Idempotency guard: skip if tasks OR documents already exist
+    const existing = await query(
+      `SELECT
+        (SELECT COUNT(*) FROM tasks WHERE employee_id = $1)::int AS task_count,
+        (SELECT COUNT(*) FROM onboarding_documents WHERE employee_id = $1)::int AS doc_count`,
+      [employeeId]
+    );
+    if (existing.rows[0].task_count > 0 || existing.rows[0].doc_count > 0) {
+      // Already seeded — return existing tasks
+      const existingTasks = await query(
+        `SELECT * FROM tasks WHERE employee_id = $1 ORDER BY due_date ASC`,
+        [employeeId]
+      );
+      return existingTasks.rows.map(mapTaskRow);
+    }
+
     // Get employee's join date
     const empResult = await query(
       `SELECT join_date, name, user_id FROM employees WHERE id = $1`,

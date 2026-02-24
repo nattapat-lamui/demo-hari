@@ -8,53 +8,14 @@ const DocumentController_1 = __importDefault(require("../controllers/DocumentCon
 const security_1 = require("../middlewares/security");
 const auth_1 = require("../middlewares/auth");
 const cache_1 = require("../middlewares/cache");
-const multer_1 = __importDefault(require("multer"));
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
+const upload_1 = require("../middlewares/upload");
 const router = (0, express_1.Router)();
-// Configure multer for file uploads
-const storage = multer_1.default.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path_1.default.join(__dirname, '../../uploads');
-        if (!fs_1.default.existsSync(uploadDir)) {
-            fs_1.default.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = path_1.default.extname(file.originalname);
-        cb(null, uniqueSuffix + ext);
-    },
-});
-const upload = (0, multer_1.default)({
-    storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'image/jpeg',
-            'image/png',
-            'image/gif',
-        ];
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true);
-        }
-        else {
-            cb(new Error('File type not allowed. Accepted: PDF, DOC, DOCX, XLS, XLSX, JPEG, PNG, GIF'));
-        }
-    },
-});
 // All routes require authentication
 router.use(auth_1.authenticateToken);
 // GET /api/documents - Get all documents - cached for 30s
 router.get('/', (0, cache_1.cacheMiddleware)(), DocumentController_1.default.getAllDocuments.bind(DocumentController_1.default));
 // POST /api/documents - Upload document
-router.post('/', security_1.apiLimiter, upload.single('file'), (0, cache_1.invalidateCache)('/api/documents'), DocumentController_1.default.createDocument.bind(DocumentController_1.default));
+router.post('/', security_1.apiLimiter, upload_1.documentUpload.single('file'), (0, cache_1.invalidateCache)('/api/documents'), DocumentController_1.default.createDocument.bind(DocumentController_1.default));
 // GET /api/documents/trash - Get deleted documents (must be before :id route) - cached for 30s
 router.get('/trash', (0, cache_1.cacheMiddleware)(), DocumentController_1.default.getDeletedDocuments.bind(DocumentController_1.default));
 // GET /api/documents/storage - Get storage statistics - cached for 60s

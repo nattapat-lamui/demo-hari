@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Calendar,
   Clock,
@@ -7,12 +7,13 @@ import {
   Download,
   CheckCircle2,
   XCircle,
+  Loader2,
 } from 'lucide-react';
 import { Modal } from './Modal';
 import { Avatar } from './Avatar';
 import { LeaveActionBar } from './LeaveActionBar';
 import { useLeaveBalance } from '../hooks/queries';
-import { API_HOST } from '../lib/api';
+import { BASE_URL, getAuthToken } from '../lib/api';
 import type { LeaveRequest } from '../types';
 
 interface LeaveDetailModalProps {
@@ -40,10 +41,28 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({
   const hasMedicalCert = !!request.medicalCertificatePath;
   const hasHandover = !!request.handoverEmployeeName || !!request.handoverNotes;
   const isPending = request.status === 'Pending';
+  const [certLoading, setCertLoading] = useState(false);
 
-  const certUrl = request.medicalCertificatePath?.startsWith('/')
-    ? `${API_HOST}${request.medicalCertificatePath}`
-    : request.medicalCertificatePath;
+  const handleViewCert = useCallback(async () => {
+    if (!request) return;
+    setCertLoading(true);
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`${BASE_URL}/leave-requests/${request.id}/medical-certificate`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to fetch certificate');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      // Revoke after a delay to allow the new tab to load
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      console.error('Error viewing medical certificate:', err);
+    } finally {
+      setCertLoading(false);
+    }
+  }, [request]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Leave Request Details" maxWidth="lg">
@@ -145,15 +164,14 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({
                 Medical Certificate Attached
               </p>
             </div>
-            <a
-              href={certUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300 hover:underline shrink-0"
+            <button
+              onClick={handleViewCert}
+              disabled={certLoading}
+              className="flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300 hover:underline shrink-0 disabled:opacity-50"
             >
-              <Download size={14} />
-              Download
-            </a>
+              {certLoading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              {certLoading ? 'Loading...' : 'View'}
+            </button>
           </div>
         )}
 

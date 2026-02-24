@@ -3,40 +3,9 @@ import LeaveRequestController from '../controllers/LeaveRequestController';
 import { apiLimiter, validateLeaveRequest, validateRequest } from '../middlewares/security';
 import { authenticateToken, requireAdmin } from '../middlewares/auth';
 import { cacheMiddleware, invalidateCache } from '../middlewares/cache';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { medicalCertUpload } from '../middlewares/upload';
 
 const router = Router();
-
-// Configure multer for medical certificate uploads
-const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => {
-        const uploadDir = path.join(__dirname, '../../uploads/medical-certs');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = path.extname(file.originalname);
-        cb(null, `cert-${uniqueSuffix}${ext}`);
-    },
-});
-
-const upload = multer({
-    storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-    fileFilter: (_req, file, cb) => {
-        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type. Only PDF, JPEG, and PNG are allowed.'));
-        }
-    },
-});
 
 // All routes require authentication
 router.use(authenticateToken);
@@ -49,7 +18,7 @@ router.get('/', cacheMiddleware(), LeaveRequestController.getAllLeaveRequests.bi
 router.post(
     '/',
     apiLimiter,
-    upload.single('medicalCertificate'),
+    medicalCertUpload.single('medicalCertificate'),
     validateLeaveRequest,
     validateRequest,
     invalidateCache('/api/leave-requests'),
@@ -60,7 +29,7 @@ router.post(
 router.put(
     '/:id',
     apiLimiter,
-    upload.single('medicalCertificate'),
+    medicalCertUpload.single('medicalCertificate'),
     invalidateCache('/api/leave-requests'),
     LeaveRequestController.editLeaveRequest.bind(LeaveRequestController)
 );
@@ -73,6 +42,9 @@ router.post('/:id/cancel', apiLimiter, invalidateCache('/api/leave-requests'), L
 
 // POST /api/leave-requests/:id/cancel-decision - Approve/reject cancel request (HR_ADMIN only)
 router.post('/:id/cancel-decision', requireAdmin, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.handleCancelDecision.bind(LeaveRequestController));
+
+// GET /api/leave-requests/:id/medical-certificate - Download medical certificate
+router.get('/:id/medical-certificate', LeaveRequestController.downloadMedicalCertificate.bind(LeaveRequestController));
 
 // DELETE /api/leave-requests/:id - Delete leave request (HR_ADMIN only)
 router.delete('/:id', requireAdmin, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.deleteLeaveRequest.bind(LeaveRequestController));

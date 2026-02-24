@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createApiError = exports.notFoundHandler = exports.errorHandler = void 0;
+const multer_1 = __importDefault(require("multer"));
 /**
  * Global error handler middleware
  * Catches all errors thrown in route handlers and provides consistent error responses
@@ -19,6 +23,7 @@ function sanitizeBody(body) {
     return sanitized;
 }
 const errorHandler = (err, req, res, next) => {
+    var _a;
     // Log error for debugging (server-side only, with sensitive fields redacted)
     console.error('API Error:', {
         message: err.message,
@@ -28,6 +33,11 @@ const errorHandler = (err, req, res, next) => {
         body: sanitizeBody(req.body),
         query: req.query,
     });
+    // Handle multer / file upload errors as 400
+    if (err instanceof multer_1.default.MulterError || ((_a = err.message) === null || _a === void 0 ? void 0 : _a.startsWith('File type not allowed'))) {
+        res.status(400).json({ error: err.message });
+        return;
+    }
     // Determine status code
     const statusCode = err.statusCode || 500;
     const message = statusCode === 500 ? 'Internal Server Error' : err.message;

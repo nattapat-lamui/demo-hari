@@ -301,9 +301,18 @@ class OnboardingService {
             return ((_c = result.rowCount) !== null && _c !== void 0 ? _c : 0) > 0;
         });
     }
-    // Seed default tasks for an employee
+    // Seed default tasks for an employee (idempotent — skips if already seeded)
     seedDefaultTasks(employeeId) {
         return __awaiter(this, void 0, void 0, function* () {
+            // Idempotency guard: skip if tasks OR documents already exist
+            const existing = yield (0, db_1.query)(`SELECT
+        (SELECT COUNT(*) FROM tasks WHERE employee_id = $1)::int AS task_count,
+        (SELECT COUNT(*) FROM onboarding_documents WHERE employee_id = $1)::int AS doc_count`, [employeeId]);
+            if (existing.rows[0].task_count > 0 || existing.rows[0].doc_count > 0) {
+                // Already seeded — return existing tasks
+                const existingTasks = yield (0, db_1.query)(`SELECT * FROM tasks WHERE employee_id = $1 ORDER BY due_date ASC`, [employeeId]);
+                return existingTasks.rows.map(mapTaskRow);
+            }
             // Get employee's join date
             const empResult = yield (0, db_1.query)(`SELECT join_date, name, user_id FROM employees WHERE id = $1`, [employeeId]);
             if (empResult.rows.length === 0) {

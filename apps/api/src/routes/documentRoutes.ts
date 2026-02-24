@@ -3,49 +3,9 @@ import DocumentController from '../controllers/DocumentController';
 import { apiLimiter } from '../middlewares/security';
 import { authenticateToken } from '../middlewares/auth';
 import { cacheMiddleware, invalidateCache } from '../middlewares/cache';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { documentUpload } from '../middlewares/upload';
 
 const router = Router();
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../../uploads');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = path.extname(file.originalname);
-        cb(null, uniqueSuffix + ext);
-    },
-});
-
-const upload = multer({
-    storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'image/jpeg',
-            'image/png',
-            'image/gif',
-        ];
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('File type not allowed. Accepted: PDF, DOC, DOCX, XLS, XLSX, JPEG, PNG, GIF') as any);
-        }
-    },
-});
 
 // All routes require authentication
 router.use(authenticateToken);
@@ -57,7 +17,7 @@ router.get('/', cacheMiddleware(), DocumentController.getAllDocuments.bind(Docum
 router.post(
     '/',
     apiLimiter,
-    upload.single('file'),
+    documentUpload.single('file'),
     invalidateCache('/api/documents'),
     DocumentController.createDocument.bind(DocumentController)
 );

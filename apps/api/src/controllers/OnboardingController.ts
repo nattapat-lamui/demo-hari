@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import OnboardingService from "../services/OnboardingService";
 import { VALID_STAGES, VALID_PRIORITIES, VALID_DOC_STATUSES } from "../models/Onboarding";
 import path from "path";
-import fs from "fs";
+import { storageService } from "../services/StorageService";
+import { generateStorageKey, getFileBuffer } from "../middlewares/upload";
 
 export class OnboardingController {
   // GET /api/onboarding/tasks?employeeId=xxx
@@ -211,10 +212,14 @@ export class OnboardingController {
         return;
       }
 
+      const key = generateStorageKey("onboarding", file);
+      const buffer = getFileBuffer(file);
+      await storageService.upload({ key, body: buffer, contentType: file.mimetype });
+
       const ext = path.extname(file.originalname).replace(".", "").toUpperCase();
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1) + " MB";
 
-      const doc = await OnboardingService.uploadDocument(id, file.path, ext, sizeMB);
+      const doc = await OnboardingService.uploadDocument(id, key, ext, sizeMB);
       if (!doc) {
         res.status(404).json({ error: "Document checklist item not found" });
         return;
@@ -270,22 +275,17 @@ export class OnboardingController {
         return;
       }
 
-      // Path traversal protection
-      const uploadsDir = path.resolve(__dirname, "../../uploads/onboarding");
-      const resolved = path.resolve(result.filePath);
-      if (!resolved.startsWith(uploadsDir + path.sep) && resolved !== uploadsDir) {
-        res.status(404).json({ error: "File not found on disk" });
-        return;
-      }
+      const key = result.filePath;
+      const { body, contentType, contentLength } = await storageService.download(key);
 
-      if (!fs.existsSync(resolved)) {
-        res.status(404).json({ error: "File not found on disk" });
-        return;
-      }
-
-      const ext = path.extname(resolved);
+      const ext = path.extname(key);
       const filename = result.name.replace(/[^a-zA-Z0-9-_ ]/g, "") + ext;
-      res.download(resolved, filename);
+
+      res.setHeader("Content-Type", contentType);
+      if (contentLength) res.setHeader("Content-Length", contentLength);
+      res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
+
+      body.pipe(res);
     } catch (error) {
       console.error("Error downloading onboarding document:", error);
       res.status(500).json({ error: "Failed to download document" });

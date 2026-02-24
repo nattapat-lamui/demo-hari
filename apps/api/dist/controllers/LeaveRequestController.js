@@ -46,6 +46,8 @@ exports.LeaveRequestController = void 0;
 const LeaveRequestService_1 = __importStar(require("../services/LeaveRequestService"));
 const socket_1 = require("../socket");
 const pagination_1 = require("../utils/pagination");
+const StorageService_1 = require("../services/StorageService");
+const upload_1 = require("../middlewares/upload");
 class LeaveRequestController {
     getAllLeaveRequests(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -97,7 +99,10 @@ class LeaveRequestController {
                     return;
                 }
                 if (req.file) {
-                    requestData.medicalCertificatePath = `/uploads/medical-certs/${req.file.filename}`;
+                    const key = (0, upload_1.generateStorageKey)('medical-certs', req.file, 'cert');
+                    const buffer = (0, upload_1.getFileBuffer)(req.file);
+                    yield StorageService_1.storageService.upload({ key, body: buffer, contentType: req.file.mimetype });
+                    requestData.medicalCertificatePath = key;
                 }
                 const leaveRequest = yield LeaveRequestService_1.default.createLeaveRequest(requestData);
                 (0, socket_1.emitLeaveRequestCreated)(leaveRequest);
@@ -131,7 +136,10 @@ class LeaveRequestController {
                     return;
                 }
                 if (req.file) {
-                    editData.medicalCertificatePath = `/uploads/medical-certs/${req.file.filename}`;
+                    const key = (0, upload_1.generateStorageKey)('medical-certs', req.file, 'cert');
+                    const buffer = (0, upload_1.getFileBuffer)(req.file);
+                    yield StorageService_1.storageService.upload({ key, body: buffer, contentType: req.file.mimetype });
+                    editData.medicalCertificatePath = key;
                 }
                 const leaveRequest = yield LeaveRequestService_1.default.editLeaveRequest(id, employeeId, editData);
                 (0, socket_1.emitLeaveRequestUpdated)(leaveRequest);
@@ -255,6 +263,38 @@ class LeaveRequestController {
                 console.error('Handle cancel decision error:', error);
                 const statusCode = error.statusCode || 500;
                 res.status(statusCode).json({ error: error.message || 'Failed to handle cancel decision' });
+            }
+        });
+    }
+    downloadMedicalCertificate(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { id } = req.params;
+                const user = req.user;
+                const leaveRequest = yield LeaveRequestService_1.default.getLeaveRequestById(id);
+                if (!leaveRequest) {
+                    res.status(404).json({ error: 'Leave request not found' });
+                    return;
+                }
+                if (user.role !== 'HR_ADMIN' && user.employeeId !== leaveRequest.employeeId) {
+                    res.status(403).json({ error: 'Access denied' });
+                    return;
+                }
+                if (!leaveRequest.medicalCertificatePath) {
+                    res.status(404).json({ error: 'No medical certificate attached' });
+                    return;
+                }
+                const key = leaveRequest.medicalCertificatePath;
+                const { body, contentType, contentLength } = yield StorageService_1.storageService.download(key);
+                res.setHeader('Content-Type', contentType);
+                if (contentLength)
+                    res.setHeader('Content-Length', contentLength);
+                res.setHeader('Content-Disposition', 'inline');
+                body.pipe(res);
+            }
+            catch (error) {
+                console.error('Download medical certificate error:', error);
+                res.status(500).json({ error: 'Failed to download medical certificate' });
             }
         });
     }
