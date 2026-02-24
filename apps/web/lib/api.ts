@@ -73,9 +73,16 @@ async function refreshAccessToken(): Promise<boolean> {
         const storage = getActiveStorage();
         storage.setItem('token', data.accessToken || data.token);
         storage.setItem('refreshToken', data.refreshToken);
-        // Keep user data fresh
+        // Keep user data fresh — map backend fields to frontend User format
         if (data.user) {
-            storage.setItem('user', JSON.stringify(data.user));
+            const existingUser = JSON.parse(storage.getItem('user') || '{}');
+            const mappedUser = {
+                ...existingUser,
+                ...data.user,
+                id: data.user.employeeId || data.user.userId || existingUser.id,
+                employeeId: data.user.employeeId,
+            };
+            storage.setItem('user', JSON.stringify(mappedUser));
         }
         return true;
     } catch {

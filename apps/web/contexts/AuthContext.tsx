@@ -40,6 +40,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (token && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
+        // Ensure id is set (may be missing if stored from a token refresh)
+        if (!parsedUser.id) {
+          parsedUser.id = parsedUser.employeeId || parsedUser.userId;
+        }
         // Transform relative avatar URL to absolute URL if needed
         if (parsedUser.avatar && parsedUser.avatar.startsWith('/')) {
           parsedUser.avatar = `${API_HOST}${parsedUser.avatar}`;
