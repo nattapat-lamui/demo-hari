@@ -11,7 +11,7 @@
         "test:e2e": "npm run test:e2e --workspace=apps/web",
         "dev:api": "npm run dev --workspace=apps/api",
         "test:api": "npm run test --workspace=apps/api",
-        "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" --kill-others --names \"API,WEB\" --prefix-colors \"blue,green\"",
+        "dev": "concurrently \"npm run dev:api\" \"wait-on http://localhost:3001/api/health && npm run dev:web\" --kill-others --names \"API,WEB\" --prefix-colors \"blue,green\"",
         "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
         "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
         "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
@@ -25,6 +25,7 @@
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-react": "^7.34.0",
         "eslint-plugin-react-hooks": "^4.6.0",
-        "prettier": "^3.2.5"
+        "prettier": "^3.2.5",
+        "wait-on": "^9.0.4"
     }
 }

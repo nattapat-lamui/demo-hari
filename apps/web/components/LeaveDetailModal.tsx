@@ -33,14 +33,6 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({
 }) => {
   const isSensitiveHidden = request?.type === 'Leave';
   const { data: balances = [] } = useLeaveBalance(request?.employeeId);
-
-  if (!request) return null;
-
-  const days = request.days ?? 1;
-  const balance = isSensitiveHidden ? undefined : balances.find((b) => b.type === request.type);
-  const hasMedicalCert = !!request.medicalCertificatePath;
-  const hasHandover = !!request.handoverEmployeeName || !!request.handoverNotes;
-  const isPending = request.status === 'Pending';
   const [certLoading, setCertLoading] = useState(false);
 
   const handleViewCert = useCallback(async () => {
@@ -55,7 +47,6 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
-      // Revoke after a delay to allow the new tab to load
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (err) {
       console.error('Error viewing medical certificate:', err);
@@ -63,6 +54,14 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({
       setCertLoading(false);
     }
   }, [request]);
+
+  if (!request) return null;
+
+  const days = request.days ?? 1;
+  const balance = isSensitiveHidden ? undefined : balances.find((b) => b.type === request.type);
+  const hasMedicalCert = !!request.medicalCertificatePath;
+  const hasHandover = !!request.handoverEmployeeName || !!request.handoverNotes;
+  const isPending = request.status === 'Pending';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Leave Request Details" maxWidth="lg">
