@@ -433,14 +433,14 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Upcoming Birthdays / Events */}
-        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm h-fit">
+        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
             <div className="flex items-center gap-2 md:gap-3">
               <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Events</h2>
             </div>
             <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">View All</button>
           </div>
-          <div className="p-3 md:p-4">
+          <div className="p-3 md:p-4 flex-1 flex flex-col">
             {upcomingEvents.length > 0 ? (
               <ul className="space-y-4">
                 {upcomingEvents.slice(0, 3).map(event => (
@@ -464,7 +464,7 @@ export const AdminDashboard: React.FC = () => {
                 ))}
               </ul>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-text-muted-light dark:text-text-muted-dark">
+              <div className="flex-1 flex flex-col items-center justify-center text-text-muted-light dark:text-text-muted-dark">
                 <CalendarIcon size={32} className="mb-2 opacity-20" />
                 <p className="text-sm">No upcoming events</p>
               </div>
@@ -473,7 +473,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Onboarding Progress Widget */}
-        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm h-fit">
+        <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm overflow-y-auto">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
             <div className="flex items-center gap-2 md:gap-3">
               <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Onboarding</h2>
