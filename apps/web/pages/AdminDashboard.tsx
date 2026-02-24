@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, XAxis, YAxis, AreaChart, Area, Tooltip } from 'recharts';
 import { StatCard } from '../components/StatCard';
+import { LeaveGanttCalendar } from '../components/LeaveGanttCalendar';
 import { Toast } from '../components/Toast';
 import { Avatar } from '../components/Avatar';
 import { AddEmployeeModal } from '../components/AddEmployeeModal';
@@ -54,6 +55,8 @@ export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const pendingRequests = requests.filter(r => r.status === 'Pending');
+  const myRequests = useMemo(() => requests.filter(r => r.employeeId === user?.employeeId), [requests, user?.employeeId]);
+  const teamRequests = useMemo(() => requests.filter(r => r.employeeId !== user?.employeeId), [requests, user?.employeeId]);
 
   // ----- REACT QUERY HOOKS -----
   const { data: allEmployees = [], isPending: isEmployeesLoading, isError: isEmployeesError, error: employeesError, refetch: refetchEmployees } = useAllEmployees();
@@ -377,6 +380,14 @@ export const AdminDashboard: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Leave Gantt Calendar */}
+      <LeaveGanttCalendar
+        userLeaves={myRequests}
+        teamLeaves={teamRequests}
+        isManager={true}
+        onLeaveClick={setDetailRequest}
+      />
 
       {/* Main Layout Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -15,6 +15,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { Toast } from '../components/Toast';
+import { LeaveGanttCalendar } from '../components/LeaveGanttCalendar';
 import { Avatar } from '../components/Avatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useLeave } from '../contexts/LeaveContext';
@@ -41,6 +42,8 @@ export const EmployeeDashboard: React.FC = () => {
   const queryClient = useQueryClient();
 
   const myRequests = requests.filter(r => r.employeeName === user?.name);
+  const myLeaves = useMemo(() => requests.filter(r => r.employeeId === user?.employeeId), [requests, user?.employeeId]);
+  const teamLeaves = useMemo(() => requests.filter(r => r.employeeId !== user?.employeeId), [requests, user?.employeeId]);
 
   // ----- REACT QUERY HOOKS -----
   const { data: allEmployees = [] } = useAllEmployees();
@@ -301,6 +304,13 @@ export const EmployeeDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Leave Gantt Calendar */}
+      <LeaveGanttCalendar
+        userLeaves={myLeaves}
+        teamLeaves={teamLeaves}
+        isManager={false}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
