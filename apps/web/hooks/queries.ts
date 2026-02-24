@@ -5,6 +5,7 @@ import type {
   Employee,
   LeaveRequest,
   LeaveBalance,
+  LeaveQuotaConfig,
   NotificationItem,
   OrgNode,
   AuditLogItem,
@@ -1084,6 +1085,46 @@ export const useDeleteLeaveQuotaOverride = () => {
       api.delete<EffectiveLeaveQuota[]>(`/employees/${employeeId}/leave-quotas/${encodeURIComponent(leaveType)}`),
     onSuccess: (_data, { employeeId }) => {
       qc.invalidateQueries({ queryKey: queryKeys.leaveQuotas.byEmployee(employeeId) });
+      qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
+    },
+  });
+};
+
+// ---------------------------------------------------------------------------
+// System Config — Leave Type Configs
+// ---------------------------------------------------------------------------
+
+const DEFAULT_LEAVE_TYPE_CONFIGS: LeaveQuotaConfig[] = [
+  { type: 'Vacation', total: 7, color: 'blue' },
+  { type: 'Sick Leave', total: 30, color: 'amber' },
+  { type: 'Personal Day', total: 6, color: 'violet' },
+  { type: 'Leave Without Pay', total: -1, color: 'orange' },
+];
+
+export const useLeaveTypeConfig = () => {
+  return useQuery({
+    queryKey: queryKeys.systemConfig.leaveQuotas(),
+    queryFn: async () => {
+      try {
+        const data = await api.get<{ key: string; value: string }>('/configs/leave/quotas');
+        const parsed: LeaveQuotaConfig[] = JSON.parse(data.value);
+        return parsed;
+      } catch (err) {
+        console.warn('[useLeaveTypeConfig] Failed to fetch leave type configs, using defaults:', err);
+        return DEFAULT_LEAVE_TYPE_CONFIGS;
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useUpdateLeaveTypeConfig = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (configs: LeaveQuotaConfig[]) =>
+      api.put('/configs/leave/quotas', { value: JSON.stringify(configs) } as unknown as Record<string, unknown>),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.systemConfig.leaveQuotas() });
       qc.invalidateQueries({ queryKey: queryKeys.leaveBalances.all });
     },
   });

@@ -26,6 +26,7 @@ export interface UpdateSystemConfigDTO {
 export interface LeaveQuota {
     type: string;
     total: number;
+    color?: string;
 }
 
 export interface SystemSettings {

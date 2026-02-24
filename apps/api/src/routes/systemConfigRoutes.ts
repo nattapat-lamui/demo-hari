@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import SystemConfigController from '../controllers/SystemConfigController';
 import { apiLimiter } from '../middlewares/security';
-import { authenticateToken } from '../middlewares/auth';
+import { authenticateToken, requireAdmin } from '../middlewares/auth';
 
 const router = Router();
 
@@ -21,6 +21,7 @@ router.get('/:category/:key', SystemConfigController.getConfig.bind(SystemConfig
 router.post(
     '/',
     apiLimiter,
+    requireAdmin,
     SystemConfigController.createConfig.bind(SystemConfigController)
 );
 
@@ -28,6 +29,7 @@ router.post(
 router.put(
     '/:category/:key',
     apiLimiter,
+    requireAdmin,
     SystemConfigController.updateConfig.bind(SystemConfigController)
 );
 
@@ -35,6 +37,7 @@ router.put(
 router.delete(
     '/:category/:key',
     apiLimiter,
+    requireAdmin,
     SystemConfigController.deleteConfig.bind(SystemConfigController)
 );
 

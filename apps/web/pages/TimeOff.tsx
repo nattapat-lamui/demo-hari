@@ -4,7 +4,8 @@ import { Calendar, Clock, AlertCircle, Plus, CheckCircle2, XCircle, Building2, B
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useLeave } from '../contexts/LeaveContext';
-import { useLeaveRequests, useLeaveBalance, useEmployeeDetail, useCancelLeaveRequest } from '../hooks/queries';
+import { useLeaveRequests, useLeaveBalance, useEmployeeDetail, useCancelLeaveRequest, useLeaveTypeConfig } from '../hooks/queries';
+import { getLeaveColor } from '../lib/leaveTypeConfig';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { LeaveCalendar } from '../components/LeaveCalendar';
 import { CancelLeaveModal } from '../components/CancelLeaveModal';
@@ -59,22 +60,6 @@ const ProgressRing: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
-// Leave Balance Card config
-// ---------------------------------------------------------------------------
-interface CardConfig {
-  type: string;
-  label: string;
-  color: string;
-  borderColor: string;
-}
-
-const LEAVE_CARDS: CardConfig[] = [
-  { type: 'Vacation',      label: 'Vacation Leave',  color: '#3B82F6', borderColor: 'border-l-blue-500' },
-  { type: 'Sick Leave',    label: 'Sick Leave',      color: '#F59E0B', borderColor: 'border-l-amber-500' },
-  { type: 'Personal Day',  label: 'Personal Leave',  color: '#8B5CF6', borderColor: 'border-l-violet-500' },
-];
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -109,6 +94,22 @@ export const TimeOff: React.FC = () => {
   const { updateRequestStatus } = useLeave();
   const { data: allRequests = [], isPending, isError: isLeaveError, error: leaveError, refetch: refetchLeave } = useLeaveRequests();
   const { data: balances = [] } = useLeaveBalance(user?.employeeId);
+  const { data: leaveConfigs = [] } = useLeaveTypeConfig();
+
+  // Dynamic balance cards from config (only types with quota >= 0 or tracked)
+  const leaveCards = useMemo(() => {
+    return leaveConfigs
+      .filter((c) => c.total > 0 || c.total === -1) // Show all tracked types (positive quota + unlimited)
+      .map((c) => {
+        const colors = getLeaveColor(c.type, leaveConfigs);
+        return {
+          type: c.type,
+          label: c.type,
+          color: colors.ringColor,
+          borderColor: colors.borderLeft,
+        };
+      });
+  }, [leaveConfigs]);
   const { data: empDetail } = useEmployeeDetail(user?.employeeId);
   const cancelMutation = useCancelLeaveRequest();
 
@@ -239,8 +240,8 @@ export const TimeOff: React.FC = () => {
       </div>
 
       {/* ========== Balance Cards ========== */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {LEAVE_CARDS.map((card) => {
+      <div className={`grid grid-cols-1 ${leaveCards.length === 2 ? 'sm:grid-cols-2' : leaveCards.length >= 3 ? 'sm:grid-cols-3' : ''} gap-4`}>
+        {leaveCards.map((card) => {
           const bal = getBalance(card.type);
           const isUnlimited = !bal || bal.total === -1;
           const remaining = bal ? bal.remaining : 0;
@@ -310,14 +311,8 @@ export const TimeOff: React.FC = () => {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className={`p-2 rounded-lg shrink-0 ${
-                          req.type === 'Vacation' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600' :
-                          req.type === 'Sick Leave' ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' :
-                          'bg-violet-100 dark:bg-violet-900/20 text-violet-600'
-                        }`}>
-                          {req.type === 'Vacation' ? <Calendar size={16} /> :
-                           req.type === 'Sick Leave' ? <AlertCircle size={16} /> :
-                           <Clock size={16} />}
+                        <div className={`p-2 rounded-lg shrink-0 ${getLeaveColor(req.type, leaveConfigs).iconBg}`}>
+                          <Calendar size={16} />
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">{req.type}</p>

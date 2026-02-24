@@ -633,3 +633,13 @@ export interface AdminAttendanceFilters {
   page?: number;
   limit?: number;
 }
+
+// ============================================================================
+// System Config Types
+// ============================================================================
+
+export interface LeaveQuotaConfig {
+  type: string;
+  total: number;
+  color?: string; // palette key: "blue", "amber", etc.
+}

@@ -108,4 +108,8 @@ export const queryKeys = {
     all: ['leaveQuotas'] as const,
     byEmployee: (id: string) => [...queryKeys.leaveQuotas.all, id] as const,
   },
+  systemConfig: {
+    all: ['systemConfig'] as const,
+    leaveQuotas: () => [...queryKeys.systemConfig.all, 'leaveQuotas'] as const,
+  },
 } as const;

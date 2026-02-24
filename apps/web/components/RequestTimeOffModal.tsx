@@ -1,12 +1,13 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Modal } from './Modal';
 import { Dropdown } from './Dropdown';
 import { DatePicker } from './DatePicker';
 import { FileUpload } from './FileUpload';
 import { SearchableSelect } from './SearchableSelect';
 import type { SearchableSelectOption } from './SearchableSelect';
-import { useLeaveBalance, useEmployeeSearch } from '../hooks/queries';
+import { useLeaveBalance, useEmployeeSearch, useLeaveTypeConfig } from '../hooks/queries';
 import { resolveAvatarUrl } from '../lib/api';
+import { buildLeaveOptions, requiresMedicalCert } from '../lib/leaveTypeConfig';
 import type { LeaveBalance } from '../types';
 
 interface RequestTimeOffModalProps {
@@ -16,15 +17,6 @@ interface RequestTimeOffModalProps {
   isPending?: boolean;
   employeeId: string;
 }
-
-const LEAVE_OPTIONS = [
-  { value: 'Vacation', label: 'Vacation' },
-  { value: 'Sick Leave', label: 'Sick Leave' },
-  { value: 'Personal Day', label: 'Personal Day' },
-  { value: 'Maternity Leave', label: 'Maternity Leave' },
-  { value: 'Compensatory Leave', label: 'Compensatory Leave' },
-  { value: 'Military Leave', label: 'Military Leave' },
-];
 
 interface FormState {
   type: string;
@@ -60,6 +52,15 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
   // Queries
   const { data: balances = [] } = useLeaveBalance(employeeId);
   const { data: employees = [], isPending: isSearching } = useEmployeeSearch(employeeSearch);
+  const { data: leaveConfigs = [] } = useLeaveTypeConfig();
+  const LEAVE_OPTIONS = useMemo(() => buildLeaveOptions(leaveConfigs), [leaveConfigs]);
+
+  // Sync default type with first available config
+  useEffect(() => {
+    if (leaveConfigs.length > 0 && !leaveConfigs.some((c) => c.type === form.type)) {
+      setForm((p) => ({ ...p, type: leaveConfigs[0]!.type }));
+    }
+  }, [leaveConfigs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derived state
   const dayCount = useMemo(() => {
@@ -79,7 +80,7 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
   const remaining = currentBalance?.remaining ?? 0;
   const quotaExceeded = !isUnlimited && dayCount > 0 && dayCount > remaining;
 
-  const needsMedicalCert = (form.type === 'Sick Leave' && dayCount >= 3) || form.type === 'Maternity Leave';
+  const needsMedicalCert = requiresMedicalCert(form.type, dayCount);
   const showHandoverNotes = !!form.handoverEmployeeId;
 
   // Employee options for SearchableSelect

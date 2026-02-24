@@ -54,10 +54,7 @@ export const LeaveProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       return await api.get<LeaveBalance[]>(`/leave-balances/${employeeId}`);
     } catch (e) {
       console.error(e);
-      return [
-        { type: 'Vacation', total: 20, used: 0, remaining: 20 },
-        { type: 'Sick Leave', total: 10, used: 0, remaining: 10 },
-      ];
+      return [];
     }
   }, []);
 

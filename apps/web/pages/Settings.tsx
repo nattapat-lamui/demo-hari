@@ -8,16 +8,17 @@ import {
   Moon,
   Sun,
   Monitor,
-  Globe,
   Save,
   AlertCircle,
   Camera,
+  Tag,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Toast } from '../components/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { api, API_HOST, BASE_URL, getAuthToken } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
+import { LeaveTypesTab } from '../components/settings/LeaveTypesTab';
 
 export const Settings: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -25,7 +26,7 @@ export const Settings: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<
-    'general' | 'notifications' | 'security' | 'appearance'
+    'general' | 'notifications' | 'security' | 'appearance' | 'leaveTypes'
   >('general');
   const [notifications, setNotifications] = useState({
     email: true,
@@ -422,6 +423,19 @@ export const Settings: React.FC = () => {
               <Lock size={18} />
               Security
             </button>
+            {user?.role === 'HR_ADMIN' && (
+              <button
+                onClick={() => setActiveTab('leaveTypes')}
+                className={`flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 lg:w-full ${
+                  activeTab === 'leaveTypes'
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-text-muted-light dark:text-text-muted-dark hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                <Tag size={18} />
+                Leave Types
+              </button>
+            )}
           </div>
         </nav>
 
@@ -845,6 +859,9 @@ export const Settings: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Leave Types Tab (Admin only) */}
+          {activeTab === 'leaveTypes' && <LeaveTypesTab showToast={showToast} />}
         </div>
       </div>
 

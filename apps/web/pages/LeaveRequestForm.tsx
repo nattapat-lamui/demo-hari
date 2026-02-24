@@ -9,6 +9,7 @@ import {
   useLeaveRequestById,
   useEmployeeSearch,
   useLeaveRequests,
+  useLeaveTypeConfig,
 } from '../hooks/queries';
 import { resolveAvatarUrl } from '../lib/api';
 import { Dropdown } from '../components/Dropdown';
@@ -18,6 +19,7 @@ import { SearchableSelect } from '../components/SearchableSelect';
 import type { SearchableSelectOption } from '../components/SearchableSelect';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import type { LeaveBalance } from '../types';
+import { buildLeaveOptions, requiresMedicalCert, getLeaveColor } from '../lib/leaveTypeConfig';
 
 interface FormState {
   type: string;
@@ -28,16 +30,6 @@ interface FormState {
   handoverNotes: string;
   medicalCertificate: File | null;
 }
-
-const LEAVE_OPTIONS = [
-  { value: 'Vacation', label: 'Vacation' },
-  { value: 'Sick Leave', label: 'Sick Leave' },
-  { value: 'Personal Day', label: 'Personal Day' },
-  { value: 'Maternity Leave', label: 'Maternity Leave' },
-  { value: 'Compensatory Leave', label: 'Compensatory Leave' },
-  { value: 'Military Leave', label: 'Military Leave' },
-  { value: 'Leave Without Pay', label: 'Leave Without Pay' },
-];
 
 const initialForm: FormState = {
   type: 'Vacation',
@@ -67,6 +59,8 @@ export function LeaveRequestForm() {
   const [employeeSearch, setEmployeeSearch] = useState('');
 
   // Queries
+  const { data: leaveConfigs = [] } = useLeaveTypeConfig();
+  const LEAVE_OPTIONS = useMemo(() => buildLeaveOptions(leaveConfigs), [leaveConfigs]);
   const { data: balances = [], isPending: balanceLoading } = useLeaveBalance(user?.employeeId);
   const { data: existingRequest, isPending: requestLoading } = useLeaveRequestById(id);
   const { data: leaveRequests = [], isPending: requestsLoading } = useLeaveRequests();
@@ -75,6 +69,13 @@ export function LeaveRequestForm() {
   // Mutations
   const addLeaveRequest = useAddLeaveRequestWithFile();
   const editLeaveRequest = useEditLeaveRequest();
+
+  // Sync default type with first available config
+  useEffect(() => {
+    if (!isEditMode && leaveConfigs.length > 0 && !leaveConfigs.some((c) => c.type === form.type)) {
+      setForm((p) => ({ ...p, type: leaveConfigs[0]!.type }));
+    }
+  }, [leaveConfigs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-fill form in edit mode
   useEffect(() => {
@@ -111,7 +112,7 @@ export function LeaveRequestForm() {
   const isUnlimited = !currentBalance || currentBalance.total === -1;
   const remaining = currentBalance?.remaining ?? 0;
   const quotaExceeded = !isUnlimited && dayCount > 0 && dayCount > remaining;
-  const needsMedicalCert = (form.type === 'Sick Leave' && dayCount >= 3) || form.type === 'Maternity Leave';
+  const needsMedicalCert = requiresMedicalCert(form.type, dayCount);
 
   // Employee options for SearchableSelect
   const employeeOptions: SearchableSelectOption[] = useMemo(
@@ -416,16 +417,7 @@ export function LeaveRequestForm() {
                     : bal.total > 0
                     ? Math.min((bal.remaining / bal.total) * 100, 100)
                     : 0;
-                  const BALANCE_COLORS: Record<string, string> = {
-                    'Vacation': 'bg-blue-500',
-                    'Sick Leave': 'bg-amber-500',
-                    'Personal Day': 'bg-violet-500',
-                    'Maternity Leave': 'bg-pink-500',
-                    'Compensatory Leave': 'bg-teal-500',
-                    'Military Leave': 'bg-slate-500',
-                    'Leave Without Pay': 'bg-orange-500',
-                  };
-                  const colorClass = BALANCE_COLORS[bal.type] || 'bg-gray-500';
+                  const colorClass = getLeaveColor(bal.type, leaveConfigs).barFill;
 
                   return (
                     <div key={bal.type}>

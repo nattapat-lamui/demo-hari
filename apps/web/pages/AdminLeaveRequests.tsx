@@ -9,6 +9,7 @@ import {
   useUpdateLeaveStatus,
   useHandleCancelDecision,
   useAllEmployees,
+  useLeaveTypeConfig,
 } from '../hooks/queries';
 import { useToast } from '../contexts/ToastContext';
 import { Avatar } from '../components/Avatar';
@@ -20,18 +21,9 @@ import { LeaveActionBar } from '../components/LeaveActionBar';
 import { FilterToolbar } from '../components/FilterToolbar';
 import type { LeaveRequest } from '../types';
 import { DEPARTMENTS } from '../types';
+import { buildLeaveColorMap, buildLeaveFilterOptions } from '../lib/leaveTypeConfig';
 
 const ITEMS_PER_PAGE = 10;
-
-const LEAVE_TYPE_COLORS: Record<string, string> = {
-  'Vacation': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
-  'Sick Leave': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
-  'Personal Day': 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-200',
-  'Maternity Leave': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-200',
-  'Compensatory Leave': 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200',
-  'Military Leave': 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-200',
-  'Leave Without Pay': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
-};
 
 const STATUS_OPTIONS = [
   { value: 'Pending', label: 'All Pending' },
@@ -39,17 +31,6 @@ const STATUS_OPTIONS = [
   { value: 'Approved', label: 'Approved' },
   { value: 'Rejected', label: 'Rejected' },
   { value: 'Cancel Requested', label: 'Cancel Requested' },
-];
-
-const LEAVE_TYPE_OPTIONS = [
-  { value: 'All', label: 'All Leave Types' },
-  { value: 'Vacation', label: 'Vacation' },
-  { value: 'Sick Leave', label: 'Sick Leave' },
-  { value: 'Personal Day', label: 'Personal Day' },
-  { value: 'Maternity Leave', label: 'Maternity Leave' },
-  { value: 'Compensatory Leave', label: 'Compensatory Leave' },
-  { value: 'Military Leave', label: 'Military Leave' },
-  { value: 'Leave Without Pay', label: 'Leave Without Pay' },
 ];
 
 const SORT_OPTIONS = [
@@ -70,6 +51,16 @@ export const AdminLeaveRequests: React.FC = () => {
 
   const { data: leaveRequests = [], isPending: isLoadingRequests } = useLeaveRequests();
   const { data: employees = [], isPending: isLoadingEmployees } = useAllEmployees();
+  const { data: leaveConfigs = [] } = useLeaveTypeConfig();
+  const LEAVE_TYPE_COLORS = useMemo(() => {
+    const colorMap = buildLeaveColorMap(leaveConfigs);
+    const result: Record<string, string> = {};
+    for (const [type, colors] of Object.entries(colorMap)) {
+      result[type] = colors.badge;
+    }
+    return result;
+  }, [leaveConfigs]);
+  const LEAVE_TYPE_OPTIONS = useMemo(() => buildLeaveFilterOptions(leaveConfigs), [leaveConfigs]);
   const updateLeaveStatusMutation = useUpdateLeaveStatus();
   const handleCancelDecisionMutation = useHandleCancelDecision();
 

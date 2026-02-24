@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { LeaveRequest } from '../types';
+import { useLeaveTypeConfig } from '../hooks/queries';
+import { buildLeaveColorMap, getShortLabel } from '../lib/leaveTypeConfig';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,31 +39,9 @@ const MONTH_NAMES = [
 
 const SHORT_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-/** Color config per leave type — covers all 7 types */
-const TYPE_COLORS: Record<string, { bar: string; barDark: string; text: string; legend: string }> = {
-  'Vacation':           { bar: 'bg-blue-400',   barDark: 'dark:bg-blue-500',   text: 'text-white', legend: 'bg-blue-400 dark:bg-blue-500' },
-  'Sick Leave':         { bar: 'bg-amber-400',  barDark: 'dark:bg-amber-500',  text: 'text-white', legend: 'bg-amber-400 dark:bg-amber-500' },
-  'Personal Day':       { bar: 'bg-violet-400', barDark: 'dark:bg-violet-500', text: 'text-white', legend: 'bg-violet-400 dark:bg-violet-500' },
-  'Maternity Leave':    { bar: 'bg-pink-400',   barDark: 'dark:bg-pink-500',   text: 'text-white', legend: 'bg-pink-400 dark:bg-pink-500' },
-  'Compensatory Leave': { bar: 'bg-teal-400',   barDark: 'dark:bg-teal-500',   text: 'text-white', legend: 'bg-teal-400 dark:bg-teal-500' },
-  'Military Leave':     { bar: 'bg-slate-400',  barDark: 'dark:bg-slate-500',  text: 'text-white', legend: 'bg-slate-400 dark:bg-slate-500' },
-  'Leave Without Pay':  { bar: 'bg-orange-400', barDark: 'dark:bg-orange-500', text: 'text-white', legend: 'bg-orange-400 dark:bg-orange-500' },
-};
-
 const DEFAULT_TYPE_COLOR = { bar: 'bg-gray-400', barDark: 'dark:bg-gray-500', text: 'text-white', legend: 'bg-gray-400 dark:bg-gray-500' };
 
 const TEAM_GRAY_COLOR = { bar: 'bg-gray-300', barDark: 'dark:bg-gray-600', text: 'text-gray-700 dark:text-gray-200', legend: 'bg-gray-300 dark:bg-gray-600' };
-
-/** Short labels for leave types */
-const SHORT_TYPE: Record<string, string> = {
-  'Vacation': 'Vacation',
-  'Sick Leave': 'Sick',
-  'Personal Day': 'Personal',
-  'Maternity Leave': 'Maternity',
-  'Compensatory Leave': 'Compensatory',
-  'Military Leave': 'Military',
-  'Leave Without Pay': 'LWP',
-};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -116,6 +96,16 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
   isManager = false,
   onLeaveClick,
 }) => {
+  const { data: leaveConfigs = [] } = useLeaveTypeConfig();
+  const TYPE_COLORS = useMemo(() => {
+    const colorMap = buildLeaveColorMap(leaveConfigs);
+    const result: Record<string, { bar: string; barDark: string; text: string; legend: string }> = {};
+    for (const [type, colors] of Object.entries(colorMap)) {
+      result[type] = { bar: colors.bar, barDark: colors.barDark, text: 'text-white', legend: colors.legend };
+    }
+    return result;
+  }, [leaveConfigs]);
+
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [anchor, setAnchor] = useState(() => new Date());
 
@@ -407,7 +397,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
                     label = `${person.name} - On Leave`;
                   } else {
                     colors = TYPE_COLORS[bar.request.type] || DEFAULT_TYPE_COLOR;
-                    const shortType = SHORT_TYPE[bar.request.type] || bar.request.type;
+                    const shortType = getShortLabel(bar.request.type);
                     label = isManager
                       ? `${person.name} - ${shortType}`
                       : shortType;
@@ -449,7 +439,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
           <div key={type} className="flex items-center gap-1.5">
             <span className={`w-3 h-2 rounded-sm ${colors.legend}`} />
             <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-              {SHORT_TYPE[type] || type}
+              {getShortLabel(type)}
             </span>
           </div>
         ))}

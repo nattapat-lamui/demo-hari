@@ -112,10 +112,10 @@ export class SystemConfigService {
         if (!quotasConfig) {
             // Return default values if not configured
             return [
-                { type: 'Vacation', total: 7 },
-                { type: 'Sick Leave', total: 30 },
-                { type: 'Personal Day', total: 6 },
-                { type: 'Leave Without Pay', total: -1 },
+                { type: 'Vacation', total: 7, color: 'blue' },
+                { type: 'Sick Leave', total: 30, color: 'amber' },
+                { type: 'Personal Day', total: 6, color: 'violet' },
+                { type: 'Leave Without Pay', total: -1, color: 'orange' },
             ];
         }
         return quotasConfig;

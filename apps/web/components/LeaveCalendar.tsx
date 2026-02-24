@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { LeaveRequest } from '../types';
+import { useLeaveTypeConfig } from '../hooks/queries';
+import { buildLeaveColorMap, getShortLabel } from '../lib/leaveTypeConfig';
 
 interface LeaveCalendarProps {
   userLeaves: LeaveRequest[];
@@ -15,13 +17,6 @@ const MONTH_NAMES = [
 ];
 
 const DAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-
-/** Color config per leave type */
-const TYPE_COLORS: Record<string, { bg: string; text: string; dot: string; badge: string }> = {
-  Vacation:       { bg: 'bg-blue-100 dark:bg-blue-900/30',     text: 'text-blue-800 dark:text-blue-200',     dot: 'bg-blue-400 dark:bg-blue-500',     badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-  'Sick Leave':   { bg: 'bg-amber-100 dark:bg-amber-900/30',   text: 'text-amber-800 dark:text-amber-200',   dot: 'bg-amber-400 dark:bg-amber-500',   badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-  'Personal Day': { bg: 'bg-violet-100 dark:bg-violet-900/30', text: 'text-violet-800 dark:text-violet-200', dot: 'bg-violet-400 dark:bg-violet-500', badge: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
-};
 
 const DEFAULT_COLOR = { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-800 dark:text-gray-200', dot: 'bg-gray-400 dark:bg-gray-500', badge: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' };
 
@@ -106,6 +101,16 @@ function buildDateTypeMap(leaves: LeaveRequest[], isManager: boolean): Map<strin
 }
 
 export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLeaves, isManager = false, onLeaveClick }) => {
+  const { data: leaveConfigs = [] } = useLeaveTypeConfig();
+  const TYPE_COLORS = useMemo(() => {
+    const colorMap = buildLeaveColorMap(leaveConfigs);
+    const result: Record<string, { bg: string; text: string; dot: string; badge: string }> = {};
+    for (const [type, colors] of Object.entries(colorMap)) {
+      result[type] = { bg: colors.cellBg, text: colors.cellText, dot: colors.dot, badge: colors.badge };
+    }
+    return result;
+  }, [leaveConfigs]);
+
   const [displayMonth, setDisplayMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -334,7 +339,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
                       </span>
                       {isManager || entry.isUser ? (
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ml-auto shrink-0 ${colors.badge}`}>
-                          {entry.type === 'Sick Leave' ? 'Sick' : entry.type === 'Personal Day' ? 'Personal' : entry.type}
+                          {getShortLabel(entry.type)}
                           {entry.request.status === 'Pending' && isManager ? ' (Pending)' : ''}
                         </span>
                       ) : (
@@ -370,7 +375,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-auto pt-3 border-t border-border-light dark:border-border-dark">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 pt-4 pb-1 border-t border-border-light dark:border-border-dark">
         {Object.entries(TYPE_COLORS).map(([type, colors]) => (
           <div key={type} className="flex items-center gap-1.5">
             <span className={`w-3 h-3 rounded ${colors.bg}`} />
