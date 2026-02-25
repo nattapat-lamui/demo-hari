@@ -119,6 +119,7 @@ export class AuthService {
       department: employee.department,
       bio: employee.bio,
       phone: employee.phone,
+      emailNotifications: user.email_notifications ?? true,
     };
 
     return {
@@ -463,7 +464,7 @@ export class AuthService {
 
     const result = await query(
       `SELECT rt.id, rt.user_id, rt.revoked, rt.expires_at,
-              u.email, u.role
+              u.email, u.role, u.email_notifications
        FROM refresh_tokens rt
        JOIN users u ON u.id = rt.user_id
        WHERE rt.token_hash = $1`,
@@ -518,6 +519,7 @@ export class AuthService {
       department: employee.department,
       bio: employee.bio,
       phone: employee.phone,
+      emailNotifications: row.email_notifications ?? true,
     };
 
     return {
@@ -526,6 +528,13 @@ export class AuthService {
       refreshToken,
       user: userResponse,
     };
+  }
+
+  async updateNotificationPreferences(userId: string, emailNotifications: boolean): Promise<void> {
+    await query(
+      "UPDATE users SET email_notifications = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+      [emailNotifications, userId],
+    );
   }
 
   /**

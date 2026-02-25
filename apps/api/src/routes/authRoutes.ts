@@ -73,4 +73,11 @@ router.get(
   AuthController.checkEmail.bind(AuthController),
 );
 
+// PATCH /api/auth/notification-preferences - Update notification preferences (protected)
+router.patch(
+  "/notification-preferences",
+  authenticateToken,
+  AuthController.updateNotificationPreferences.bind(AuthController),
+);
+
 export default router;

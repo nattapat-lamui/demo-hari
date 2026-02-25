@@ -20,6 +20,7 @@ export interface EmployeeHeroProps {
     permissions: EmployeePermissions;
     onEditProfileClick: () => void;
     onAvatarChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onBannerColorChange: (color: string) => void;
     onPromote: () => void;
     onTransfer: () => void;
     onTerminate: () => void;
@@ -72,6 +73,8 @@ export interface TrainingTabProps {
 
 export interface PerformanceTabProps {
     isAdmin: boolean;
+    canAddReview: boolean;
+    currentUserId?: string;
     reviewsList: PerformanceReview[];
     onAddReview: () => void;
     onEditReview: (review: PerformanceReview) => void;

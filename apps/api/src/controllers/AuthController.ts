@@ -168,6 +168,26 @@ export class AuthController {
       res.status(500).json({ error: error.message || "Failed to check email" });
     }
   }
+
+  async updateNotificationPreferences(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.userId;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const { emailNotifications } = req.body;
+      if (typeof emailNotifications !== 'boolean') {
+        res.status(400).json({ error: "emailNotifications must be a boolean" });
+        return;
+      }
+      await AuthService.updateNotificationPreferences(userId, emailNotifications);
+      res.json({ message: "Notification preferences updated" });
+    } catch (error: any) {
+      console.error("Update notification preferences error:", error);
+      res.status(500).json({ error: error.message || "Failed to update preferences" });
+    }
+  }
 }
 
 export default new AuthController();

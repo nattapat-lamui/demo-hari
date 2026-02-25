@@ -28,6 +28,7 @@ export interface Employee {
     managerId?: string;
     onboardingStatus?: string;
     onboardingPercentage?: number;
+    bannerColor?: string | null;
 }
 
 export interface CreateEmployeeDTO {
@@ -53,4 +54,5 @@ export interface UpdateEmployeeDTO extends Partial<CreateEmployeeDTO> {
     managerId?: string | null;
     employeeCode?: string;
     address?: EmployeeAddress | null;
+    bannerColor?: string | null;
 }

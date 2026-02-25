@@ -22,6 +22,12 @@ router.put(
   NotificationController.markAllAsRead.bind(NotificationController)
 );
 
+// POST /api/notifications/support-contact - Send support message to HR admins
+router.post(
+  "/support-contact",
+  NotificationController.supportContact.bind(NotificationController)
+);
+
 // PUT /api/notifications/:id/read - Mark single as read
 router.put(
   "/:id/read",

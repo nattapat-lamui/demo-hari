@@ -157,6 +157,54 @@ class EmailService {
     await this.transporter.sendMail(mailOptions);
     console.log("EmailService: Password reset confirmation sent to", to);
   }
+
+  async sendNotificationEmail(
+    to: string,
+    title: string,
+    message: string,
+    link?: string,
+  ): Promise<void> {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const actionUrl = link ? `${frontendUrl}/#${link}` : frontendUrl;
+
+    const html = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        <div style="background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%); border-radius: 12px; padding: 40px; text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px;">HARI</h1>
+          <p style="color: #a0aec0; margin: 5px 0 0; font-size: 14px;">HR Intelligence by AIYA</p>
+        </div>
+        <div style="background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0;">
+          <h2 style="color: #2d3748; margin-top: 0;">${title}</h2>
+          <p style="color: #4a5568; line-height: 1.6;">${message}</p>
+          ${link ? `
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${actionUrl}"
+               style="background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%); color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">
+              View in HARI
+            </a>
+          </div>` : ''}
+        </div>
+        <p style="color: #a0aec0; font-size: 12px; text-align: center; margin-top: 20px;">
+          You can turn off email notifications in <a href="${frontendUrl}/#/settings" style="color: #4a90d9;">Settings</a>.
+        </p>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: this.getFrom(),
+      to,
+      subject: `HARI — ${title}`,
+      html,
+    };
+
+    if (!this.transporter) {
+      console.log(`EmailService [DEV]: Notification email to ${to}: ${title}`);
+      return;
+    }
+
+    await this.transporter.sendMail(mailOptions);
+    console.log(`EmailService: Notification email sent to ${to}`);
+  }
 }
 
 export default new EmailService();

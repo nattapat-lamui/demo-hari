@@ -9,6 +9,7 @@ export interface User {
     department?: string;
     bio?: string;
     phone?: string;
+    emailNotifications?: boolean;
 }
 
 export interface LoginCredentials {

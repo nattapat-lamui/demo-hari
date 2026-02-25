@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Edit2 } from 'lucide-react';
+import { Plus, Edit2, Briefcase } from 'lucide-react';
 import { HistoryTabProps } from './EmployeeDetailTypes';
 import { formatDate } from '../../lib/date';
 
@@ -31,6 +31,13 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                     </button>
                 )}
             </div>
+            {historyList.length === 0 ? (
+                <div className="text-center py-12 text-text-muted-light dark:text-text-muted-dark border-2 border-dashed border-border-light dark:border-border-dark rounded-xl">
+                    <Briefcase size={48} className="mx-auto mb-4 opacity-20" />
+                    <p>No employment history recorded.</p>
+                    {canEdit && <p className="text-xs mt-1">Click "Add Position" to add the first entry.</p>}
+                </div>
+            ) : (
             <div className="relative border-l-2 border-border-light dark:border-border-dark ml-3 space-y-8">
                 {historyList.map((job, index) => (
                     <div key={job.id} className="relative pl-8">
@@ -138,6 +145,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                     </div>
                 ))}
             </div>
+            )}
         </div>
     );
 };

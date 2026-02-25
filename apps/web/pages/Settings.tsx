@@ -5,6 +5,7 @@ import {
   Bell,
   Lock,
   Eye,
+  EyeOff,
   Moon,
   Sun,
   Monitor,
@@ -12,6 +13,8 @@ import {
   AlertCircle,
   Camera,
   Tag,
+  Check,
+  X,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Toast } from '../components/Toast';
@@ -19,6 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api, API_HOST, BASE_URL, getAuthToken } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import { LeaveTypesTab } from '../components/settings/LeaveTypesTab';
+import { PHONE_COUNTRY_CODES, parsePhoneNumber } from '../lib/phoneUtils';
 
 export const Settings: React.FC = () => {
   const { user, updateUser, isAdminView } = useAuth();
@@ -35,12 +39,10 @@ export const Settings: React.FC = () => {
       setActiveTab('general');
     }
   }, [isAdminView, activeTab]);
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    slack: false,
-    news: true,
-  });
+  const [emailNotifications, setEmailNotifications] = useState(
+    () => user?.emailNotifications ?? true
+  );
+  const [isSavingNotif, setIsSavingNotif] = useState(false);
 
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const [language, setLanguage] = useState<'en' | 'th'>('en');
@@ -64,6 +66,7 @@ export const Settings: React.FC = () => {
     confirm: '',
   });
   const [passwordErrors, setPasswordErrors] = useState<{ [key: string]: string }>({});
+  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
   // Loading and Toast state
   const [isSaving, setIsSaving] = useState(false);
@@ -161,17 +164,10 @@ export const Settings: React.FC = () => {
       let phoneNumber = '';
       let extractedCountryCode = '+66'; // Default
 
-      // If user has a phone number, try to extract country code
-      // Assuming phone is stored as "+66812345678"
-      if (user.phone && user.phone.startsWith('+')) {
-        const match = user.phone.match(/^(\+\d{1,4})(.*)/);
-        if (match && match[1] && match[2] !== undefined) {
-          extractedCountryCode = match[1];
-          phoneNumber = match[2].trim();
-        }
-      } else {
-        phoneNumber = user.phone || '';
-      }
+      // Parse phone number to extract country code
+      const parsed = parsePhoneNumber(user.phone || '');
+      extractedCountryCode = parsed.code;
+      phoneNumber = parsed.number;
 
       setProfile({
         firstName: names[0] || '',
@@ -192,8 +188,26 @@ export const Settings: React.FC = () => {
     }
   }, [user]);
 
-  const handleNotificationChange = (key: keyof typeof notifications) => {
-    setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+  // Sync emailNotifications from user object when user data loads
+  useEffect(() => {
+    if (user?.emailNotifications !== undefined) {
+      setEmailNotifications(user.emailNotifications);
+    }
+  }, [user?.emailNotifications]);
+
+  const handleEmailNotificationToggle = async () => {
+    const newValue = !emailNotifications;
+    setEmailNotifications(newValue);
+    setIsSavingNotif(true);
+    try {
+      await api.patch('/auth/notification-preferences', { emailNotifications: newValue });
+      updateUser({ emailNotifications: newValue });
+    } catch {
+      setEmailNotifications(!newValue); // revert on error
+      showToast('Failed to save notification preference', 'error');
+    } finally {
+      setIsSavingNotif(false);
+    }
   };
 
   // Handle Save Changes (Profile)
@@ -349,6 +363,7 @@ export const Settings: React.FC = () => {
       showToast('Password changed successfully!', 'success');
       setPasswords({ current: '', new: '', confirm: '' });
       setPasswordErrors({});
+      setShowPasswords({ current: false, new: false, confirm: false });
     } catch (error: any) {
       let errorMessage = 'Failed to change password. Please try again.';
       if (error.message) {
@@ -364,10 +379,23 @@ export const Settings: React.FC = () => {
     }
   };
 
-  // Handle 2FA Enable
-  const handleEnable2FA = () => {
-    showToast('Two-Factor Authentication setup is coming soon!', 'info');
+  // Password strength checker
+  const getPasswordStrength = (pwd: string) => {
+    if (!pwd) return null;
+    const checks = [
+      pwd.length >= 8,
+      /[A-Z]/.test(pwd),
+      /[a-z]/.test(pwd),
+      /[0-9]/.test(pwd),
+      /[@$!%*?&]/.test(pwd),
+    ];
+    const score = checks.filter(Boolean).length;
+    if (score <= 2) return { score, label: 'Weak', color: 'bg-red-500', textColor: 'text-red-500' };
+    if (score <= 3) return { score, label: 'Fair', color: 'bg-yellow-500', textColor: 'text-yellow-600' };
+    if (score === 4) return { score, label: 'Good', color: 'bg-blue-500', textColor: 'text-blue-600' };
+    return { score, label: 'Strong', color: 'bg-green-500', textColor: 'text-green-600' };
   };
+  const strength = getPasswordStrength(passwords.new);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
@@ -544,20 +572,8 @@ export const Settings: React.FC = () => {
                       name="countryCode"
                       value={countryCode}
                       onChange={(value) => setCountryCode(value)}
-                      className="w-32"
-                      options={[
-                        { value: '+66', label: '🇹🇭 +66' },
-                        { value: '+1', label: '🇺🇸 +1' },
-                        { value: '+44', label: '🇬🇧 +44' },
-                        { value: '+65', label: '🇸🇬 +65' },
-                        { value: '+81', label: '🇯🇵 +81' },
-                        { value: '+86', label: '🇨🇳 +86' },
-                        { value: '+91', label: '🇮🇳 +91' },
-                        { value: '+61', label: '🇦🇺 +61' },
-                        { value: '+82', label: '🇰🇷 +82' },
-                        { value: '+33', label: '🇫🇷 +33' },
-                        { value: '+49', label: '🇩🇪 +49' },
-                      ]}
+                      className="w-28"
+                      options={PHONE_COUNTRY_CODES}
                     />
                     <input
                       id="phone"
@@ -573,9 +589,6 @@ export const Settings: React.FC = () => {
                       className="flex-1 px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                     />
                   </div>
-                  <p className="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                    Enter phone number without country code or special characters
-                  </p>
                 </div>
               </div>
 
@@ -627,57 +640,18 @@ export const Settings: React.FC = () => {
                       Email Notifications
                     </h3>
                     <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                      Receive daily summaries and critical alerts via email.
+                      Receive alerts for leave approvals and important HR updates via email.
                     </p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={notifications.email}
-                      onChange={() => handleNotificationChange('email')}
+                      checked={emailNotifications}
+                      onChange={handleEmailNotificationToggle}
+                      disabled={isSavingNotif}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark/50 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-text-light dark:text-text-dark">
-                      Push Notifications
-                    </h3>
-                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                      Receive real-time alerts on your desktop.
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={notifications.push}
-                      onChange={() => handleNotificationChange('push')}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark/50 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-text-light dark:text-text-dark">
-                      Slack Integration
-                    </h3>
-                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                      Forward important updates to your Slack workspace.
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={notifications.slack}
-                      onChange={() => handleNotificationChange('slack')}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary peer-disabled:opacity-50"></div>
                   </label>
                 </div>
               </div>
@@ -751,119 +725,170 @@ export const Settings: React.FC = () => {
                 </p>
               </div>
 
-              <div className="space-y-4">
+              {/* Hidden honeypot inputs — prevent browser from autofilling search bar */}
+              <input type="text" name="fake_user" style={{ display: 'none' }} autoComplete="username" readOnly tabIndex={-1} />
+              <input type="password" name="fake_pass" style={{ display: 'none' }} autoComplete="new-password" readOnly tabIndex={-1} />
+
+              <form
+                onSubmit={(e) => { e.preventDefault(); handleChangePassword(); }}
+                autoComplete="off"
+                className="space-y-5"
+              >
+                <h3 className="font-semibold text-text-light dark:text-text-dark">Change Password</h3>
+
+                {/* Current Password */}
                 <div>
-                  <h3 className="font-medium text-text-light dark:text-text-dark mb-4">
-                    Change Password
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label htmlFor="currentPassword" className="sr-only">Current Password</label>
-                      <input
-                        id="currentPassword"
-                        name="currentPassword"
-                        type="password"
-                        placeholder="Current Password"
-                        value={passwords.current}
-                        onChange={(e) => {
-                          setPasswords((prev) => ({ ...prev, current: e.target.value }));
-                          if (passwordErrors.current)
-                            setPasswordErrors((prev) => ({ ...prev, current: '' }));
-                        }}
-                        autoComplete="current-password"
-                        className={`w-full px-4 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark ${
-                          passwordErrors.current
-                            ? 'border-red-500'
-                            : 'border-border-light dark:border-border-dark'
-                        }`}
-                      />
-                      {passwordErrors.current && (
-                        <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle size={12} /> {passwordErrors.current}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label htmlFor="newPassword" className="sr-only">New Password</label>
-                      <input
-                        id="newPassword"
-                        name="newPassword"
-                        type="password"
-                        placeholder="New Password"
-                        value={passwords.new}
-                        onChange={(e) => {
-                          setPasswords((prev) => ({ ...prev, new: e.target.value }));
-                          if (passwordErrors.new)
-                            setPasswordErrors((prev) => ({ ...prev, new: '' }));
-                        }}
-                        autoComplete="new-password"
-                        className={`w-full px-4 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark ${
-                          passwordErrors.new
-                            ? 'border-red-500'
-                            : 'border-border-light dark:border-border-dark'
-                        }`}
-                      />
-                      {passwordErrors.new && (
-                        <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle size={12} /> {passwordErrors.new}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label htmlFor="confirmPassword" className="sr-only">Confirm New Password</label>
-                      <input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password"
-                        placeholder="Confirm New Password"
-                        value={passwords.confirm}
-                        onChange={(e) => {
-                          setPasswords((prev) => ({ ...prev, confirm: e.target.value }));
-                          if (passwordErrors.confirm)
-                            setPasswordErrors((prev) => ({ ...prev, confirm: '' }));
-                        }}
-                        autoComplete="new-password"
-                        className={`w-full px-4 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark ${
-                          passwordErrors.confirm
-                            ? 'border-red-500'
-                            : 'border-border-light dark:border-border-dark'
-                        }`}
-                      />
-                      {passwordErrors.confirm && (
-                        <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle size={12} /> {passwordErrors.confirm}
-                        </p>
-                      )}
-                    </div>
+                  <label htmlFor="currentPassword" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                    Current Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="currentPassword"
+                      name="currentPassword"
+                      type={showPasswords.current ? 'text' : 'password'}
+                      placeholder="Enter your current password"
+                      value={passwords.current}
+                      onChange={(e) => {
+                        setPasswords((prev) => ({ ...prev, current: e.target.value }));
+                        if (passwordErrors.current) setPasswordErrors((prev) => ({ ...prev, current: '' }));
+                      }}
+                      autoComplete="new-password"
+                      className={`w-full px-4 py-2.5 pr-10 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark text-sm ${
+                        passwordErrors.current ? 'border-red-500' : 'border-border-light dark:border-border-dark'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(p => ({ ...p, current: !p.current }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted-light hover:text-text-light dark:hover:text-text-dark transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPasswords.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
+                  {passwordErrors.current && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle size={12} /> {passwordErrors.current}
+                    </p>
+                  )}
+                </div>
+
+                {/* New Password */}
+                <div>
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="newPassword"
+                      name="newPassword"
+                      type={showPasswords.new ? 'text' : 'password'}
+                      placeholder="Enter a new password"
+                      value={passwords.new}
+                      onChange={(e) => {
+                        setPasswords((prev) => ({ ...prev, new: e.target.value }));
+                        if (passwordErrors.new) setPasswordErrors((prev) => ({ ...prev, new: '' }));
+                      }}
+                      autoComplete="new-password"
+                      className={`w-full px-4 py-2.5 pr-10 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark text-sm ${
+                        passwordErrors.new ? 'border-red-500' : 'border-border-light dark:border-border-dark'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(p => ({ ...p, new: !p.new }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted-light hover:text-text-light dark:hover:text-text-dark transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPasswords.new ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {passwordErrors.new && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle size={12} /> {passwordErrors.new}
+                    </p>
+                  )}
+                  {/* Password strength */}
+                  {passwords.new && strength && (
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 flex gap-1">
+                          {[1,2,3,4,5].map(i => (
+                            <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength.score ? strength.color : 'bg-gray-200 dark:bg-gray-700'}`} />
+                          ))}
+                        </div>
+                        <span className={`text-xs font-medium ${strength.textColor}`}>{strength.label}</span>
+                      </div>
+                      <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                        {[
+                          { label: '8+ characters', ok: passwords.new.length >= 8 },
+                          { label: 'Uppercase letter', ok: /[A-Z]/.test(passwords.new) },
+                          { label: 'Lowercase letter', ok: /[a-z]/.test(passwords.new) },
+                          { label: 'Number', ok: /[0-9]/.test(passwords.new) },
+                          { label: 'Special character', ok: /[@$!%*?&]/.test(passwords.new) },
+                        ].map(({ label, ok }) => (
+                          <li key={label} className={`flex items-center gap-1 text-xs ${ok ? 'text-green-600 dark:text-green-400' : 'text-text-muted-light dark:text-text-muted-dark'}`}>
+                            {ok ? <Check size={11} /> : <X size={11} />} {label}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                    Confirm New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showPasswords.confirm ? 'text' : 'password'}
+                      placeholder="Re-enter your new password"
+                      value={passwords.confirm}
+                      onChange={(e) => {
+                        setPasswords((prev) => ({ ...prev, confirm: e.target.value }));
+                        if (passwordErrors.confirm) setPasswordErrors((prev) => ({ ...prev, confirm: '' }));
+                      }}
+                      autoComplete="new-password"
+                      className={`w-full px-4 py-2.5 pr-10 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark text-sm ${
+                        passwordErrors.confirm ? 'border-red-500' : passwords.confirm && passwords.confirm === passwords.new ? 'border-green-500' : 'border-border-light dark:border-border-dark'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(p => ({ ...p, confirm: !p.confirm }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted-light hover:text-text-light dark:hover:text-text-dark transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPasswords.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {passwordErrors.confirm && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle size={12} /> {passwordErrors.confirm}
+                    </p>
+                  )}
+                  {passwords.confirm && passwords.confirm === passwords.new && !passwordErrors.confirm && (
+                    <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                      <Check size={12} /> Passwords match
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-1">
                   <button
-                    onClick={handleChangePassword}
+                    type="submit"
                     disabled={isChangingPassword}
-                    className="mt-3 px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
+                    <Lock size={16} />
                     {isChangingPassword ? 'Updating...' : 'Update Password'}
                   </button>
                 </div>
-
-                <div className="pt-4 border-t border-border-light dark:border-border-dark">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-text-light dark:text-text-dark">
-                        Two-Factor Authentication
-                      </h3>
-                      <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                        Add an extra layer of security to your account.
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleEnable2FA}
-                      className="px-4 py-2 bg-primary/10 text-primary font-medium rounded-lg text-sm hover:bg-primary/20 transition-colors"
-                    >
-                      Enable 2FA
-                    </button>
-                  </div>
-                </div>
-              </div>
+              </form>
             </div>
           )}
 

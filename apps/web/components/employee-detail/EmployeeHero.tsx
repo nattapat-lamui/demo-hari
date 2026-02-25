@@ -1,6 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, MoreHorizontal } from 'lucide-react';
+import { Camera, MoreHorizontal, Palette } from 'lucide-react';
 import { EmployeeHeroProps } from './EmployeeDetailTypes';
+
+const BANNER_PRESETS = [
+    { label: 'Blue Teal',      from: '#4a90d9', to: '#50c5b7' },
+    { label: 'Purple Pink',    from: '#7c3aed', to: '#ec4899' },
+    { label: 'Rose Orange',    from: '#e11d48', to: '#f97316' },
+    { label: 'Green Cyan',     from: '#16a34a', to: '#06b6d4' },
+    { label: 'Indigo Violet',  from: '#4338ca', to: '#8b5cf6' },
+    { label: 'Sky Blue',       from: '#0284c7', to: '#38bdf8' },
+    { label: 'Amber Gold',     from: '#d97706', to: '#fbbf24' },
+    { label: 'Pink Rose',      from: '#db2777', to: '#f472b6' },
+    { label: 'Emerald Green',  from: '#059669', to: '#34d399' },
+    { label: 'Slate',          from: '#334155', to: '#64748b' },
+];
+
+function parseBannerColor(raw?: string | null): { from: string; to: string } {
+    if (raw && raw.includes(',')) {
+        const parts = raw.split(',');
+        return { from: parts[0] ?? '#4a90d9', to: parts[1] ?? '#50c5b7' };
+    }
+    return { from: '#4a90d9', to: '#50c5b7' };
+}
 
 export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
     employee,
@@ -8,16 +29,18 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
     permissions,
     onEditProfileClick,
     onAvatarChange,
+    onBannerColorChange,
     onPromote,
     onTransfer,
     onTerminate,
 }) => {
     const { canEditBasicInfo, isAdmin } = permissions;
     const [actionsOpen, setActionsOpen] = useState(false);
+    const [paletteOpen, setPaletteOpen] = useState(false);
     const [imgError, setImgError] = useState(false);
     const actionsRef = useRef<HTMLDivElement>(null);
+    const paletteRef = useRef<HTMLDivElement>(null);
 
-    // Reset image error state when avatar URL changes
     useEffect(() => { setImgError(false); }, [avatar]);
 
     useEffect(() => {
@@ -31,10 +54,61 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [actionsOpen]);
 
+    useEffect(() => {
+        if (!paletteOpen) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (paletteRef.current && !paletteRef.current.contains(e.target as Node)) {
+                setPaletteOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [paletteOpen]);
+
+    const bannerColors = parseBannerColor(employee.bannerColor);
+    const bannerStyle = {
+        background: `linear-gradient(to right, ${bannerColors.from}, ${bannerColors.to})`,
+    };
+
     return (
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-            <div className="h-32 bg-gradient-to-r from-primary/80 to-accent-teal/80 rounded-t-xl"></div>
-            <div className="px-6 pb-6 pt-2">
+            <div className="h-32 rounded-t-xl relative group/banner" style={bannerStyle}>
+                {canEditBasicInfo && (
+                    <div ref={paletteRef} className="absolute top-3 right-3">
+                        <button
+                            onClick={() => setPaletteOpen(p => !p)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-black/30 hover:bg-black/50 text-white rounded-lg text-xs font-medium opacity-0 group-hover/banner:opacity-100 transition-opacity backdrop-blur-sm"
+                        >
+                            <Palette size={14} />
+                            Banner color
+                        </button>
+
+                        {paletteOpen && (
+                            <div className="absolute right-0 top-9 z-30 bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark p-3 w-52">
+                                <p className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark mb-2">Choose a banner color</p>
+                                <div className="grid grid-cols-5 gap-1.5">
+                                    {BANNER_PRESETS.map((preset) => {
+                                        const isActive = employee.bannerColor === `${preset.from},${preset.to}`;
+                                        return (
+                                            <button
+                                                key={preset.label}
+                                                title={preset.label}
+                                                onClick={() => {
+                                                    onBannerColorChange(`${preset.from},${preset.to}`);
+                                                    setPaletteOpen(false);
+                                                }}
+                                                className={`w-8 h-8 rounded-lg transition-transform hover:scale-110 ${isActive ? 'ring-2 ring-offset-1 ring-primary' : ''}`}
+                                                style={{ background: `linear-gradient(135deg, ${preset.from}, ${preset.to})` }}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+            <div className="px-6 pb-6 pt-2 relative z-10">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end -mt-14 mb-2">
                     <div className="flex items-end gap-4">
                         <div className="relative group cursor-pointer">

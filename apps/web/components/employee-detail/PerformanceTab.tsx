@@ -2,18 +2,28 @@ import React from 'react';
 import { Plus, Edit2, Trash2, Star } from 'lucide-react';
 import { PerformanceTabProps } from './EmployeeDetailTypes';
 
+const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
 export const PerformanceTab: React.FC<PerformanceTabProps> = ({
     isAdmin,
+    canAddReview,
+    currentUserId,
     reviewsList,
     onAddReview,
     onEditReview,
     onDeleteReview,
 }) => {
+    const canManageReview = (reviewerUserId?: string) =>
+        isAdmin || (!!currentUserId && reviewerUserId === currentUserId);
+
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex justify-between items-center mb-2">
                 <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Performance Reviews</h3>
-                {isAdmin && (
+                {canAddReview && (
                     <button
                         onClick={onAddReview}
                         className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
@@ -31,7 +41,7 @@ export const PerformanceTab: React.FC<PerformanceTabProps> = ({
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="font-bold text-text-light dark:text-text-dark">Review by {review.reviewer}</span>
-                                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark">• {review.date}</span>
+                                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark">• {formatDate(review.date)}</span>
                                     </div>
                                     <div className="flex items-center gap-1">
                                         {[1, 2, 3, 4, 5].map(star => (
@@ -44,7 +54,7 @@ export const PerformanceTab: React.FC<PerformanceTabProps> = ({
                                         <span className="ml-2 text-sm font-medium text-text-light dark:text-text-dark">{review.rating}/5</span>
                                     </div>
                                 </div>
-                                {isAdmin && (
+                                {canManageReview(review.reviewerUserId) && (
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => onEditReview(review)}
@@ -73,7 +83,7 @@ export const PerformanceTab: React.FC<PerformanceTabProps> = ({
                 <div className="text-center py-12 text-text-muted-light dark:text-text-muted-dark border-2 border-dashed border-border-light dark:border-border-dark rounded-xl">
                     <Star size={48} className="mx-auto mb-4 opacity-20" />
                     <p>No performance reviews recorded.</p>
-                    <p className="text-xs mt-1">Start by adding a new review.</p>
+                    {canAddReview && <p className="text-xs mt-1">Start by adding a new review.</p>}
                 </div>
             )}
         </div>

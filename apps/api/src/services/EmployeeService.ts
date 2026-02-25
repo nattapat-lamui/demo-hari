@@ -212,6 +212,10 @@ export class EmployeeService {
             updates.push(`status = $${paramIndex++}`);
             values.push(data.status);
         }
+        if (data.bannerColor !== undefined) {
+            updates.push(`banner_color = $${paramIndex++}`);
+            values.push(data.bannerColor || null);
+        }
 
         if (updates.length === 0) {
             return existing;
@@ -274,6 +278,7 @@ export class EmployeeService {
             skills: row.skills,
             onboardingStatus: row.onboarding_status || 'Not Started',
             onboardingPercentage: row.onboarding_percentage || 0,
+            bannerColor: row.banner_color || null,
         };
     }
 

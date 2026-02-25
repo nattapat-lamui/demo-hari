@@ -5,6 +5,7 @@ import {
   NotificationResponse,
 } from "../models/Notification";
 import { emitNotificationCreated, emitNotificationRefresh } from "../socket";
+import EmailService from "./EmailService";
 
 // Helper function to format relative time
 function formatRelativeTime(date: Date): string {
@@ -82,6 +83,19 @@ export class NotificationService {
     );
     const notification = toResponse(result.rows[0]);
     emitNotificationCreated(notification);
+
+    // Send email notification if user has email notifications enabled
+    query(
+      `SELECT u.email, u.email_notifications FROM users u WHERE u.id = $1`,
+      [data.user_id]
+    ).then((userResult) => {
+      const user = userResult.rows[0];
+      if (user?.email_notifications) {
+        EmailService.sendNotificationEmail(user.email, data.title, data.message, data.link)
+          .catch((err) => console.error("EmailService: Failed to send notification email:", err));
+      }
+    }).catch(() => { /* non-blocking */ });
+
     return notification;
   }
 

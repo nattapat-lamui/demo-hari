@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import NotificationService from "../services/NotificationService";
+import EmailService from "../services/EmailService";
+import { query } from "../db";
 
 export class NotificationController {
   // GET /api/notifications - Get user's notifications
@@ -75,6 +77,56 @@ export class NotificationController {
     } catch (error: any) {
       console.error("Error marking all notifications as read:", error);
       res.status(500).json({ error: "Failed to mark notifications as read" });
+    }
+  }
+
+  // POST /api/notifications/support-contact - Send support message to HR admins
+  async supportContact(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.userId;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { subject, message } = req.body;
+      if (!subject?.trim() || !message?.trim()) {
+        res.status(400).json({ error: "Subject and message are required" });
+        return;
+      }
+
+      // Get sender info
+      const senderResult = await query(
+        `SELECT u.email, e.name FROM users u LEFT JOIN employees e ON e.user_id = u.id WHERE u.id = $1`,
+        [userId]
+      );
+      const sender = senderResult.rows[0];
+      const senderName = sender?.name || sender?.email || "An employee";
+
+      // Notify all HR admins in-app
+      await NotificationService.notifyAdmins({
+        title: `Support Request: ${subject.trim()}`,
+        message: `${senderName}: ${message.trim()}`,
+        type: "info",
+        link: "/employees",
+      });
+
+      // Also send email to HR admins who have email notifications enabled
+      const adminResult = await query(
+        `SELECT u.email FROM users u WHERE u.role = 'HR_ADMIN' AND u.email_notifications = TRUE`
+      );
+      for (const admin of adminResult.rows) {
+        EmailService.sendNotificationEmail(
+          admin.email,
+          `Support Request from ${senderName}: ${subject.trim()}`,
+          message.trim()
+        ).catch((err) => console.error("Failed to email support request:", err));
+      }
+
+      res.json({ message: "Support message sent successfully" });
+    } catch (error: any) {
+      console.error("Error sending support contact:", error);
+      res.status(500).json({ error: "Failed to send support message" });
     }
   }
 

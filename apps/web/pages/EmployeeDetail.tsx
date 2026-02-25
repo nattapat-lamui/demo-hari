@@ -395,6 +395,17 @@ export const EmployeeDetail: React.FC = () => {
         }
     };
 
+    // Banner Color Handler
+    const handleBannerColorChange = async (color: string) => {
+        if (!id) return;
+        try {
+            await api.patch(`/employees/${id}`, { bannerColor: color });
+            qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id) });
+        } catch (error) {
+            showToast((error as Error).message || 'Failed to save banner color.', 'error');
+        }
+    };
+
     // Performance Review Handlers
     const handleAddReview = () => {
         setReviewForm({
@@ -416,10 +427,16 @@ export const EmployeeDetail: React.FC = () => {
         setDeleteConfirmId(reviewId);
     };
 
-    const confirmDeleteReview = () => {
-        if (deleteConfirmId) {
+    const confirmDeleteReview = async () => {
+        if (!deleteConfirmId) return;
+        try {
+            await api.delete(`/performance/reviews/${deleteConfirmId}`);
             setReviewsList(reviewsList.filter(r => r.id !== deleteConfirmId));
             showToast('Review deleted successfully.', 'success');
+            qc.invalidateQueries({ queryKey: queryKeys.performanceReviews.byEmployee(id!) });
+        } catch (error) {
+            showToast((error as Error).message || 'Failed to delete review.', 'error');
+        } finally {
             setDeleteConfirmId(null);
         }
     };
@@ -513,23 +530,34 @@ export const EmployeeDetail: React.FC = () => {
         }
     };
 
-    const handleSaveReview = () => {
+    const handleSaveReview = async () => {
         if (!reviewForm.reviewer || !reviewForm.date) return;
 
-        if (reviewForm.id) {
-            setReviewsList(prev => prev.map(r => r.id === reviewForm.id ? { ...r, ...reviewForm } as PerformanceReview : r));
-        } else {
-            const newReview: PerformanceReview = {
-                id: Date.now().toString(),
-                employeeId: id!,
-                reviewer: reviewForm.reviewer!,
-                date: reviewForm.date!,
-                rating: reviewForm.rating || 0,
-                notes: reviewForm.notes || ''
-            };
-            setReviewsList(prev => [newReview, ...prev]);
+        try {
+            if (reviewForm.id) {
+                const updated = await api.put<PerformanceReview>(`/performance/reviews/${reviewForm.id}`, {
+                    rating: reviewForm.rating,
+                    notes: reviewForm.notes,
+                    reviewer: reviewForm.reviewer,
+                    date: reviewForm.date,
+                });
+                setReviewsList(prev => prev.map(r => r.id === updated.id ? updated : r));
+            } else {
+                const created = await api.post<PerformanceReview>('/performance/reviews', {
+                    employeeId: id,
+                    date: reviewForm.date,
+                    reviewer: reviewForm.reviewer,
+                    rating: reviewForm.rating || 0,
+                    notes: reviewForm.notes || '',
+                });
+                setReviewsList(prev => [created, ...prev]);
+            }
+            setIsReviewModalOpen(false);
+            showToast(reviewForm.id ? 'Review updated successfully.' : 'Review added successfully.', 'success');
+            qc.invalidateQueries({ queryKey: queryKeys.performanceReviews.byEmployee(id!) });
+        } catch (error) {
+            showToast((error as Error).message || 'Failed to save review.', 'error');
         }
-        setIsReviewModalOpen(false);
     };
 
     // Show loading skeleton while fetching data
@@ -603,6 +631,7 @@ export const EmployeeDetail: React.FC = () => {
                 permissions={permissions}
                 onEditProfileClick={handleEditProfileClick}
                 onAvatarChange={handleAvatarChange}
+                onBannerColorChange={handleBannerColorChange}
                 onPromote={handleOpenPromote}
                 onTransfer={handleOpenTransfer}
                 onTerminate={() => setIsTerminateOpen(true)}
@@ -646,14 +675,14 @@ export const EmployeeDetail: React.FC = () => {
                                     >
                                         Training
                                     </button>
-                                    <button
-                                        className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'performance' ? 'border-primary text-primary' : 'border-transparent text-text-muted-light hover:text-text-light dark:hover:text-text-dark'}`}
-                                        onClick={() => setActiveTab('performance')}
-                                    >
-                                        Performance
-                                    </button>
                                 </>
                             )}
+                            <button
+                                className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'performance' ? 'border-primary text-primary' : 'border-transparent text-text-muted-light hover:text-text-light dark:hover:text-text-dark'}`}
+                                onClick={() => setActiveTab('performance')}
+                            >
+                                Performance
+                            </button>
                             {isAdmin && (
                                 <button
                                     className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'leave-quotas' ? 'border-primary text-primary' : 'border-transparent text-text-muted-light hover:text-text-light dark:hover:text-text-dark'}`}
@@ -707,9 +736,11 @@ export const EmployeeDetail: React.FC = () => {
                                     showToast={showToast}
                                 />
                             )}
-                            {activeTab === 'performance' && canViewSensitiveTabs && (
+                            {activeTab === 'performance' && (
                                 <PerformanceTab
                                     isAdmin={isAdmin}
+                                    canAddReview={isAdmin || !isOwnProfile}
+                                    currentUserId={user?.id}
                                     reviewsList={reviewsList}
                                     onAddReview={handleAddReview}
                                     onEditReview={handleEditReview}

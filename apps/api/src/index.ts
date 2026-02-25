@@ -659,8 +659,28 @@ const runLightMigrations = async () => {
         }
       }
     }
+
   } catch (err) {
     // Table may not exist yet — ignore
+  }
+
+  // Run each critical column migration independently so one failure can't block others
+  try {
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications BOOLEAN DEFAULT TRUE`);
+  } catch (err) {
+    console.error("Migration: failed to add email_notifications column:", err);
+  }
+
+  try {
+    await query(`ALTER TABLE performance_reviews ADD COLUMN IF NOT EXISTS reviewer_user_id UUID REFERENCES users(id)`);
+  } catch (err) {
+    console.error("Migration: failed to add reviewer_user_id to performance_reviews:", err);
+  }
+
+  try {
+    await query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS banner_color VARCHAR(50)`);
+  } catch (err) {
+    console.error("Migration: failed to add banner_color to employees:", err);
   }
 };
 

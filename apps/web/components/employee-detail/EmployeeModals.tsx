@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
     X,
@@ -21,6 +21,7 @@ import { Dropdown } from '../../components/Dropdown';
 import { ThaiAddressForm } from '../../components/ThaiAddressForm';
 import { EmployeeModalsProps } from './EmployeeDetailTypes';
 import { DEPARTMENTS, JOB_TITLES } from '../../types';
+import { PHONE_COUNTRY_CODES, parsePhoneNumber } from '../../lib/phoneUtils';
 
 const OFFICE_LOCATIONS = ['Office', 'Remote'];
 
@@ -73,6 +74,24 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
     onConfirmTerminate,
 }) => {
     const { canEditSensitiveInfo, isOwnProfile } = permissions;
+
+    // Phone: split into country code + number for the UI, combine before saving
+    const [phoneCode, setPhoneCode] = useState('+66');
+    const [phoneNumber, setPhoneNumber] = useState('');
+
+    useEffect(() => {
+        if (isEditProfileOpen) {
+            const parsed = parsePhoneNumber(editForm.phone || '');
+            setPhoneCode(parsed.code);
+            setPhoneNumber(parsed.number);
+        }
+    }, [isEditProfileOpen]);
+
+    const handlePhoneChange = (code: string, number: string) => {
+        setPhoneCode(code);
+        setPhoneNumber(number);
+        onProfileChange('phone', number ? `${code}${number}` : '');
+    };
 
     const handleFormKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
         // Ctrl/Cmd+Enter → save from anywhere
@@ -263,19 +282,27 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
 
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Phone Number</label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
-                                    <input
-                                        type="tel"
-                                        value={editForm.phone || ''}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^\d+\-\s]/g, '');
-                                            if (val.length <= 16) onProfileChange('phone', val);
-                                        }}
-                                        maxLength={16}
-                                        className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
-                                        placeholder="+66812345678"
+                                <div className="flex gap-2">
+                                    <Dropdown
+                                        value={phoneCode}
+                                        onChange={(code) => handlePhoneChange(code, phoneNumber)}
+                                        options={PHONE_COUNTRY_CODES}
+                                        className="w-28"
                                     />
+                                    <div className="relative flex-1">
+                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
+                                        <input
+                                            type="tel"
+                                            value={phoneNumber}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                if (val.length <= 10) handlePhoneChange(phoneCode, val);
+                                            }}
+                                            maxLength={10}
+                                            className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
+                                            placeholder="812345678"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -421,7 +448,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
             )}
 
             {/* Performance Review Modal */}
-            {isReviewModalOpen && isAdmin && createPortal(
+            {isReviewModalOpen && createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
@@ -442,9 +469,10 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 <input
                                     type="text"
                                     value={reviewForm.reviewer || ''}
-                                    onChange={(e) => onSetReviewForm({ ...reviewForm, reviewer: e.target.value })}
+                                    onChange={(e) => isAdmin ? onSetReviewForm({ ...reviewForm, reviewer: e.target.value }) : undefined}
+                                    readOnly={!isAdmin}
                                     placeholder="Reviewer Name"
-                                    className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
+                                    className={`w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark ${!isAdmin ? 'opacity-70 cursor-default' : ''}`}
                                 />
                             </div>
 

@@ -59,6 +59,7 @@ export interface User {
   jobTitle: string;
   bio?: string;
   phone?: string;
+  emailNotifications?: boolean;
 }
 
 export interface EmployeeAddress {
@@ -90,6 +91,7 @@ export interface Employee {
   managerId?: string;
   employeeCode?: string;
   address?: EmployeeAddress | null;
+  bannerColor?: string;
 }
 
 export interface StatCardProps {
@@ -303,6 +305,7 @@ export interface PerformanceReview {
   employeeId: string;
   date: string;
   reviewer: string;
+  reviewerUserId?: string;
   rating: number; // 1 to 5
   notes: string;
 }
