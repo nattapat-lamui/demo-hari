@@ -1,9 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Clock,
-  CheckCircle2,
-  XCircle,
-} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Clock, CheckCircle2, XCircle } from 'lucide-react';
 import {
   useLeaveRequests,
   useUpdateLeaveStatus,
@@ -21,26 +18,35 @@ import { LeaveActionBar } from '../components/LeaveActionBar';
 import { FilterToolbar } from '../components/FilterToolbar';
 import type { LeaveRequest } from '../types';
 import { DEPARTMENTS } from '../types';
-import { buildLeaveColorMap, buildLeaveFilterOptions } from '../lib/leaveTypeConfig';
+import { buildLeaveColorMap, buildLeaveFilterOptions, translateLeaveType } from '../lib/leaveTypeConfig';
 
 const ITEMS_PER_PAGE = 10;
 
-const STATUS_OPTIONS = [
-  { value: 'Pending', label: 'All Pending' },
-  { value: 'All', label: 'All Requests' },
-  { value: 'Approved', label: 'Approved' },
-  { value: 'Rejected', label: 'Rejected' },
-  { value: 'Cancel Requested', label: 'Cancel Requested' },
-];
-
-const SORT_OPTIONS = [
-  { value: 'date_desc', label: 'Date Requested' },
-  { value: 'date_asc', label: 'Oldest First' },
-  { value: 'name_asc', label: 'Name (A-Z)' },
-];
+// STATUS_OPTIONS and SORT_OPTIONS are defined inside the component to access translations
 
 export const AdminLeaveRequests: React.FC = () => {
+  const { t } = useTranslation(['leave', 'common']);
   const { showToast } = useToast();
+
+  const STATUS_OPTIONS = useMemo(
+    () => [
+      { value: 'Pending', label: t('leave:admin.allPending') },
+      { value: 'All', label: t('leave:admin.allRequests') },
+      { value: 'Approved', label: t('leave:admin.approved') },
+      { value: 'Rejected', label: t('leave:admin.rejected') },
+      { value: 'Cancel Requested', label: t('leave:admin.cancelRequested') },
+    ],
+    [t]
+  );
+
+  const SORT_OPTIONS = useMemo(
+    () => [
+      { value: 'date_desc', label: t('leave:admin.sortDateRequested') },
+      { value: 'date_asc', label: t('leave:admin.sortOldestFirst') },
+      { value: 'name_asc', label: t('leave:admin.sortNameAZ') },
+    ],
+    [t]
+  );
 
   const [statusFilter, setStatusFilter] = useState('Pending');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -95,12 +101,22 @@ export const AdminLeaveRequests: React.FC = () => {
     }).length;
 
     const totalDecided = approvedThisMonth + rejectedThisMonth;
-    const approvalRate = totalDecided > 0 ? Math.round((approvedThisMonth / totalDecided) * 100) : 0;
-    const rejectionRate = totalDecided > 0 ? Math.round((rejectedThisMonth / totalDecided) * 100) : 0;
+    const approvalRate =
+      totalDecided > 0 ? Math.round((approvedThisMonth / totalDecided) * 100) : 0;
+    const rejectionRate =
+      totalDecided > 0 ? Math.round((rejectedThisMonth / totalDecided) * 100) : 0;
     const pendingTotal = pending + cancelRequested;
-    const pendingRate = leaveRequests.length > 0 ? Math.round((pendingTotal / leaveRequests.length) * 100) : 0;
+    const pendingRate =
+      leaveRequests.length > 0 ? Math.round((pendingTotal / leaveRequests.length) * 100) : 0;
 
-    return { pending: pendingTotal, approvedThisMonth, rejectedThisMonth, approvalRate, rejectionRate, pendingRate };
+    return {
+      pending: pendingTotal,
+      approvedThisMonth,
+      rejectedThisMonth,
+      approvalRate,
+      rejectionRate,
+      pendingRate,
+    };
   }, [leaveRequests]);
 
   // Filter & sort requests
@@ -141,9 +157,9 @@ export const AdminLeaveRequests: React.FC = () => {
   const handleApprove = async (id: string) => {
     try {
       await updateLeaveStatusMutation.mutateAsync({ id, status: 'Approved' });
-      showToast('Leave request approved', 'success');
+      showToast(t('leave:admin.requestApproved'), 'success');
     } catch {
-      showToast('Failed to approve leave request', 'error');
+      showToast(t('leave:admin.cancelFailed'), 'error');
     }
   };
 
@@ -154,33 +170,36 @@ export const AdminLeaveRequests: React.FC = () => {
         status: 'Rejected',
         rejectionReason: reason,
       });
-      showToast('Leave request rejected', 'success');
+      showToast(t('leave:admin.requestRejected'), 'success');
     } catch {
-      showToast('Failed to reject leave request', 'error');
+      showToast(t('leave:admin.cancelFailed'), 'error');
     }
   };
 
   const handleCancelDecision = async (
     request: LeaveRequest,
-    decision: 'approve_cancel' | 'reject_cancel',
+    decision: 'approve_cancel' | 'reject_cancel'
   ) => {
     try {
       await handleCancelDecisionMutation.mutateAsync({ id: request.id, decision });
       showToast(
         decision === 'approve_cancel'
-          ? 'Leave cancellation approved'
-          : 'Leave cancellation rejected',
-        'success',
+          ? t('leave:admin.cancelApproved')
+          : t('leave:admin.cancelRejected'),
+        'success'
       );
     } catch {
-      showToast('Failed to process cancellation', 'error');
+      showToast(t('leave:admin.cancelFailed'), 'error');
     }
   };
 
-  const departmentOptions = useMemo(() => [
-    { value: 'All', label: 'All Departments' },
-    ...DEPARTMENTS.map((d) => ({ value: d, label: d })),
-  ], []);
+  const departmentOptions = useMemo(
+    () => [
+      { value: 'All', label: 'All Departments' },
+      ...DEPARTMENTS.map((d) => ({ value: d, label: d })),
+    ],
+    []
+  );
 
   if (isLoadingRequests || isLoadingEmployees) {
     return (
@@ -194,9 +213,11 @@ export const AdminLeaveRequests: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Leave Requests</h1>
+        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
+          {t('leave:admin.title')}
+        </h1>
         <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
-          Manage and track employee leave applications
+          {t('leave:admin.subtitle')}
         </p>
       </div>
 
@@ -205,51 +226,69 @@ export const AdminLeaveRequests: React.FC = () => {
         <div className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl p-5 border-l-4 border-l-blue-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Pending Requests</p>
-              <p className="text-3xl font-bold text-text-light dark:text-text-dark mt-1">{stats.pending}</p>
+              <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
+                {t('leave:admin.pendingRequests')}
+              </p>
+              <p className="text-3xl font-bold text-text-light dark:text-text-dark mt-1">
+                {stats.pending}
+              </p>
               <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                {stats.pendingRate}% of all requests
+                {t('leave:admin.ofAllRequests', { rate: stats.pendingRate })}
               </p>
             </div>
             <div className="flex flex-col items-center gap-1">
               <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                 <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{stats.pendingRate}%</span>
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                {stats.pendingRate}%
+              </span>
             </div>
           </div>
         </div>
         <div className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl p-5 border-l-4 border-l-green-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Approved This Month</p>
-              <p className="text-3xl font-bold text-text-light dark:text-text-dark mt-1">{stats.approvedThisMonth}</p>
+              <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
+                {t('leave:admin.approvedThisMonth')}
+              </p>
+              <p className="text-3xl font-bold text-text-light dark:text-text-dark mt-1">
+                {stats.approvedThisMonth}
+              </p>
               <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                {stats.approvalRate}% approval rate
+                {t('leave:admin.approvalRate', { rate: stats.approvalRate })}
               </p>
             </div>
             <div className="flex flex-col items-center gap-1">
               <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
                 <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
-              <span className="text-xs font-semibold text-green-600 dark:text-green-400">{stats.approvalRate}%</span>
+              <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                {stats.approvalRate}%
+              </span>
             </div>
           </div>
         </div>
         <div className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl p-5 border-l-4 border-l-red-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Rejected This Month</p>
-              <p className="text-3xl font-bold text-text-light dark:text-text-dark mt-1">{stats.rejectedThisMonth}</p>
+              <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
+                {t('leave:admin.rejectedThisMonth')}
+              </p>
+              <p className="text-3xl font-bold text-text-light dark:text-text-dark mt-1">
+                {stats.rejectedThisMonth}
+              </p>
               <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                {stats.rejectionRate}% rejection rate
+                {t('leave:admin.rejectionRate', { rate: stats.rejectionRate })}
               </p>
             </div>
             <div className="flex flex-col items-center gap-1">
               <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
                 <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
-              <span className="text-xs font-semibold text-red-600 dark:text-red-400">{stats.rejectionRate}%</span>
+              <span className="text-xs font-semibold text-red-600 dark:text-red-400">
+                {stats.rejectionRate}%
+              </span>
             </div>
           </div>
         </div>
@@ -260,33 +299,50 @@ export const AdminLeaveRequests: React.FC = () => {
         <FilterToolbar
           trailing={
             <>
-              <span className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark whitespace-nowrap">Sort by:</span>
+              <span className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark whitespace-nowrap">
+                {t('leave:admin.sortBy')}
+              </span>
               <Dropdown options={SORT_OPTIONS} value={sortBy} onChange={setSortBy} width="w-auto" />
             </>
           }
         >
-          <Dropdown options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} width="w-auto" />
-          <Dropdown options={LEAVE_TYPE_OPTIONS} value={typeFilter} onChange={setTypeFilter} width="w-auto" />
-          <Dropdown options={departmentOptions} value={departmentFilter} onChange={setDepartmentFilter} width="w-auto" />
+          <Dropdown
+            options={STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            width="w-auto"
+          />
+          <Dropdown
+            options={LEAVE_TYPE_OPTIONS}
+            value={typeFilter}
+            onChange={setTypeFilter}
+            width="w-auto"
+          />
+          <Dropdown
+            options={departmentOptions}
+            value={departmentFilter}
+            onChange={setDepartmentFilter}
+            width="w-auto"
+          />
         </FilterToolbar>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-border-light dark:border-border-dark">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Employee
+                  {t('leave:admin.employee')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Leave Type
+                  {t('leave:admin.leaveType')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Dates
+                  {t('leave:admin.dates')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Reason
+                  {t('leave:admin.reason')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Actions
+                  {t('leave:admin.actions')}
                 </th>
               </tr>
             </thead>
@@ -297,7 +353,7 @@ export const AdminLeaveRequests: React.FC = () => {
                     colSpan={5}
                     className="px-6 py-12 text-center text-text-muted-light dark:text-text-muted-dark"
                   >
-                    No leave requests found
+                    {t('leave:admin.noRequests')}
                   </td>
                 </tr>
               ) : (
@@ -331,10 +387,11 @@ export const AdminLeaveRequests: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                            LEAVE_TYPE_COLORS[request.type] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                            LEAVE_TYPE_COLORS[request.type] ||
+                            'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
                           }`}
                         >
-                          {request.type}
+                          {translateLeaveType(request.type)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -342,12 +399,12 @@ export const AdminLeaveRequests: React.FC = () => {
                           {request.dates}
                         </p>
                         <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                          {days} {days === 1 ? 'day' : 'days'}
+                          {days} {days === 1 ? t('common:time.day') : t('common:time.days')}
                         </p>
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-sm text-text-light dark:text-text-dark truncate max-w-xs">
-                          {request.reason || 'No reason provided'}
+                          {request.reason || t('leave:admin.noReason')}
                         </p>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -361,13 +418,13 @@ export const AdminLeaveRequests: React.FC = () => {
                                 onClick={() => handleCancelDecision(request, 'approve_cancel')}
                                 className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-200 dark:hover:bg-green-900/50 rounded-lg transition-colors"
                               >
-                                Approve Cancel
+                                {t('leave:admin.approveCancel')}
                               </button>
                               <button
                                 onClick={() => handleCancelDecision(request, 'reject_cancel')}
                                 className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-200 dark:hover:bg-red-900/50 rounded-lg transition-colors"
                               >
-                                Reject Cancel
+                                {t('leave:admin.rejectCancel')}
                               </button>
                             </>
                           ) : request.status === 'Pending' ? (
@@ -390,7 +447,9 @@ export const AdminLeaveRequests: React.FC = () => {
                               ) : (
                                 <XCircle className="w-3.5 h-3.5" />
                               )}
-                              {request.status}
+                              {t(`common:status.${request.status.toLowerCase()}`, {
+                                defaultValue: request.status,
+                              })}
                             </span>
                           )}
                         </div>

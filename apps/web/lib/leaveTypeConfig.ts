@@ -1,4 +1,5 @@
 import type { LeaveQuotaConfig } from '../types';
+import i18n from './i18n';
 
 // ============================================================================
 // Color Palette — full Tailwind class literals so the scanner picks them up
@@ -212,30 +213,51 @@ export function buildLeaveColorMap(configs: LeaveQuotaConfig[]): Record<string, 
   return map;
 }
 
+/**
+ * Translate a leave type name using i18n.
+ * Normalizes the DB name to a camelCase key and looks up leave:types.<key>.
+ * Falls back to the raw DB name if no translation is found.
+ */
+export function translateLeaveType(typeName: string): string {
+  // Normalize "Sick Leave" → "sickLeave", "Vacation" → "vacation"
+  const key = typeName
+    .split(/\s+/)
+    .map((word, idx) =>
+      idx === 0 ? word.charAt(0).toLowerCase() + word.slice(1) : word.charAt(0).toUpperCase() + word.slice(1)
+    )
+    .join('');
+  const translated = i18n.t(`leave:types.${key}`, { defaultValue: '' });
+  return translated || typeName;
+}
+
+/** Translate a leave type to its short form for calendar/gantt labels */
+export function translateLeaveTypeShort(typeName: string): string {
+  const key = typeName
+    .split(/\s+/)
+    .map((word, idx) =>
+      idx === 0 ? word.charAt(0).toLowerCase() + word.slice(1) : word.charAt(0).toUpperCase() + word.slice(1)
+    )
+    .join('');
+  const translated = i18n.t(`leave:typesShort.${key}`, { defaultValue: '' });
+  return translated || translateLeaveType(typeName);
+}
+
 /** Build dropdown options from configs: [{ value, label }] */
 export function buildLeaveOptions(configs: LeaveQuotaConfig[]): { value: string; label: string }[] {
-  return configs.map((c) => ({ value: c.type, label: c.type }));
+  return configs.map((c) => ({ value: c.type, label: translateLeaveType(c.type) }));
 }
 
 /** Build filter dropdown options (with "All" prepended) */
 export function buildLeaveFilterOptions(configs: LeaveQuotaConfig[]): { value: string; label: string }[] {
   return [
-    { value: 'All', label: 'All Leave Types' },
-    ...configs.map((c) => ({ value: c.type, label: c.type })),
+    { value: 'All', label: i18n.t('leave:allLeaveTypes') },
+    ...configs.map((c) => ({ value: c.type, label: translateLeaveType(c.type) })),
   ];
 }
 
 /** Short label for calendar/gantt bars */
 export function getShortLabel(typeName: string): string {
-  const SHORT_MAP: Record<string, string> = {
-    'Sick Leave': 'Sick',
-    'Personal Day': 'Personal',
-    'Maternity Leave': 'Maternity',
-    'Compensatory Leave': 'Compensatory',
-    'Military Leave': 'Military',
-    'Leave Without Pay': 'LWP',
-  };
-  return SHORT_MAP[typeName] || typeName;
+  return translateLeaveTypeShort(typeName);
 }
 
 /** Check if a leave type requires medical certificate */

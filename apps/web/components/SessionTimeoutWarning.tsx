@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, LogOut, RefreshCw } from 'lucide-react';
 
 interface SessionTimeoutWarningProps {
@@ -14,6 +15,8 @@ export const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
   onExtendSession,
   onLogout
 }) => {
+  const { t } = useTranslation('common');
+
   if (!isOpen) return null;
 
   const minutes = Math.floor(timeLeft / 60);
@@ -29,17 +32,17 @@ export const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
-                Session Timeout Warning
+                {t('session.timeoutTitle')}
               </h3>
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                Your session is about to expire
+                {t('session.timeoutMessage')}
               </p>
             </div>
           </div>
 
           <div className="mb-6">
             <p className="text-text-light dark:text-text-dark mb-3">
-              Due to inactivity, you will be automatically logged out in:
+              {t('session.autoLogoutMessage')}
             </p>
             <div className="flex justify-center">
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-center min-w-[120px]">
@@ -47,7 +50,7 @@ export const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
                   {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
                 </div>
                 <div className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                  minutes remaining
+                  {t('session.minutesRemaining')}
                 </div>
               </div>
             </div>
@@ -59,14 +62,14 @@ export const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 dark:bg-gray-800 text-text-light dark:text-text-dark rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
               <LogOut size={16} />
-              Logout Now
+              {t('session.signOut')}
             </button>
             <button
               onClick={onExtendSession}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
             >
               <RefreshCw size={16} />
-              Stay Logged In
+              {t('session.staySignedIn')}
             </button>
           </div>
         </div>

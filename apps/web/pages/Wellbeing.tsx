@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { Megaphone, ScrollText, PartyPopper, ChevronLeft, ChevronRight, Plus, X, Check, Calendar, Type, AlignLeft, BarChart3, Users, TrendingUp } from 'lucide-react';
 import { Announcement, UpcomingEvent } from '../types';
 import { Toast } from '../components/Toast';
@@ -8,6 +9,7 @@ import { DatePicker } from '../components/DatePicker';
 import { useAnnouncements, useUpcomingEvents, useAddAnnouncement, useAddEvent, useDeleteEvent, useSentimentOverview } from '../hooks/queries';
 
 export const Wellbeing: React.FC = () => {
+  const { t } = useTranslation(['wellbeing', 'common']);
   const { data: announcementsList = [] } = useAnnouncements();
   const { data: upcomingEvents = [] } = useUpcomingEvents();
   const { data: sentiment } = useSentimentOverview();
@@ -111,10 +113,12 @@ export const Wellbeing: React.FC = () => {
       .slice(0, 3);
   }, [upcomingEvents]);
 
-  // Month names
+  // Month names (translated)
   const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    t('common:months.january'), t('common:months.february'), t('common:months.march'),
+    t('common:months.april'), t('common:months.may'), t('common:months.june'),
+    t('common:months.july'), t('common:months.august'), t('common:months.september'),
+    t('common:months.october'), t('common:months.november'), t('common:months.december')
   ];
 
   const handleSaveAnnouncement = async (e: React.FormEvent) => {
@@ -215,11 +219,11 @@ export const Wellbeing: React.FC = () => {
 
   // Event type options for dropdown
   const eventTypeOptions = [
-    { value: 'Meeting', label: 'Meeting' },
+    { value: 'Meeting', label: t('eventTypes.meeting') },
     { value: 'Birthday', label: 'Birthday' },
     { value: 'Social', label: 'Social' },
-    { value: 'Training', label: 'Training' },
-    { value: 'Holiday', label: 'Holiday' },
+    { value: 'Training', label: t('eventTypes.training') },
+    { value: 'Holiday', label: t('eventTypes.holiday') },
     { value: 'Deadline', label: 'Deadline' },
     { value: 'Company Event', label: 'Company Event' },
   ];
@@ -228,15 +232,15 @@ export const Wellbeing: React.FC = () => {
     <div className="space-y-6 animate-fade-in relative">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div className="flex flex-col">
-          <h1 className="text-text-light dark:text-text-dark text-2xl sm:text-3xl font-bold tracking-tight">Employee Well-being</h1>
-          <p className="text-text-muted-light dark:text-text-muted-dark text-sm sm:text-base">Fostering a positive and supportive workplace culture.</p>
+          <h1 className="text-text-light dark:text-text-dark text-2xl sm:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-text-muted-light dark:text-text-muted-dark text-sm sm:text-base">{t('subtitle')}</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary/90 transition-colors w-full sm:w-auto"
         >
           <Plus size={18} />
-          New Announcement
+          {t('newAnnouncement')}
         </button>
       </header>
 
@@ -245,10 +249,10 @@ export const Wellbeing: React.FC = () => {
           {/* Employee Sentiment Section */}
           <section className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">Employee Sentiment</h2>
+              <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">{t('sentiment.title')}</h2>
               {sentiment && sentiment.totalResponses > 0 && (
                 <span className="px-2.5 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full flex items-center gap-1">
-                  <TrendingUp size={12} /> Live
+                  <TrendingUp size={12} /> {t('sentiment.live')}
                 </span>
               )}
             </div>
@@ -258,9 +262,9 @@ export const Wellbeing: React.FC = () => {
                 <div className="w-16 h-16 mb-4 rounded-full bg-primary/10 flex items-center justify-center">
                   <BarChart3 size={32} className="text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">No Survey Data Yet</h3>
+                <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{t('sentiment.noData')}</h3>
                 <p className="text-sm text-text-muted-light dark:text-text-muted-dark max-w-sm">
-                  Sentiment scores will appear here once employees start completing surveys.
+                  {t('sentiment.noDataDesc')}
                 </p>
               </div>
             ) : (
@@ -350,14 +354,14 @@ export const Wellbeing: React.FC = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-3 bg-background-light dark:bg-background-dark rounded-lg">
                         <div className="text-2xl font-bold text-accent-teal">{sentiment.responseRate}%</div>
-                        <div className="text-xs text-text-muted-light mt-0.5">Response Rate</div>
+                        <div className="text-xs text-text-muted-light mt-0.5">{t('sentiment.responseRate')}</div>
                       </div>
                       <div className="p-3 bg-background-light dark:bg-background-dark rounded-lg">
                         <div className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-1">
                           <Users size={18} className="text-text-muted-light" />
                           {sentiment.totalResponses}/{sentiment.totalEmployees}
                         </div>
-                        <div className="text-xs text-text-muted-light mt-0.5">Respondents</div>
+                        <div className="text-xs text-text-muted-light mt-0.5">{t('sentiment.respondents')}</div>
                       </div>
                     </div>
                   </div>
@@ -365,7 +369,7 @@ export const Wellbeing: React.FC = () => {
 
                 {/* Category Breakdown */}
                 <div>
-                  <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-3">Category Breakdown</h3>
+                  <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-3">{t('sentiment.categoryBreakdown')}</h3>
                   <div className="space-y-3">
                     {sentiment.categoryBreakdown.map((cat) => (
                       <div key={cat.category}>
@@ -395,8 +399,8 @@ export const Wellbeing: React.FC = () => {
           {/* Announcements & Policies */}
           <section className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">Announcements & Policies</h2>
-              <a className="text-primary text-sm font-medium hover:underline" href="#">View all</a>
+              <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">{t('announcements.title')}</h2>
+              <a className="text-primary text-sm font-medium hover:underline" href="#">{t('announcements.viewAll')}</a>
             </div>
             <div className="space-y-4">
               {announcementsList.map((item) => (
@@ -440,7 +444,7 @@ export const Wellbeing: React.FC = () => {
           <section className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 h-full flex flex-col">
             <div className="flex flex-col gap-4 mb-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">Team Calendar</h2>
+                <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">{t('calendar.teamCalendar')}</h2>
                 <div className="flex items-center gap-2">
                   <button onClick={handlePrevMonth} className="p-1.5 text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark rounded-md"><ChevronLeft size={18} /></button>
                   <button onClick={handleNextMonth} className="p-1.5 text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark rounded-md"><ChevronRight size={18} /></button>
@@ -451,7 +455,7 @@ export const Wellbeing: React.FC = () => {
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary/90 transition-all hover:shadow-md"
               >
                 <Plus size={18} />
-                Add New Event
+                {t('calendar.addEvent')}
               </button>
             </div>
 
@@ -463,7 +467,7 @@ export const Wellbeing: React.FC = () => {
 
             {/* Calendar Grid */}
             <div className="grid grid-cols-7 text-center text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-3">
-              <span className="py-2">Su</span><span className="py-2">Mo</span><span className="py-2">Tu</span><span className="py-2">We</span><span className="py-2">Th</span><span className="py-2">Fr</span><span className="py-2">Sa</span>
+              <span className="py-2">{t('common:weekdays.su')}</span><span className="py-2">{t('common:weekdays.mo')}</span><span className="py-2">{t('common:weekdays.tu')}</span><span className="py-2">{t('common:weekdays.we')}</span><span className="py-2">{t('common:weekdays.th')}</span><span className="py-2">{t('common:weekdays.fr')}</span><span className="py-2">{t('common:weekdays.sa')}</span>
             </div>
             <div className="grid grid-cols-7 text-center text-sm gap-y-4 flex-grow">
               {calendarDays.map((dayInfo, index) => (
@@ -488,7 +492,7 @@ export const Wellbeing: React.FC = () => {
             </div>
 
             <div className="mt-auto pt-6 border-t border-border-light dark:border-border-dark">
-              <h3 className="font-semibold text-text-light dark:text-text-dark mb-4">Upcoming Events</h3>
+              <h3 className="font-semibold text-text-light dark:text-text-dark mb-4">{t('calendar.upcomingEvents')}</h3>
               {nextUpcomingEvents.length > 0 ? (
                 <div className="space-y-4">
                   {nextUpcomingEvents.map((event) => (
@@ -509,7 +513,7 @@ export const Wellbeing: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-text-muted-light dark:text-text-muted-dark">No upcoming events</p>
+                <p className="text-sm text-text-muted-light dark:text-text-muted-dark">{t('calendar.noUpcoming')}</p>
               )}
             </div>
           </section>
@@ -522,7 +526,7 @@ export const Wellbeing: React.FC = () => {
           <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
               <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
-                Post New Announcement
+                {t('announcementModal.title')}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -534,7 +538,7 @@ export const Wellbeing: React.FC = () => {
 
             <form onSubmit={handleSaveAnnouncement} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Title</label>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('announcementModal.titleLabel')}</label>
                 <div className="relative">
                   <Type className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
                   <input
@@ -542,7 +546,7 @@ export const Wellbeing: React.FC = () => {
                     type="text"
                     value={newAnnouncement.title || ''}
                     onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
-                    placeholder="e.g. Office Closure Notice"
+                    placeholder={t('announcementModal.titlePlaceholder')}
                     className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                   />
                 </div>
@@ -550,28 +554,28 @@ export const Wellbeing: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Type</label>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('announcementModal.type')}</label>
                   <Dropdown
                     value={newAnnouncement.type || 'announcement'}
                     onChange={(value) => setNewAnnouncement({ ...newAnnouncement, type: value as any })}
                     options={[
-                      { value: 'announcement', label: 'Announcement' },
-                      { value: 'policy', label: 'Policy Update' },
-                      { value: 'event', label: 'Event' }
+                      { value: 'announcement', label: t('announcementModal.typeAnnouncement') },
+                      { value: 'policy', label: t('announcementModal.typePolicy') },
+                      { value: 'event', label: t('announcementModal.typeEvent') }
                     ]}
                     placeholder="Select announcement type"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Event Date (Optional)</label>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('announcementModal.eventDate')}</label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
                     <input
                       type="text"
                       value={newAnnouncement.date || ''}
                       onChange={(e) => setNewAnnouncement({ ...newAnnouncement, date: e.target.value })}
-                      placeholder="e.g. Aug 15"
+                      placeholder={t('announcementModal.eventDatePlaceholder')}
                       className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                     />
                   </div>
@@ -579,14 +583,14 @@ export const Wellbeing: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Content</label>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('announcementModal.content')}</label>
                 <div className="relative">
                   <AlignLeft className="absolute left-3 top-3 text-text-muted-light" size={16} />
                   <textarea
                     required
                     value={newAnnouncement.description || ''}
                     onChange={(e) => setNewAnnouncement({ ...newAnnouncement, description: e.target.value })}
-                    placeholder="Details about the announcement..."
+                    placeholder={t('announcementModal.contentPlaceholder')}
                     rows={4}
                     className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark resize-none"
                   />
@@ -599,13 +603,13 @@ export const Wellbeing: React.FC = () => {
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
                 >
-                  Cancel
+                  {t('announcementModal.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
                 >
-                  <Check size={16} /> Post
+                  <Check size={16} /> {t('announcementModal.post')}
                 </button>
               </div>
             </form>
@@ -620,7 +624,7 @@ export const Wellbeing: React.FC = () => {
           <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
               <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
-                Add New Event
+                {t('eventModal.title')}
               </h3>
               <button
                 onClick={() => setIsEventModalOpen(false)}
@@ -632,7 +636,7 @@ export const Wellbeing: React.FC = () => {
 
             <form onSubmit={handleSaveEvent} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Event Title</label>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('eventModal.eventTitle')}</label>
                 <div className="relative">
                   <Type className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
                   <input
@@ -640,7 +644,7 @@ export const Wellbeing: React.FC = () => {
                     type="text"
                     value={newEvent.title || ''}
                     onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                    placeholder="e.g. Team Meeting"
+                    placeholder={t('eventModal.titlePlaceholder')}
                     className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                   />
                 </div>
@@ -648,7 +652,7 @@ export const Wellbeing: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Event Type</label>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('eventModal.eventType')}</label>
                   <Dropdown
                     value={newEvent.type || 'Meeting'}
                     onChange={(value) => setNewEvent({ ...newEvent, type: value as any })}
@@ -658,7 +662,7 @@ export const Wellbeing: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Date</label>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('eventModal.date')}</label>
                   <DatePicker
                     value={newEvent.date || ''}
                     onChange={(date) => setNewEvent({ ...newEvent, date })}
@@ -673,13 +677,13 @@ export const Wellbeing: React.FC = () => {
                   onClick={() => setIsEventModalOpen(false)}
                   className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
                 >
-                  Cancel
+                  {t('eventModal.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
                 >
-                  <Check size={16} /> Create Event
+                  <Check size={16} /> {t('eventModal.create')}
                 </button>
               </div>
             </form>

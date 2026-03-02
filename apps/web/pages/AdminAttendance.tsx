@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Users,
   UserCheck,
@@ -29,29 +30,7 @@ import type { AdminAttendanceRecord, AdminAttendanceFilters, AdminDisplayStatus,
 
 const ITEMS_PER_PAGE = 20;
 
-const DEPARTMENTS: DropdownOption[] = [
-  { value: 'All', label: 'All Departments' },
-  { value: 'Human Resources', label: 'Human Resources' },
-  { value: 'Engineering', label: 'Engineering' },
-  { value: 'Developer', label: 'Developer' },
-  { value: 'Marketing', label: 'Marketing' },
-  { value: 'Sales', label: 'Sales' },
-  { value: 'Finance', label: 'Finance' },
-  { value: 'Operations', label: 'Operations' },
-  { value: 'Product', label: 'Product' },
-  { value: 'Design', label: 'Design' },
-  { value: 'Legal', label: 'Legal' },
-  { value: 'Customer Support', label: 'Customer Support' },
-  { value: 'Tester', label: 'Tester' },
-];
-
-const STATUS_FILTER_OPTIONS: DropdownOption[] = [
-  { value: 'All', label: 'All Statuses' },
-  { value: 'Present', label: 'Present Today' },
-  { value: 'Active', label: 'Active Now' },
-  { value: 'Checked Out', label: 'Checked Out' },
-  { value: 'Not In', label: 'Not In / On-Leave' },
-];
+/* DEPARTMENTS and STATUS_FILTER_OPTIONS moved inside component for i18n */
 
 const getStatusStyle = (status: AdminDisplayStatus | string): { dot: string; badge: string } => {
   switch (status) {
@@ -71,7 +50,32 @@ const getStatusStyle = (status: AdminDisplayStatus | string): { dot: string; bad
 const formatTime = formatTimeTH;
 
 const AdminAttendance: React.FC = () => {
+  const { t } = useTranslation(['attendance', 'common']);
   const { showToast } = useToast();
+
+  const DEPARTMENTS: DropdownOption[] = [
+    { value: 'All', label: t('common:departments.allDepartments') },
+    { value: 'Human Resources', label: t('common:departments.humanResources') },
+    { value: 'Engineering', label: t('common:departments.engineering') },
+    { value: 'Developer', label: t('common:departments.developer') },
+    { value: 'Marketing', label: t('common:departments.marketing') },
+    { value: 'Sales', label: t('common:departments.sales') },
+    { value: 'Finance', label: t('common:departments.finance') },
+    { value: 'Operations', label: t('common:departments.operations') },
+    { value: 'Product', label: t('common:departments.product') },
+    { value: 'Design', label: t('common:departments.design') },
+    { value: 'Legal', label: t('common:departments.legal') },
+    { value: 'Customer Support', label: t('common:departments.customerSupport') },
+    { value: 'Tester', label: t('common:departments.tester') },
+  ];
+
+  const STATUS_FILTER_OPTIONS: DropdownOption[] = [
+    { value: 'All', label: t('attendance:filters.allStatuses') },
+    { value: 'Present', label: t('attendance:filters.presentToday') },
+    { value: 'Active', label: t('attendance:filters.activeNow') },
+    { value: 'Checked Out', label: t('attendance:filters.checkedOut') },
+    { value: 'Not In', label: t('attendance:filters.notInOnLeave') },
+  ];
 
   // Filters
   const [searchInput, setSearchInput] = useState('');
@@ -148,11 +152,11 @@ const AdminAttendance: React.FC = () => {
     }) => {
       upsertMutation.mutate(data, {
         onSuccess: () => {
-          showToast(editingRecord ? 'Attendance record updated' : 'Attendance record added', 'success');
+          showToast(editingRecord ? t('attendance:admin.recordUpdated') : t('attendance:admin.recordAdded'), 'success');
           handleCloseModal();
         },
         onError: (error) => {
-          showToast(error instanceof Error ? error.message : 'Failed to save record', 'error');
+          showToast(error instanceof Error ? error.message : t(editingRecord ? 'attendance:admin.failedUpdate' : 'attendance:admin.failedAdd'), 'error');
         },
       });
     },
@@ -163,11 +167,11 @@ const AdminAttendance: React.FC = () => {
     (id: string) => {
       deleteMutation.mutate(id, {
         onSuccess: () => {
-          showToast('Attendance record deleted', 'success');
+          showToast(t('attendance:admin.recordDeleted'), 'success');
           setDeleteConfirmId(null);
         },
         onError: (error) => {
-          showToast(error instanceof Error ? error.message : 'Failed to delete record', 'error');
+          showToast(error instanceof Error ? error.message : t('attendance:admin.failedDelete'), 'error');
         },
       });
     },
@@ -180,11 +184,11 @@ const AdminAttendance: React.FC = () => {
 
   const exportToCSV = useCallback(() => {
     if (records.length === 0) {
-      showToast('No records to export', 'error');
+      showToast(t('attendance:admin.noRecordsExport'), 'error');
       return;
     }
 
-    const headers = ['Employee', 'Department', 'Check In', 'Check Out', 'Hours', 'Overtime', 'Auto-checkout', 'Status'];
+    const headers = [t('attendance:admin.csvEmployee'), t('attendance:admin.csvDepartment'), t('attendance:admin.csvCheckIn'), t('attendance:admin.csvCheckOut'), t('attendance:admin.csvHours'), t('attendance:admin.csvOvertime'), t('attendance:admin.csvAutoCheckout'), t('attendance:admin.csvStatus')];
     const rows = records.map((r) => [
       r.employeeName,
       r.employeeDepartment,
@@ -192,7 +196,7 @@ const AdminAttendance: React.FC = () => {
       r.clockOut ? formatTime(r.clockOut) : '-',
       r.totalHours != null ? Number(r.totalHours).toFixed(1) : '-',
       r.overtimeHours != null && r.overtimeHours > 0 ? Number(r.overtimeHours).toFixed(1) : '0',
-      r.autoCheckout ? 'Yes' : 'No',
+      r.autoCheckout ? t('attendance:admin.yes') : t('attendance:admin.no'),
       r.displayStatus || r.status,
     ]);
 
@@ -218,10 +222,10 @@ const AdminAttendance: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">
-            Admin Attendance Dashboard
+            {t('attendance:admin.title')}
           </h1>
           <p className="text-sm sm:text-base text-text-muted-light dark:text-text-muted-dark mt-1">
-            Monitor and manage employee attendance records
+            {t('attendance:admin.subtitle')}
           </p>
         </div>
         <button
@@ -229,7 +233,7 @@ const AdminAttendance: React.FC = () => {
           className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium shadow-sm"
         >
           <Plus size={18} />
-          <span>Add Record</span>
+          <span>{t('attendance:admin.addRecord')}</span>
         </button>
       </div>
 
@@ -238,7 +242,7 @@ const AdminAttendance: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <SnapshotCard
             icon={<Users size={20} />}
-            label="Total Employees"
+            label={t('attendance:admin.totalEmployees')}
             value={snapshot.total}
             iconColor="bg-slate-100 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400"
             filterValue="All"
@@ -247,7 +251,7 @@ const AdminAttendance: React.FC = () => {
           />
           <SnapshotCard
             icon={<UserCheck size={20} />}
-            label="Present Today"
+            label={t('attendance:admin.presentToday')}
             value={snapshot.presentToday}
             iconColor="bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400"
             filterValue="Present"
@@ -256,7 +260,7 @@ const AdminAttendance: React.FC = () => {
           />
           <SnapshotCard
             icon={<Activity size={20} />}
-            label="Active Now"
+            label={t('attendance:admin.activeNow')}
             value={snapshot.activeNow}
             iconColor="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
             filterValue="Active"
@@ -265,7 +269,7 @@ const AdminAttendance: React.FC = () => {
           />
           <SnapshotCard
             icon={<LogOut size={20} />}
-            label="Checked Out"
+            label={t('attendance:admin.checkedOut')}
             value={snapshot.checkedOut}
             iconColor="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
             filterValue="Checked Out"
@@ -274,7 +278,7 @@ const AdminAttendance: React.FC = () => {
           />
           <SnapshotCard
             icon={<UserX size={20} />}
-            label="Not In / On-Leave"
+            label={t('attendance:admin.notInOnLeave')}
             value={snapshot.absentOrLeave}
             iconColor="bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
             filterValue="Not In"
@@ -298,7 +302,7 @@ const AdminAttendance: React.FC = () => {
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search employee..."
+                placeholder={t('attendance:admin.searchEmployee')}
                 className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
@@ -316,13 +320,13 @@ const AdminAttendance: React.FC = () => {
             />
           </div>
           <div className="flex items-center gap-2">
-            <DatePicker value={selectedDate} onChange={setSelectedDate} placeholder="Select date" />
+            <DatePicker value={selectedDate} onChange={setSelectedDate} placeholder={t('attendance:admin.selectDate')} />
             <button
               onClick={exportToCSV}
               className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium shadow-sm whitespace-nowrap"
             >
               <Download size={16} />
-              <span>Export</span>
+              <span>{t('common:buttons.export')}</span>
             </button>
           </div>
         </div>
@@ -332,28 +336,28 @@ const AdminAttendance: React.FC = () => {
             <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-border-light dark:border-border-dark">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Employee
+                  {t('attendance:admin.employee')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Department
+                  {t('attendance:admin.department')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Check In
+                  {t('attendance:admin.checkIn')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Check Out
+                  {t('attendance:admin.checkOut')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Hours
+                  {t('attendance:admin.hours')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  OT
+                  {t('attendance:admin.ot')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Status
+                  {t('attendance:admin.status')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
-                  Actions
+                  {t('attendance:admin.actions')}
                 </th>
               </tr>
             </thead>
@@ -361,13 +365,13 @@ const AdminAttendance: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
-                    Loading attendance records...
+                    {t('attendance:admin.loading')}
                   </td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
-                    No attendance records found
+                    {t('attendance:admin.noRecords')}
                   </td>
                 </tr>
               ) : (
@@ -400,7 +404,7 @@ const AdminAttendance: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
                       {formatTime(record.clockOut)}
                       {record.autoCheckout && (
-                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">(auto)</span>
+                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">({t('common:auto')})</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
@@ -419,12 +423,12 @@ const AdminAttendance: React.FC = () => {
                           return (
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                              {ds}
+                              {t('common:status.' + ds.toLowerCase().replace(/-/g, '').replace(/ /g, ''), { defaultValue: ds })}
                             </span>
                           );
                         })()}
                         {record.earlyDeparture && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Early</span>
+                          <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">{t('common:status.early')}</span>
                         )}
                       </div>
                     </td>
@@ -445,7 +449,7 @@ const AdminAttendance: React.FC = () => {
                                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                               >
                                 <Pencil size={14} />
-                                Edit
+                                {t('common:buttons.edit')}
                               </button>
                               {deleteConfirmId === record.id ? (
                                 <div className="flex items-center gap-1 px-3 py-2">
@@ -453,13 +457,13 @@ const AdminAttendance: React.FC = () => {
                                     onClick={() => handleDelete(record.id)}
                                     className="px-2 py-1 text-xs font-medium text-white bg-red-500 rounded hover:bg-red-600 transition-colors"
                                   >
-                                    Confirm
+                                    {t('common:buttons.confirm')}
                                   </button>
                                   <button
                                     onClick={() => { setDeleteConfirmId(null); setActionMenuId(null); }}
                                     className="px-2 py-1 text-xs font-medium text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark transition-colors"
                                   >
-                                    Cancel
+                                    {t('common:buttons.cancel')}
                                   </button>
                                 </div>
                               ) : (
@@ -468,7 +472,7 @@ const AdminAttendance: React.FC = () => {
                                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                                 >
                                   <Trash2 size={14} />
-                                  Delete
+                                  {t('common:buttons.delete')}
                                 </button>
                               )}
                             </div>
@@ -487,11 +491,11 @@ const AdminAttendance: React.FC = () => {
         <div className="md:hidden p-4">
           {loading ? (
             <div className="py-8 text-center text-text-muted-light dark:text-text-muted-dark">
-              Loading attendance records...
+              {t('attendance:admin.loading')}
             </div>
           ) : records.length === 0 ? (
             <div className="py-8 text-center text-text-muted-light dark:text-text-muted-dark">
-              No attendance records found
+              {t('attendance:admin.noRecords')}
             </div>
           ) : (
             <div className="space-y-3">
@@ -529,34 +533,34 @@ const AdminAttendance: React.FC = () => {
                         return (
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                            {ds}
+                            {t('common:status.' + ds.toLowerCase().replace(/-/g, '').replace(/ /g, ''), { defaultValue: ds })}
                           </span>
                         );
                       })()}
                       {record.autoCheckout && (
-                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Auto</span>
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">{t('common:auto')}</span>
                       )}
                       {record.earlyDeparture && (
-                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Early</span>
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">{t('common:status.early')}</span>
                       )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-4 gap-2 text-xs mb-3">
                     <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">Check In</p>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">{t('attendance:admin.checkIn')}</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockIn)}</p>
                     </div>
                     <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">Check Out</p>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">{t('attendance:admin.checkOut')}</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockOut)}</p>
                     </div>
                     <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">Hours</p>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">{t('attendance:admin.hours')}</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{record.totalHours != null ? `${Number(record.totalHours).toFixed(1)}h` : '-'}</p>
                     </div>
                     <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">OT</p>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">{t('attendance:admin.ot')}</p>
                       <p className="font-medium text-amber-600 dark:text-amber-400">
                         {record.overtimeHours != null && record.overtimeHours > 0 ? `${Number(record.overtimeHours).toFixed(1)}h` : '-'}
                       </p>
@@ -569,7 +573,7 @@ const AdminAttendance: React.FC = () => {
                       className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
                     >
                       <Pencil size={14} />
-                      Edit
+                      {t('common:buttons.edit')}
                     </button>
                     {deleteConfirmId === record.id ? (
                       <div className="flex items-center gap-1">
@@ -577,13 +581,13 @@ const AdminAttendance: React.FC = () => {
                           onClick={() => handleDelete(record.id)}
                           className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
                         >
-                          Confirm Delete
+                          {t('attendance:admin.confirmDelete')}
                         </button>
                         <button
                           onClick={() => setDeleteConfirmId(null)}
                           className="px-3 py-1.5 text-xs font-medium text-text-muted-light dark:text-text-muted-dark transition-colors"
                         >
-                          Cancel
+                          {t('common:buttons.cancel')}
                         </button>
                       </div>
                     ) : (
@@ -592,7 +596,7 @@ const AdminAttendance: React.FC = () => {
                         className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                       >
                         <Trash2 size={14} />
-                        Delete
+                        {t('common:buttons.delete')}
                       </button>
                     )}
                   </div>

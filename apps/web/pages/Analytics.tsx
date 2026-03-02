@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart,
   Bar,
@@ -17,6 +18,7 @@ import {
 // Mocks removed
 
 export const Analytics: React.FC = () => {
+  const { t } = useTranslation(['analytics', 'common']);
   const COLORS = ['#3498db', '#1abc9c', '#f39c12', '#9b59b6', '#e74c3c'];
 
   const [headcountData, setHeadcountData] = useState<any[]>([]);
@@ -52,14 +54,14 @@ export const Analytics: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">Deep Analytics</h1>
+      <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">{t('title')}</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Headcount Growth Chart */}
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
-          <h2 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">Headcount Growth</h2>
-          <p className="text-sm text-text-muted-light mb-6">Monthly employee count</p>
+          <h2 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">{t('headcountGrowth.title')}</h2>
+          <p className="text-sm text-text-muted-light mb-6">{t('headcountGrowth.subtitle')}</p>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={headcountData}>
@@ -79,8 +81,8 @@ export const Analytics: React.FC = () => {
 
         {/* Dept Distribution */}
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
-          <h2 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">Department Distribution</h2>
-          <p className="text-sm text-text-muted-light mb-6">Employee count by department</p>
+          <h2 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">{t('departmentDistribution.title')}</h2>
+          <p className="text-sm text-text-muted-light mb-6">{t('departmentDistribution.subtitle')}</p>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -109,7 +111,7 @@ export const Analytics: React.FC = () => {
 
       {/* Performance Bell Curve (Simulated with LineChart) */}
       <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">Performance Review Distribution</h2>
+        <h2 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">{t('performanceDistribution.title')}</h2>
         <div className="h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={[

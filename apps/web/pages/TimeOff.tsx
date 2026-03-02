@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Calendar, Clock, AlertCircle, Plus, CheckCircle2, XCircle, Building2, Briefcase, IdCard, Pencil } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useLeave } from '../contexts/LeaveContext';
 import { useLeaveRequests, useLeaveBalance, useEmployeeDetail, useCancelLeaveRequest, useLeaveTypeConfig } from '../hooks/queries';
-import { getLeaveColor } from '../lib/leaveTypeConfig';
+import { getLeaveColor, translateLeaveType } from '../lib/leaveTypeConfig';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { LeaveCalendar } from '../components/LeaveCalendar';
 import { CancelLeaveModal } from '../components/CancelLeaveModal';
@@ -21,7 +22,8 @@ const ProgressRing: React.FC<{
   remaining: number;
   total: number;
   color: string;
-}> = ({ remaining, total, color }) => {
+  leftLabel: string;
+}> = ({ remaining, total, color, leftLabel }) => {
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const percent = total > 0 ? Math.min(Math.max(remaining, 0) / total, 1) : 0;
@@ -52,7 +54,7 @@ const ProgressRing: React.FC<{
           {Math.max(remaining, 0)}
         </span>
         <span className="text-[10px] font-semibold tracking-widest text-text-muted-light dark:text-text-muted-dark uppercase">
-          left
+          {leftLabel}
         </span>
       </div>
     </div>
@@ -88,6 +90,7 @@ function canCancel(req: LeaveRequest): boolean {
 // Page Component
 // ---------------------------------------------------------------------------
 export const TimeOff: React.FC = () => {
+  const { t } = useTranslation(['leave', 'common']);
   const navigate = useNavigate();
   const { user, isAdminView } = useAuth();
   const { showToast } = useToast();
@@ -104,7 +107,7 @@ export const TimeOff: React.FC = () => {
         const colors = getLeaveColor(c.type, leaveConfigs);
         return {
           type: c.type,
-          label: c.type,
+          label: translateLeaveType(c.type),
           color: colors.ringColor,
           borderColor: colors.borderLeft,
         };
@@ -153,12 +156,12 @@ export const TimeOff: React.FC = () => {
       await cancelMutation.mutateAsync(cancelModalRequest.id);
       showToast(
         cancelModalRequest.status === 'Approved'
-          ? 'Cancellation request submitted. Awaiting manager confirmation.'
-          : 'Leave request cancelled',
+          ? t('leave:timeOff.cancelSubmitted')
+          : t('leave:timeOff.cancelSuccess'),
         'success',
       );
     } catch (error: any) {
-      showToast(error?.message || 'Failed to cancel leave request', 'error');
+      showToast(error?.message || t('leave:timeOff.cancelFailed'), 'error');
     } finally {
       setCancelModalRequest(null);
     }
@@ -234,7 +237,7 @@ export const TimeOff: React.FC = () => {
             onClick={() => navigate('/time-off/request')}
             className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg shadow-sm hover:bg-primary/90 transition-colors w-full sm:w-auto"
           >
-            <Plus size={18} /> Request Leave
+            <Plus size={18} /> {t('leave:timeOff.requestLeave')}
           </button>
         </div>
       </div>
@@ -259,7 +262,7 @@ export const TimeOff: React.FC = () => {
                 <h3 className="font-semibold text-text-light dark:text-text-dark">{card.label}</h3>
                 {!isUnlimited && (
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                    Allowance: {total} days
+                    {t('leave:timeOff.allowance', { total })}
                   </span>
                 )}
               </div>
@@ -268,20 +271,20 @@ export const TimeOff: React.FC = () => {
               {isUnlimited ? (
                 <div className="flex flex-col items-center justify-center h-28 text-center">
                   <IdCard size={28} className="text-text-muted-light dark:text-text-muted-dark mb-2" />
-                  <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Contact Manager</p>
+                  <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('leave:timeOff.contactManager')}</p>
                 </div>
               ) : (
-                <ProgressRing remaining={remaining} total={total} color={card.color} />
+                <ProgressRing remaining={remaining} total={total} color={card.color} leftLabel={t('leave:timeOff.left')} />
               )}
 
               {/* Bottom stats */}
               <div className="flex justify-around mt-4 pt-3 border-t border-border-light dark:border-border-dark text-center">
                 <div>
-                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark">Used</p>
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('leave:timeOff.used')}</p>
                   <p className="text-lg font-bold text-text-light dark:text-text-dark">{used}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark">Pending</p>
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('leave:timeOff.pending')}</p>
                   <p className="text-lg font-bold text-text-light dark:text-text-dark">{pending}</p>
                 </div>
               </div>
@@ -297,7 +300,7 @@ export const TimeOff: React.FC = () => {
         {/* My Leave History */}
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
           <div className="p-4 md:p-6 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">My Leave History</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('leave:timeOff.myLeaveHistory')}</h2>
           </div>
 
           <div className="p-4 md:p-6 space-y-3">
@@ -315,9 +318,9 @@ export const TimeOff: React.FC = () => {
                           <Calendar size={16} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">{req.type}</p>
+                          <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">{translateLeaveType(req.type)}</p>
                           <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                            {req.dates} &middot; {days} day{days !== 1 ? 's' : ''}
+                            {req.dates} &middot; {days} {days === 1 ? t('leave:requestForm.day') : t('leave:requestForm.days')}
                           </p>
                         </div>
                       </div>
@@ -340,7 +343,7 @@ export const TimeOff: React.FC = () => {
                             onClick={() => setCancelModalRequest(req)}
                             className="px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                           >
-                            Cancel
+                            {t('leave:timeOff.cancel')}
                           </button>
                         )}
 
@@ -355,7 +358,7 @@ export const TimeOff: React.FC = () => {
                           {req.status === 'Rejected' && <XCircle size={12} />}
                           {req.status === 'Pending' && <Clock size={12} />}
                           {req.status === 'Cancel Requested' && <AlertCircle size={12} />}
-                          {req.status}
+                          {t(`common:status.${req.status === 'Cancel Requested' ? 'cancelRequested' : req.status.toLowerCase()}`, { defaultValue: req.status })}
                         </span>
                       </div>
                     </div>
@@ -363,7 +366,7 @@ export const TimeOff: React.FC = () => {
                     {/* Rejection reason */}
                     {req.status === 'Rejected' && req.rejectionReason && (
                       <p className="mt-2 ml-11 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded px-2 py-1 border border-red-100 dark:border-red-800">
-                        Reason: {req.rejectionReason}
+                        {t('leave:detail.reason')}: {req.rejectionReason}
                       </p>
                     )}
                   </div>
@@ -371,7 +374,7 @@ export const TimeOff: React.FC = () => {
               })
             ) : (
               <div className="text-center py-8 text-text-muted-light dark:text-text-muted-dark text-sm">
-                No leave requests yet.
+                {t('leave:timeOff.noRequests')}
               </div>
             )}
           </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Clock, TrendingUp, AlertCircle, CheckCircle2, Briefcase, Timer } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAttendanceRecords, useAttendanceSummary } from '../hooks/queries';
@@ -15,6 +16,7 @@ interface AttendanceSummary {
 }
 
 const Attendance: React.FC = () => {
+  const { t } = useTranslation(['attendance', 'common']);
   const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -55,20 +57,8 @@ const Attendance: React.FC = () => {
     }
   };
 
-  const monthOptions: DropdownOption[] = [
-    { value: '0', label: 'January' },
-    { value: '1', label: 'February' },
-    { value: '2', label: 'March' },
-    { value: '3', label: 'April' },
-    { value: '4', label: 'May' },
-    { value: '5', label: 'June' },
-    { value: '6', label: 'July' },
-    { value: '7', label: 'August' },
-    { value: '8', label: 'September' },
-    { value: '9', label: 'October' },
-    { value: '10', label: 'November' },
-    { value: '11', label: 'December' }
-  ];
+  const monthNames = ['january','february','march','april','may','june','july','august','september','october','november','december'].map(m => t('common:months.' + m));
+  const monthOptions: DropdownOption[] = monthNames.map((label, i) => ({ value: String(i), label }));
 
   const yearOptions: DropdownOption[] = [
     { value: '2024', label: '2024' },
@@ -82,10 +72,10 @@ const Attendance: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">
-            My Attendance
+            {t('attendance:employee.title')}
           </h1>
           <p className="text-sm sm:text-base text-text-muted-light dark:text-text-muted-dark mt-1">
-            Track your check-in and check-out history
+            {t('attendance:employee.subtitle')}
           </p>
         </div>
 
@@ -116,7 +106,7 @@ const Attendance: React.FC = () => {
                 <Briefcase size={20} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Working Days</p>
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.workingDays')}</p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
                   {summary.totalDays}
                 </p>
@@ -131,7 +121,7 @@ const Attendance: React.FC = () => {
                 <CheckCircle2 size={20} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">On-Time Days</p>
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.onTimeDays')}</p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
                   {summary.presentDays}
                 </p>
@@ -146,7 +136,7 @@ const Attendance: React.FC = () => {
                 <AlertCircle size={20} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Late Days</p>
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.lateDays')}</p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
                   {summary.lateDays}
                 </p>
@@ -161,7 +151,7 @@ const Attendance: React.FC = () => {
                 <Clock size={20} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Total Hours</p>
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.totalHours')}</p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
                   {Number(summary.totalHours || 0).toFixed(1)}h
                 </p>
@@ -176,7 +166,7 @@ const Attendance: React.FC = () => {
                 <TrendingUp size={20} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Avg Hours/Day</p>
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.avgHoursDay')}</p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
                   {summary.totalDays > 0 ? (Number(summary.totalHours || 0) / summary.totalDays).toFixed(1) : '0'}h
                 </p>
@@ -191,7 +181,7 @@ const Attendance: React.FC = () => {
                 <Timer size={20} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Overtime</p>
+                <p className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.overtime')}</p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
                   {Number(summary.overtimeHours || 0).toFixed(1)}h
                 </p>
@@ -208,22 +198,22 @@ const Attendance: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-border-light dark:border-border-dark">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Check In</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Check Out</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Total Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Overtime</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{t('attendance:employee.date')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{t('attendance:employee.checkIn')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{t('attendance:employee.checkOut')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{t('attendance:employee.totalHours')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{t('attendance:employee.overtime')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{t('attendance:employee.status')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">Loading attendance records...</td>
+                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.loading')}</td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">No attendance records for this period</td>
+                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.noRecords')}</td>
                 </tr>
               ) : (
                 records.map((record) => (
@@ -233,7 +223,7 @@ const Attendance: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
                       {formatTime(record.clockOut)}
                       {record.autoCheckout && (
-                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Auto</span>
+                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">{t('common:auto')}</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">{record.totalHours != null ? `${Number(record.totalHours).toFixed(1)}h` : '-'}</td>
@@ -244,9 +234,9 @@ const Attendance: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
-                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>{record.status}</span>
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>{t('common:status.' + record.status.toLowerCase().replace(/-/g, '').replace(/ /g, ''), { defaultValue: record.status })}</span>
                         {record.earlyDeparture && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Early</span>
+                          <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">{t('common:status.early')}</span>
                         )}
                       </div>
                     </td>
@@ -260,9 +250,9 @@ const Attendance: React.FC = () => {
         {/* Mobile Card View */}
         <div className="md:hidden p-4">
           {loading ? (
-            <div className="py-8 text-center text-text-muted-light dark:text-text-muted-dark">Loading attendance records...</div>
+            <div className="py-8 text-center text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.loading')}</div>
           ) : records.length === 0 ? (
-            <div className="py-8 text-center text-text-muted-light dark:text-text-muted-dark">No attendance records for this period</div>
+            <div className="py-8 text-center text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.noRecords')}</div>
           ) : (
             <div className="space-y-3">
               {records.map((record) => (
@@ -270,30 +260,30 @@ const Attendance: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium text-text-light dark:text-text-dark">{formatDate(record.date)}</p>
                     <div className="flex items-center gap-1">
-                      <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>{record.status}</span>
+                      <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>{t('common:status.' + record.status.toLowerCase().replace(/-/g, '').replace(/ /g, ''), { defaultValue: record.status })}</span>
                       {record.autoCheckout && (
-                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Auto</span>
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">{t('common:auto')}</span>
                       )}
                       {record.earlyDeparture && (
-                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Early</span>
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">{t('common:status.early')}</span>
                       )}
                     </div>
                   </div>
                   <div className="grid grid-cols-4 gap-2 text-xs">
                     <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">In</p>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.in')}</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockIn)}</p>
                     </div>
                     <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">Out</p>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.out')}</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{formatTime(record.clockOut)}</p>
                     </div>
                     <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">Hours</p>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">{t('common:time.hours')}</p>
                       <p className="font-medium text-text-light dark:text-text-dark">{record.totalHours != null ? `${Number(record.totalHours).toFixed(1)}h` : '-'}</p>
                     </div>
                     <div>
-                      <p className="text-text-muted-light dark:text-text-muted-dark">OT</p>
+                      <p className="text-text-muted-light dark:text-text-muted-dark">{t('attendance:employee.ot')}</p>
                       <p className="font-medium text-amber-600 dark:text-amber-400">
                         {record.overtimeHours != null && record.overtimeHours > 0 ? `${Number(record.overtimeHours).toFixed(1)}h` : '-'}
                       </p>

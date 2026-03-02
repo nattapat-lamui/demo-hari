@@ -16,6 +16,7 @@ import {
     ArrowRightLeft,
     AlertTriangle,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { DatePicker } from '../../components/DatePicker';
 import { Dropdown } from '../../components/Dropdown';
 import { ThaiAddressForm } from '../../components/ThaiAddressForm';
@@ -73,6 +74,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
     onCloseTerminate,
     onConfirmTerminate,
 }) => {
+    const { t } = useTranslation(['employees', 'common']);
     const { canEditSensitiveInfo, isOwnProfile } = permissions;
 
     // Phone: split into country code + number for the UI, combine before saving
@@ -125,7 +127,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                     <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
                             <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
-                                Edit Employee Profile
+                                {t('employees:modals.editTitle')}
                             </h3>
                             <button
                                 onClick={onCloseEditProfile}
@@ -140,7 +142,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             onKeyDown={handleFormKeyDown}
                         >
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Full Name</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.fullName')}</label>
                                 <div className="relative">
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
                                     <input
@@ -154,7 +156,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
 
                             <div>
                                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                                    Role / Title
+                                    {t('employees:modals.roleTitle')}
                                     {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
                                 </label>
                                 <Dropdown
@@ -173,7 +175,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
 
                             <div>
                                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                                    Department
+                                    {t('employees:modals.department')}
                                     {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
                                 </label>
                                 <Dropdown
@@ -191,7 +193,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Email</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.email')}</label>
                                 <div className="relative">
                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
                                     <input
@@ -204,7 +206,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Slack Handle</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.slackHandle')}</label>
                                 <div className="relative">
                                     <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
                                     <input
@@ -219,7 +221,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
 
                             <div>
                                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                                    Location
+                                    {t('employees:modals.location')}
                                     {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
                                 </label>
                                 <Dropdown
@@ -238,7 +240,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
 
                             <div>
                                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                                    Join Date
+                                    {t('employees:modals.joinDate')}
                                     {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
                                 </label>
                                 <DatePicker
@@ -251,7 +253,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
 
                             <div>
                                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                                    Status
+                                    {t('employees:modals.status')}
                                     {!canEditSensitiveInfo && <Lock size={12} className="inline ml-2 text-text-muted-light" />}
                                 </label>
                                 <Dropdown
@@ -259,15 +261,15 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     onChange={(val) => onProfileChange('status', val)}
                                     disabled={!canEditSensitiveInfo}
                                     options={[
-                                        { value: 'Active', label: 'Active' },
-                                        { value: 'On Leave', label: 'On Leave' },
-                                        { value: 'Terminated', label: 'Terminated' },
+                                        { value: 'Active', label: t('employees:status.active') },
+                                        { value: 'On Leave', label: t('employees:status.onLeave') },
+                                        { value: 'Terminated', label: t('employees:status.terminated') },
                                     ]}
                                 />
                             </div>
 
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Emergency Contact</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.emergencyContact')}</label>
                                 <div className="relative">
                                     <HeartPulse className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
                                     <input
@@ -281,7 +283,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             </div>
 
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Phone Number</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.phoneNumber')}</label>
                                 <div className="flex gap-2">
                                     <Dropdown
                                         value={phoneCode}
@@ -307,7 +309,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             </div>
 
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Bio</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.bio')}</label>
                                 <div className="relative">
                                     <AlignLeft className="absolute left-3 top-3 text-text-muted-light" size={16} />
                                     <textarea
@@ -333,13 +335,13 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     onClick={onCloseEditProfile}
                                     className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
                                 >
-                                    Cancel
+                                    {t('employees:modals.cancel')}
                                 </button>
                                 <button
                                     onClick={onProfileSave}
                                     className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
                                 >
-                                    <Check size={16} /> Save Changes
+                                    <Check size={16} /> {t('employees:modals.save')}
                                 </button>
                             </div>
                         </div>
@@ -354,7 +356,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                     <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
                             <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
-                                Add Employment History
+                                {t('employees:modals.addHistory')}
                             </h3>
                             <button
                                 onClick={onCloseAddHistory}
@@ -366,7 +368,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
 
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Role</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.historyRole')}</label>
                                 <input
                                     type="text"
                                     value={newHistoryForm.role || ''}
@@ -377,7 +379,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Department</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.historyDepartment')}</label>
                                 <input
                                     type="text"
                                     value={newHistoryForm.department || ''}
@@ -390,7 +392,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <DatePicker
-                                        label="Start Date"
+                                        label={t('employees:modals.historyStartDate')}
                                         value={newHistoryForm.startDate || ''}
                                         onChange={(date) => onSetNewHistoryForm({ ...newHistoryForm, startDate: date })}
                                         placeholder="Select start date"
@@ -398,7 +400,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 </div>
                                 <div>
                                     <DatePicker
-                                        label="End Date"
+                                        label={t('employees:modals.historyEndDate')}
                                         value={newHistoryForm.endDate && newHistoryForm.endDate !== 'Present' ? newHistoryForm.endDate : ''}
                                         onChange={(date) => onSetNewHistoryForm({ ...newHistoryForm, endDate: date })}
                                         placeholder="Select end date"
@@ -411,13 +413,13 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                             onChange={(e) => onSetNewHistoryForm({ ...newHistoryForm, endDate: e.target.checked ? 'Present' : '' })}
                                             className="w-4 h-4 text-primary bg-background-light dark:bg-background-dark border-border-light dark:border-border-dark rounded focus:ring-2 focus:ring-primary"
                                         />
-                                        <span className="ml-2 text-sm text-text-muted-light dark:text-text-muted-dark">Current Position</span>
+                                        <span className="ml-2 text-sm text-text-muted-light dark:text-text-muted-dark">{t('employees:modals.historyCurrentPosition')}</span>
                                     </label>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Description</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.historyDescription')}</label>
                                 <textarea
                                     value={newHistoryForm.description || ''}
                                     onChange={(e) => onSetNewHistoryForm({ ...newHistoryForm, description: e.target.value })}
@@ -433,13 +435,13 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 onClick={onCloseAddHistory}
                                 className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
                             >
-                                Cancel
+                                {t('employees:modals.cancel')}
                             </button>
                             <button
                                 onClick={onSaveNewHistory}
                                 className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
                             >
-                                <Check size={16} /> Save Position
+                                <Check size={16} /> {t('employees:modals.historySave')}
                             </button>
                         </div>
                     </div>
@@ -453,7 +455,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                     <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
                             <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
-                                {reviewForm.id ? 'Edit Performance Review' : 'New Performance Review'}
+                                {reviewForm.id ? t('employees:modals.editReview') : t('employees:modals.newReview')}
                             </h3>
                             <button
                                 onClick={onCloseReviewModal}
@@ -465,7 +467,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
 
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Reviewer</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.reviewReviewer')}</label>
                                 <input
                                     type="text"
                                     value={reviewForm.reviewer || ''}
@@ -478,7 +480,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
 
                             <div>
                                 <DatePicker
-                                    label="Date"
+                                    label={t('employees:modals.reviewDate')}
                                     value={reviewForm.date || ''}
                                     onChange={(date) => onSetReviewForm({ ...reviewForm, date: date })}
                                     placeholder="Select review date"
@@ -486,7 +488,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Rating</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.reviewRating')}</label>
                                 <div className="flex gap-2">
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <button
@@ -505,7 +507,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Notes</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.reviewNotes')}</label>
                                 <textarea
                                     value={reviewForm.notes || ''}
                                     onChange={(e) => onSetReviewForm({ ...reviewForm, notes: e.target.value })}
@@ -521,13 +523,13 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 onClick={onCloseReviewModal}
                                 className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
                             >
-                                Cancel
+                                {t('employees:modals.cancel')}
                             </button>
                             <button
                                 onClick={onSaveReview}
                                 className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
                             >
-                                <Check size={16} /> Save Review
+                                <Check size={16} /> {t('employees:modals.reviewSave')}
                             </button>
                         </div>
                     </div>
@@ -541,7 +543,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                     <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
                             <h3 className="font-bold text-lg text-text-light dark:text-text-dark flex items-center gap-2">
-                                <TrendingUp size={20} className="text-primary" /> Promote Employee
+                                <TrendingUp size={20} className="text-primary" /> {t('employees:modals.promoteTitle')}
                             </h3>
                             <button onClick={onClosePromote} className="text-text-muted-light hover:text-text-light">
                                 <X size={20} />
@@ -549,7 +551,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">New Role</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.promoteNewRole')}</label>
                                 <Dropdown
                                     value={promoteForm.role}
                                     onChange={(val) => onPromoteFormChange('role', val)}
@@ -563,7 +565,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">New Salary</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.promoteNewSalary')}</label>
                                 <input
                                     type="number"
                                     value={promoteForm.salary}
@@ -575,14 +577,14 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                         </div>
                         <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-end gap-3 bg-gray-50 dark:bg-gray-800/50">
                             <button onClick={onClosePromote} className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark">
-                                Cancel
+                                {t('employees:modals.cancel')}
                             </button>
                             <button
                                 onClick={onConfirmPromote}
                                 disabled={!promoteForm.role}
                                 className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <Check size={16} /> Confirm Promotion
+                                <Check size={16} /> {t('employees:modals.promoteConfirm')}
                             </button>
                         </div>
                     </div>
@@ -596,7 +598,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                     <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
                             <h3 className="font-bold text-lg text-text-light dark:text-text-dark flex items-center gap-2">
-                                <ArrowRightLeft size={20} className="text-primary" /> Transfer Employee
+                                <ArrowRightLeft size={20} className="text-primary" /> {t('employees:modals.transferTitle')}
                             </h3>
                             <button onClick={onCloseTransfer} className="text-text-muted-light hover:text-text-light">
                                 <X size={20} />
@@ -604,7 +606,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">New Department</label>
+                                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.transferNewDepartment')}</label>
                                 <Dropdown
                                     value={transferDepartment}
                                     onChange={onTransferDepartmentChange}
@@ -615,14 +617,14 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                         </div>
                         <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-end gap-3 bg-gray-50 dark:bg-gray-800/50">
                             <button onClick={onCloseTransfer} className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark">
-                                Cancel
+                                {t('employees:modals.cancel')}
                             </button>
                             <button
                                 onClick={onConfirmTransfer}
                                 disabled={!transferDepartment}
                                 className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <Check size={16} /> Confirm Transfer
+                                <Check size={16} /> {t('employees:modals.transferConfirm')}
                             </button>
                         </div>
                     </div>
@@ -639,21 +641,21 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 <AlertTriangle className="text-red-600 dark:text-red-400" size={24} />
                             </div>
                             <h3 className="font-bold text-lg text-text-light dark:text-text-dark mb-2">
-                                Terminate Employee?
+                                {t('employees:modals.terminateTitle')}
                             </h3>
                             <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                                This will mark the employee as terminated and automatically reassign their direct reports to their manager. This action can be reversed by changing status back to Active.
+                                {t('employees:modals.terminateDescription')}
                             </p>
                         </div>
                         <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-center gap-3 bg-gray-50 dark:bg-gray-800/50">
                             <button onClick={onCloseTerminate} className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark">
-                                Cancel
+                                {t('employees:modals.cancel')}
                             </button>
                             <button
                                 onClick={onConfirmTerminate}
                                 className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2"
                             >
-                                <AlertTriangle size={16} /> Terminate
+                                <AlertTriangle size={16} /> {t('employees:modals.terminateConfirm')}
                             </button>
                         </div>
                     </div>
@@ -670,10 +672,10 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 <Trash2 className="text-red-600 dark:text-red-400" size={24} />
                             </div>
                             <h3 className="font-bold text-lg text-text-light dark:text-text-dark mb-2">
-                                Delete Review?
+                                {t('employees:modals.deleteReviewTitle')}
                             </h3>
                             <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                                This action cannot be undone. Are you sure you want to delete this performance review?
+                                {t('employees:modals.deleteReviewConfirm')}
                             </p>
                         </div>
                         <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-center gap-3 bg-gray-50 dark:bg-gray-800/50">
@@ -681,13 +683,13 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 onClick={onCancelDelete}
                                 className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
                             >
-                                Cancel
+                                {t('employees:modals.cancel')}
                             </button>
                             <button
                                 onClick={onConfirmDelete}
                                 className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2"
                             >
-                                <Trash2 size={16} /> Delete
+                                <Trash2 size={16} /> {t('employees:modals.delete')}
                             </button>
                         </div>
                     </div>

@@ -80,6 +80,7 @@ const AvatarWithFallback: React.FC<{
     />
   );
 };
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useOrg } from '../contexts/OrgContext';
 import { Toast } from '../components/Toast';
@@ -133,6 +134,7 @@ interface ModalState {
 }
 
 export const OrgChart: React.FC = () => {
+  const { t } = useTranslation(['employees', 'common']);
   const { user, isAdminView } = useAuth();
   const isAdmin = isAdminView;
   const { nodes, addNode, updateNode, deleteNode, fetchSubTree, fetchAllNodes, isSubTreeView } =
@@ -424,7 +426,7 @@ export const OrgChart: React.FC = () => {
   const confirmDelete = () => {
     if (deleteConfirmId) {
       deleteNode(deleteConfirmId);
-      showToast('Employee removed from org chart.', 'success');
+      showToast(t('orgChart.removedSuccess'), 'success');
       setDeleteConfirmId(null);
     }
   };
@@ -445,7 +447,7 @@ export const OrgChart: React.FC = () => {
           avatar: inputAvatar,
         };
         await addNode(newNode);
-        showToast('Employee added successfully.', 'success');
+        showToast(t('orgChart.addedSuccess'), 'success');
       } else if (modalState.type === 'edit' && modalState.nodeId) {
         await updateNode(modalState.nodeId, {
           name: inputName,
@@ -454,12 +456,12 @@ export const OrgChart: React.FC = () => {
           avatar: inputAvatar,
           parentId: inputParentId || null, // Allow null for root
         });
-        showToast('Position updated successfully.', 'success');
+        showToast(t('orgChart.updatedSuccess'), 'success');
       }
 
       setModalState({ ...modalState, isOpen: false });
     } catch (error) {
-      showToast('Failed to save changes. Please try again.', 'error');
+      showToast(t('orgChart.saveFailed'), 'error');
     }
   };
 
@@ -537,9 +539,9 @@ export const OrgChart: React.FC = () => {
         await updateNode(draggedId, { parentId: targetId });
         const draggedName = nodes.find((n) => n.id === draggedId)?.name || 'Employee';
         const targetName = nodes.find((n) => n.id === targetId)?.name || 'Manager';
-        showToast(`${draggedName} now reports to ${targetName}.`, 'success');
+        showToast(t('orgChart.reassignSuccess', { dragged: draggedName, target: targetName }), 'success');
       } catch {
-        showToast('Failed to reassign manager. Please try again.', 'error');
+        showToast(t('orgChart.reassignFailed'), 'error');
       }
       setDraggedNodeId(null);
       setDragOverNodeId(null);
@@ -631,11 +633,11 @@ export const OrgChart: React.FC = () => {
                   e.stopPropagation();
                   fetchSubTree(node.id);
                 }}
-                title={`View ${node.directReportCount} direct report${node.directReportCount > 1 ? 's' : ''}`}
+                title={node.directReportCount > 1 ? t('orgChart.reports', { count: node.directReportCount }) : t('orgChart.report', { count: node.directReportCount })}
               >
                 <Users size={10} />
                 <span>
-                  {node.directReportCount} report{node.directReportCount > 1 ? 's' : ''}
+                  {node.directReportCount > 1 ? t('orgChart.reports', { count: node.directReportCount }) : t('orgChart.report', { count: node.directReportCount })}
                 </span>
               </div>
             )}
@@ -659,14 +661,14 @@ export const OrgChart: React.FC = () => {
               <button
                 onClick={() => openEditModal(node)}
                 className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-blue-500"
-                title="Edit"
+                title={t('orgChart.edit')}
               >
                 <Edit2 size={14} />
               </button>
               <button
                 onClick={() => openAddModal(node.id)}
                 className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-green-500"
-                title="Add Subordinate"
+                title={t('orgChart.addSubordinate')}
               >
                 <Plus size={14} />
               </button>
@@ -674,7 +676,7 @@ export const OrgChart: React.FC = () => {
                 <button
                   onClick={() => handleDelete(node.id)}
                   className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-red-500"
-                  title="Delete"
+                  title={t('orgChart.delete')}
                 >
                   <Trash2 size={14} />
                 </button>
@@ -731,12 +733,12 @@ export const OrgChart: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">
-            Organizational Structure
+            {t('orgChart.title')}
           </h1>
           <p className="text-text-muted-light dark:text-text-muted-dark text-sm mt-1">
             {isAdmin
-              ? 'Hover over cards to add, edit or remove people. Drag cards to reassign managers.'
-              : 'View the company hierarchy.'}
+              ? t('orgChart.subtitleAdmin')
+              : t('orgChart.subtitleEmployee')}
           </p>
         </div>
 
@@ -748,7 +750,7 @@ export const OrgChart: React.FC = () => {
               className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
             >
               <ArrowLeft size={14} />
-              Full Org Chart
+              {t('orgChart.fullOrgChart')}
             </button>
           )}
 
@@ -759,10 +761,10 @@ export const OrgChart: React.FC = () => {
             value={departmentFilter}
             onChange={(value) => setDepartmentFilter(value as Department | '')}
             options={[
-              { value: '', label: 'All Departments' },
+              { value: '', label: t('common:departments.allDepartments') },
               ...departments.map((dept) => ({ value: dept, label: dept }))
             ]}
-            placeholder="All Departments"
+            placeholder={t('common:departments.allDepartments')}
             width="w-44"
           />
 
@@ -774,7 +776,7 @@ export const OrgChart: React.FC = () => {
             />
             <input
               type="text"
-              placeholder="Find employee..."
+              placeholder={t('orgChart.findEmployee')}
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               className="pl-9 pr-4 py-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-56"
@@ -799,7 +801,7 @@ export const OrgChart: React.FC = () => {
             <button
               onClick={resetZoom}
               className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-text-muted-light hover:text-text-light transition-colors"
-              title="Reset Zoom"
+              title={t('orgChart.resetZoom')}
             >
               <RotateCcw size={16} />
             </button>
@@ -818,13 +820,13 @@ export const OrgChart: React.FC = () => {
         {/* Pan/Zoom hint */}
         <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 bg-white/80 dark:bg-gray-800/80 rounded text-[10px] text-text-muted-light dark:text-text-muted-dark z-10">
           <Move size={12} />
-          <span>Drag to pan • Scroll to zoom</span>
+          <span>{t('orgChart.dragToZoom')}</span>
         </div>
 
         {/* Drag banner */}
         {draggedNodeId && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
-            Dragging <span className="font-bold">{nodes.find((n) => n.id === draggedNodeId)?.name}</span> — drop on a card to reassign manager
+            {t('orgChart.dragging')} <span className="font-bold">{nodes.find((n) => n.id === draggedNodeId)?.name}</span> {t('orgChart.dropToReassign')}
           </div>
         )}
         <div
@@ -849,7 +851,7 @@ export const OrgChart: React.FC = () => {
           <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
               <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
-                {modalState.type === 'add' ? 'Add New Position' : 'Edit Position'}
+                {modalState.type === 'add' ? t('orgChart.addNewPosition') : t('orgChart.editPosition')}
               </h3>
               <button
                 onClick={() => setModalState({ ...modalState, isOpen: false })}
@@ -861,26 +863,26 @@ export const OrgChart: React.FC = () => {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Name
+                  {t('orgChart.name')}
                 </label>
                 <input
                   type="text"
                   value={inputName}
                   onChange={(e) => setInputName(e.target.value)}
                   className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
-                  placeholder="Employee Name"
+                  placeholder={t('orgChart.namePlaceholder')}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Role / Job Title
+                  {t('orgChart.roleJobTitle')}
                 </label>
                 <input
                   type="text"
                   value={inputRole}
                   onChange={(e) => setInputRole(e.target.value)}
                   className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
-                  placeholder="e.g. Senior Developer"
+                  placeholder={t('orgChart.rolePlaceholder')}
                 />
               </div>
 
@@ -888,14 +890,14 @@ export const OrgChart: React.FC = () => {
               {modalState.type === 'add' && (
                 <div>
                   <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    Email <span className="text-red-500">*</span>
+                    {t('orgChart.email')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
                     value={inputEmail}
                     onChange={(e) => setInputEmail(e.target.value)}
                     className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
-                    placeholder="employee@aiya.ai"
+                    placeholder={t('orgChart.emailPlaceholder')}
                   />
                 </div>
               )}
@@ -903,45 +905,45 @@ export const OrgChart: React.FC = () => {
               {/* Department */}
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Department
+                  {t('orgChart.department')}
                 </label>
                 <Dropdown
                   value={inputDepartment}
                   onChange={(value) => setInputDepartment(value as Department | '')}
                   options={[
-                    { value: '', label: 'Select Department' },
+                    { value: '', label: t('addModal.selectDepartment') },
                     ...departments.map((dept) => ({ value: dept, label: dept }))
                   ]}
-                  placeholder="Select Department"
+                  placeholder={t('addModal.selectDepartment')}
                 />
               </div>
 
               {modalState.type === 'edit' && (
                 <div>
                   <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    Reports To
+                    {t('orgChart.reportsTo')}
                   </label>
                   <Dropdown
                     value={inputParentId || ''}
                     onChange={(value) => setInputParentId(value)}
                     options={[
-                      { value: '', label: 'No Manager (Root Node)' },
+                      { value: '', label: t('orgChart.noManager') },
                       ...availableParents.map((parent) => ({
                         value: parent.id,
                         label: `${parent.name} (${parent.role})`
                       }))
                     ]}
-                    placeholder="Select Manager"
+                    placeholder={t('orgChart.selectManager')}
                   />
                   <p className="text-xs text-text-muted-light mt-1">
-                    Change to reassign this employee's manager.
+                    {t('orgChart.reportsToHint')}
                   </p>
                 </div>
               )}
 
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Avatar URL
+                  {t('orgChart.avatarUrl')}
                 </label>
                 <input
                   type="text"
@@ -956,13 +958,13 @@ export const OrgChart: React.FC = () => {
                 onClick={() => setModalState({ ...modalState, isOpen: false })}
                 className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
               >
-                Cancel
+                {t('common:buttons.cancel')}
               </button>
               <button
                 onClick={handleSave}
                 className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
               >
-                <Check size={16} /> Save Changes
+                <Check size={16} /> {t('common:buttons.save')}
               </button>
             </div>
           </div>
@@ -979,11 +981,10 @@ export const OrgChart: React.FC = () => {
                 <Trash2 className="text-red-600 dark:text-red-400" size={24} />
               </div>
               <h3 className="font-bold text-lg text-text-light dark:text-text-dark mb-2">
-                Remove from Org Chart?
+                {t('orgChart.removeFromOrgChart')}
               </h3>
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                This will remove this person from the organization chart. Their direct reports
-                will be reassigned to their manager.
+                {t('orgChart.removeConfirm')}
               </p>
             </div>
             <div className="flex justify-center gap-3 p-4 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50">
@@ -991,13 +992,13 @@ export const OrgChart: React.FC = () => {
                 onClick={() => setDeleteConfirmId(null)}
                 className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light transition-colors"
               >
-                Cancel
+                {t('common:buttons.cancel')}
               </button>
               <button
                 onClick={confirmDelete}
                 className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2"
               >
-                <Trash2 size={16} /> Remove
+                <Trash2 size={16} /> {t('common:buttons.delete')}
               </button>
             </div>
           </div>

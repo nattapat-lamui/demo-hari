@@ -1,5 +1,6 @@
 import React from 'react';
 import { UploadCloud, Download, FileText, MoreHorizontal } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { DocumentsTabProps } from './EmployeeDetailTypes';
 import { formatDate } from '../../lib/date';
 
@@ -8,22 +9,23 @@ export const DocumentsTab: React.FC<DocumentsTabProps> = ({
     onUpload,
     showToast,
 }) => {
+    const { t } = useTranslation(['employees', 'common']);
     return (
         <div className="space-y-4 animate-fade-in">
             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Documents</h3>
+                <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{t('employees:documentsTab.title')}</h3>
                 <div className="flex gap-2">
                     <label className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer">
                         <UploadCloud size={16} />
-                        Upload
+                        {t('employees:documentsTab.upload')}
                         <input type="file" className="hidden" onChange={onUpload} />
                     </label>
                     <button
-                        onClick={() => showToast('Bulk download feature coming soon!', 'info')}
+                        onClick={() => showToast(t('employees:toast.bulkDownload'), 'info')}
                         className="flex items-center gap-2 px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
                         <Download size={16} />
-                        Download All
+                        {t('employees:documentsTab.downloadAll')}
                     </button>
                 </div>
             </div>
@@ -40,7 +42,7 @@ export const DocumentsTab: React.FC<DocumentsTabProps> = ({
                                     <div className="flex items-center gap-2 text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">
                                         <span className="uppercase">{doc.type}</span>
                                         <span>•</span>
-                                        <span>Last accessed {formatDate(doc.lastAccessed)}</span>
+                                        <span>{t('employees:documentsTab.lastAccessed')} {formatDate(doc.lastAccessed)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -52,7 +54,7 @@ export const DocumentsTab: React.FC<DocumentsTabProps> = ({
                 </div>
             ) : (
                 <div className="text-center py-12 text-text-muted-light dark:text-text-muted-dark border-2 border-dashed border-border-light dark:border-border-dark rounded-xl">
-                    <p>No documents found for this employee.</p>
+                    <p>{t('employees:documentsTab.noDocuments')}</p>
                 </div>
             )}
         </div>

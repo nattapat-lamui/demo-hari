@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Bell,
   Info,
@@ -29,6 +30,7 @@ const typeConfig: Record<NotificationType, { icon: React.ElementType; bg: string
 type FilterTab = 'all' | 'unread';
 
 const Notifications: React.FC = () => {
+  const { t } = useTranslation(['common']);
   const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -77,14 +79,14 @@ const Notifications: React.FC = () => {
     <div className="max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Notifications</h1>
+        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">{t('header.notifications')}</h1>
         {unreadCount > 0 && (
           <button
             onClick={handleMarkAllRead}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
           >
             <CheckCheck size={16} />
-            Mark All as Read
+            {t('header.markAllRead')}
           </button>
         )}
       </div>
@@ -174,7 +176,7 @@ const Notifications: React.FC = () => {
             <Bell size={28} className="text-text-muted-light dark:text-text-muted-dark" />
           </div>
           <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">
-            No notifications
+            {t('header.noNotifications')}
           </h3>
           <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
             {activeTab === 'unread' ? "You're all caught up!" : "You don't have any notifications yet."}

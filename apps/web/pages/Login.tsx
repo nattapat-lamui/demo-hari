@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import { Lock, Mail, Check, CheckCircle, Eye, EyeOff, Users, BarChart3, Clock, Shield } from "lucide-react";
 
 interface LocationState {
@@ -20,6 +21,7 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation('auth');
 
   // Check for registration success message
   useEffect(() => {
@@ -39,13 +41,13 @@ const Login: React.FC = () => {
     const errors: { email?: string; password?: string } = {};
 
     if (!email.trim()) {
-      errors.email = "Please enter your email address";
+      errors.email = t('login.emailRequired');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.email = "Please enter a valid email address";
+      errors.email = t('login.emailInvalid');
     }
 
     if (!password) {
-      errors.password = "Please enter your password";
+      errors.password = t('login.passwordRequired');
     }
 
     setFieldErrors(errors);
@@ -72,16 +74,16 @@ const Login: React.FC = () => {
     if (success) {
       navigate("/");
     } else {
-      setError("Invalid email or password");
+      setError(t('login.invalidCredentials'));
       setLoading(false);
     }
   };
 
   const features = [
-    { icon: Users, title: "Employee Management", desc: "Complete workforce management solution" },
-    { icon: Clock, title: "Smart Timekeeping", desc: "Automated clock-in and clock-out" },
-    { icon: BarChart3, title: "HR Analytics", desc: "In-depth data insights and reports" },
-    { icon: Shield, title: "Secure & Reliable", desc: "Enterprise-grade security" },
+    { icon: Users, title: t('login.feature1'), desc: t('login.feature1Desc') },
+    { icon: Clock, title: t('login.feature2'), desc: t('login.feature2Desc') },
+    { icon: BarChart3, title: t('login.feature3'), desc: t('login.feature3Desc') },
+    { icon: Shield, title: t('login.feature4'), desc: t('login.feature4Desc') },
   ];
 
   return (
@@ -114,7 +116,7 @@ const Login: React.FC = () => {
               />
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">HARI</h1>
-                <p className="text-white/70 text-sm">HR Intelligence by AIYA</p>
+                <p className="text-white/70 text-sm">{t('login.tagline')}</p>
               </div>
             </div>
           </div>
@@ -122,11 +124,11 @@ const Login: React.FC = () => {
           {/* Main Message */}
           <div className="flex-1 flex flex-col justify-center max-w-lg">
             <h2 className="text-4xl xl:text-5xl font-bold leading-tight mb-6">
-              Intelligent Human
-              <span className="block text-accent-teal">Resource Management</span>
+              {t('login.heroTitle1')}
+              <span className="block text-accent-teal">{t('login.heroTitle2')}</span>
             </h2>
             <p className="text-white/80 text-lg leading-relaxed mb-10">
-              Transform your HR operations with modern technology and seamless user experience.
+              {t('login.heroDesc')}
             </p>
 
             {/* Features Grid */}
@@ -146,7 +148,7 @@ const Login: React.FC = () => {
 
           {/* Footer */}
           <div className="text-white/50 text-sm">
-            © 2026 AIYA Technology. All rights reserved.
+            {t('login.copyright')}
           </div>
         </div>
       </div>
@@ -163,7 +165,7 @@ const Login: React.FC = () => {
             />
             <div>
               <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">HARI</h1>
-              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">HR Intelligence by AIYA</p>
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('login.tagline')}</p>
             </div>
           </div>
 
@@ -173,8 +175,8 @@ const Login: React.FC = () => {
               <div className="inline-flex items-center justify-center h-14 w-14 bg-gradient-to-br from-primary to-primary-dark text-white rounded-xl shadow-lg shadow-primary/30 mb-4">
                 <Lock size={26} />
               </div>
-              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Welcome to HARI</h2>
-              <p className="text-text-muted-light dark:text-text-muted-dark mt-2">Sign in to access your HR portal</p>
+              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">{t('login.welcomeTitle')}</h2>
+              <p className="text-text-muted-light dark:text-text-muted-dark mt-2">{t('login.welcomeSubtitle')}</p>
             </div>
 
             {successMessage && (
@@ -193,7 +195,7 @@ const Login: React.FC = () => {
             <form onSubmit={handleSubmit} noValidate className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Email Address
+                  {t('login.emailLabel')}
                 </label>
                 <div className="relative group">
                   <Mail
@@ -205,7 +207,7 @@ const Login: React.FC = () => {
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); setFieldErrors((prev) => ({ ...prev, email: undefined })); }}
                     className={`w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${fieldErrors.email ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-primary"}`}
-                    placeholder="name@company.com"
+                    placeholder={t('login.emailPlaceholder')}
                   />
                 </div>
                 {fieldErrors.email && (
@@ -215,7 +217,7 @@ const Login: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Password
+                  {t('login.passwordLabel')}
                 </label>
                 <div className="relative group">
                   <Lock
@@ -227,7 +229,7 @@ const Login: React.FC = () => {
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setFieldErrors((prev) => ({ ...prev, password: undefined })); }}
                     className={`w-full pl-12 pr-14 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${fieldErrors.password ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-primary"}`}
-                    placeholder="••••••••"
+                    placeholder={t('login.passwordPlaceholder')}
                   />
                   <button
                     type="button"
@@ -247,10 +249,10 @@ const Login: React.FC = () => {
                   <span className={`flex items-center justify-center w-[18px] h-[18px] rounded border transition-all duration-200 ${rememberMe ? "bg-primary border-primary" : "border-border-light dark:border-border-dark group-hover:border-primary/50"}`}>
                     {rememberMe && <Check size={12} className="text-white" strokeWidth={3} />}
                   </span>
-                  <span className="text-sm text-text-muted-light dark:text-text-muted-dark">Remember me</span>
+                  <span className="text-sm text-text-muted-light dark:text-text-muted-dark">{t('login.rememberMe')}</span>
                 </button>
                 <Link to="/forgot-password" className="text-sm text-primary hover:text-primary-hover font-medium transition-colors">
-                  Forgot password?
+                  {t('login.forgotPassword')}
                 </Link>
               </div>
 
@@ -267,17 +269,17 @@ const Login: React.FC = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Signing in...
+                    {t('login.signingIn')}
                   </span>
-                ) : "Sign In"}
+                ) : t('login.signIn')}
               </button>
             </form>
 
             <div className="mt-8 pt-6 border-t border-border-light dark:border-border-dark text-center">
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                New employee?{" "}
+                {t('login.newEmployee')}{" "}
                 <Link to="/register" className="text-primary font-semibold hover:text-primary-hover transition-colors">
-                  Create an account
+                  {t('login.createAccount')}
                 </Link>
               </p>
             </div>
@@ -285,7 +287,7 @@ const Login: React.FC = () => {
 
           {/* Additional Info */}
           <p className="text-center text-xs text-text-muted-light dark:text-text-muted-dark mt-6">
-            Secured with 256-bit SSL encryption
+            {t('login.sslEncryption')}
           </p>
         </div>
       </div>

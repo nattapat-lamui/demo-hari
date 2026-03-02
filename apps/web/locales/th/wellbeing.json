@@ -1,0 +1,55 @@
+{
+  "title": "สุขภาวะพนักงาน",
+  "subtitle": "ส่งเสริมวัฒนธรรมการทำงานที่ดีและสนับสนุนกัน",
+  "newAnnouncement": "ประกาศใหม่",
+  "sentiment": {
+    "title": "ความรู้สึกของพนักงาน",
+    "live": "สด",
+    "noData": "ยังไม่มีข้อมูลแบบสำรวจ",
+    "noDataDesc": "คะแนนความรู้สึกจะปรากฏเมื่อพนักงานเริ่มทำแบบสำรวจ",
+    "responseRate": "อัตราการตอบ",
+    "respondents": "ผู้ตอบ",
+    "categoryBreakdown": "แยกตามหมวดหมู่"
+  },
+  "announcements": {
+    "title": "ประกาศและนโยบาย",
+    "viewAll": "ดูทั้งหมด"
+  },
+  "calendar": {
+    "teamCalendar": "ปฏิทินทีม",
+    "addEvent": "เพิ่มกิจกรรมใหม่",
+    "upcomingEvents": "กิจกรรมที่กำลังจะมาถึง",
+    "noUpcoming": "ไม่มีกิจกรรมที่กำลังจะมาถึง"
+  },
+  "announcementModal": {
+    "title": "โพสต์ประกาศใหม่",
+    "titleLabel": "หัวข้อ",
+    "titlePlaceholder": "เช่น แจ้งปิดสำนักงาน",
+    "type": "ประเภท",
+    "typeAnnouncement": "ประกาศ",
+    "typePolicy": "อัปเดตนโยบาย",
+    "typeEvent": "กิจกรรม",
+    "eventDate": "วันที่กิจกรรม (ไม่บังคับ)",
+    "eventDatePlaceholder": "เช่น 15 ส.ค.",
+    "content": "เนื้อหา",
+    "contentPlaceholder": "รายละเอียดเกี่ยวกับประกาศ...",
+    "cancel": "ยกเลิก",
+    "post": "โพสต์"
+  },
+  "eventModal": {
+    "title": "เพิ่มกิจกรรมใหม่",
+    "eventTitle": "ชื่อกิจกรรม",
+    "titlePlaceholder": "เช่น ประชุมทีม",
+    "eventType": "ประเภทกิจกรรม",
+    "date": "วันที่",
+    "cancel": "ยกเลิก",
+    "create": "สร้างกิจกรรม"
+  },
+  "eventTypes": {
+    "meeting": "ประชุม",
+    "holiday": "วันหยุด",
+    "training": "อบรม",
+    "teamBuilding": "สร้างทีม",
+    "other": "อื่นๆ"
+  }
+}

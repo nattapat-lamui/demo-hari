@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BASE_URL, getAuthToken } from '../lib/api';
 import { Dropdown } from '../components/Dropdown';
 import { useDocumentList, useDocumentTrash, useDocumentStorage, useDeleteDocument, useRestoreDocument, usePermanentDeleteDocument } from '../hooks/queries';
@@ -32,6 +33,7 @@ import { Toast } from '../components/Toast';
 import { Pagination } from '../components/Pagination';
 
 export const Documents: React.FC = () => {
+  const { t } = useTranslation(['documents', 'common']);
   const { user, isAdminView } = useAuth();
   const isAdmin = isAdminView;
 
@@ -164,15 +166,17 @@ export const Documents: React.FC = () => {
   }, [openMenuId]);
 
   const categories = [
-    { name: 'All Files', icon: <FolderOpen size={18} /> },
-    { name: 'Contracts', icon: <FileText size={18} /> },
-    { name: 'Policies', icon: <ShieldCheck size={18} /> },
-    { name: 'Finance', icon: <FileSpreadsheet size={18} /> },
-    { name: 'HR', icon: <UsersIcon size={18} /> },
-    { name: 'Recent', icon: <Clock size={18} /> },
-    // Hide Trash for employees typically, but keeping for UI consistency or filtered content
-    ...(isAdmin ? [{ name: 'Trash', icon: <Trash2Icon size={18} /> }] : []),
+    { name: 'All Files', label: t('categories.allFiles'), icon: <FolderOpen size={18} /> },
+    { name: 'Contracts', label: t('categories.contracts'), icon: <FileText size={18} /> },
+    { name: 'Policies', label: t('categories.policies'), icon: <ShieldCheck size={18} /> },
+    { name: 'Finance', label: t('categories.finance'), icon: <FileSpreadsheet size={18} /> },
+    { name: 'HR', label: t('categories.hr'), icon: <UsersIcon size={18} /> },
+    { name: 'Recent', label: t('categories.recent'), icon: <Clock size={18} /> },
+    ...(isAdmin ? [{ name: 'Trash', label: t('categories.trash'), icon: <Trash2Icon size={18} /> }] : []),
   ];
+
+  const categoryLabelMap: Record<string, string> = {};
+  categories.forEach(c => { categoryLabelMap[c.name] = c.label; });
 
   const fileTypes = ['All', 'PDF', 'DOCX', 'XLSX', 'JPG', 'PNG'];
 
@@ -245,10 +249,10 @@ export const Documents: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
-      showToast('Download started!', 'success');
+      showToast(t('toast.downloadStarted'), 'success');
     } catch (error) {
       console.error('Error downloading:', error);
-      showToast('Download failed. Please try again.', 'error');
+      showToast(t('toast.downloadFailed'), 'error');
     }
   };
 
@@ -258,10 +262,9 @@ export const Documents: React.FC = () => {
 
     try {
       await navigator.clipboard.writeText(shareUrl);
-      showToast('Link copied to clipboard!', 'success');
+      showToast(t('toast.linkCopied'), 'success');
     } catch {
-      // Fallback - still show toast
-      showToast('Could not copy link automatically. URL: ' + shareUrl, 'info');
+      showToast(t('toast.linkCopyFailed'), 'info');
     }
   };
 
@@ -301,11 +304,11 @@ export const Documents: React.FC = () => {
       setIsUploadModalOpen(false);
       setSelectedFile(null);
       setUploadCategory('HR');
-      showToast(`"${selectedFile.name}" uploaded successfully!`, 'success');
+      showToast(t('upload.success', { filename: selectedFile.name }), 'success');
     } catch (error) {
       const apiError = error as Error;
       console.error('Error uploading document:', apiError);
-      showToast(apiError.message || 'Upload failed. Please try again.', 'error');
+      showToast(apiError.message || t('upload.failed'), 'error');
     }
   };
 
@@ -320,10 +323,10 @@ export const Documents: React.FC = () => {
     try {
       await deleteDocMutation.mutateAsync(deleteConfirmId);
       if (previewDoc?.id === deleteConfirmId) setPreviewDoc(null);
-      showToast('Document moved to trash.', 'success');
+      showToast(t('toast.movedToTrash'), 'success');
     } catch (error) {
       console.error('Error deleting document:', error);
-      showToast('Failed to delete document.', 'error');
+      showToast(t('toast.deleteFailed'), 'error');
     } finally {
       setDeleteConfirmId(null);
     }
@@ -333,10 +336,10 @@ export const Documents: React.FC = () => {
     e.stopPropagation();
     try {
       await restoreDocMutation.mutateAsync(docId);
-      showToast('Document restored successfully.', 'success');
+      showToast(t('toast.restored'), 'success');
     } catch (error) {
       console.error('Error restoring document:', error);
-      showToast('Failed to restore document.', 'error');
+      showToast(t('toast.restoreFailed'), 'error');
     }
   };
 
@@ -344,10 +347,10 @@ export const Documents: React.FC = () => {
     e.stopPropagation();
     try {
       await permanentDeleteMutation.mutateAsync(docId);
-      showToast('Document permanently deleted.', 'success');
+      showToast(t('toast.permanentlyDeleted'), 'success');
     } catch (error) {
       console.error('Error permanently deleting document:', error);
-      showToast('Failed to permanently delete document.', 'error');
+      showToast(t('toast.permanentDeleteFailed'), 'error');
     }
   };
 
@@ -361,7 +364,7 @@ export const Documents: React.FC = () => {
             className="w-full py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 mb-6"
           >
             <UploadCloud size={18} />
-            Upload New
+            {t('uploadNew')}
           </button>
 
           <nav className="space-y-1">
@@ -376,7 +379,7 @@ export const Documents: React.FC = () => {
                 }`}
               >
                 {cat.icon}
-                {cat.name}
+                {cat.label}
               </button>
             ))}
           </nav>
@@ -385,7 +388,7 @@ export const Documents: React.FC = () => {
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-2 text-text-light dark:text-text-dark font-semibold">
             <HardDrive size={18} />
-            <h3>Storage</h3>
+            <h3>{t('storage')}</h3>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden mb-2">
             <div
@@ -400,8 +403,8 @@ export const Documents: React.FC = () => {
             ></div>
           </div>
           <div className="flex justify-between text-xs text-text-muted-light dark:text-text-muted-dark">
-            <span>{storageStats?.usedFormatted ?? '0 B'} used</span>
-            <span>{storageStats?.totalFormatted ?? '100 GB'} total</span>
+            <span>{t('usedOfTotal', { used: storageStats?.usedFormatted ?? '0 B' })}</span>
+            <span>{t('totalStorage', { total: storageStats?.totalFormatted ?? '100 GB' })}</span>
           </div>
         </div>
       </aside>
@@ -411,7 +414,7 @@ export const Documents: React.FC = () => {
         {/* Toolbar */}
         <div className="p-4 border-b border-border-light dark:border-border-dark flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-lg font-semibold text-text-light dark:text-text-dark">
-            <h2>{selectedCategory}</h2>
+            <h2>{categoryLabelMap[selectedCategory] || selectedCategory}</h2>
             <span className="text-text-muted-light dark:text-text-muted-dark font-normal text-sm ml-2">
               ({filteredDocuments.length})
             </span>
@@ -431,7 +434,7 @@ export const Documents: React.FC = () => {
               >
                 {fileTypes.map((type) => (
                   <option key={type} value={type}>
-                    {type === 'All' ? 'All Types' : type}
+                    {type === 'All' ? t('fileTypes.all') : type}
                   </option>
                 ))}
               </select>
@@ -459,7 +462,7 @@ export const Documents: React.FC = () => {
               />
               <input
                 type="text"
-                placeholder="Search files..."
+                placeholder={t('searchPlaceholder')}
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="w-full sm:w-64 pl-9 pr-4 py-2 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
@@ -516,7 +519,7 @@ export const Documents: React.FC = () => {
                               }}
                               className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-2"
                             >
-                              <RotateCcw size={14} /> Restore
+                              <RotateCcw size={14} /> {t('actions.restore')}
                             </button>
                             <button
                               onClick={(e) => {
@@ -525,7 +528,7 @@ export const Documents: React.FC = () => {
                               }}
                               className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                             >
-                              <Trash2 size={14} /> Delete Permanently
+                              <Trash2 size={14} /> {t('actions.deletePermanently')}
                             </button>
                           </>
                         ) : (
@@ -537,7 +540,7 @@ export const Documents: React.FC = () => {
                               }}
                               className="w-full px-3 py-2 text-left text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                             >
-                              <Download size={14} /> Download
+                              <Download size={14} /> {t('actions.download')}
                             </button>
                             <button
                               onClick={(e) => {
@@ -546,7 +549,7 @@ export const Documents: React.FC = () => {
                               }}
                               className="w-full px-3 py-2 text-left text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                             >
-                              <Share2 size={14} /> Share
+                              <Share2 size={14} /> {t('actions.share')}
                             </button>
                             <button
                               onClick={(e) => {
@@ -555,7 +558,7 @@ export const Documents: React.FC = () => {
                               }}
                               className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                             >
-                              <Trash2 size={14} /> Move to Trash
+                              <Trash2 size={14} /> {t('actions.moveToTrash')}
                             </button>
                           </>
                         )}
@@ -691,13 +694,13 @@ export const Documents: React.FC = () => {
                         onClick={(e) => handleDownload(e, doc.id)}
                         className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors"
                       >
-                        <Download size={14} /> Download
+                        <Download size={14} /> {t('actions.download')}
                       </button>
                       <button
                         onClick={(e) => handleShare(e, doc)}
                         className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-text-light dark:text-text-dark rounded-lg text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                       >
-                        <Share2 size={14} /> Share
+                        <Share2 size={14} /> {t('actions.share')}
                       </button>
                       <button
                         onClick={(e) => handleDelete(e, doc.id)}
@@ -718,7 +721,7 @@ export const Documents: React.FC = () => {
               <FolderOpen size={48} className="mb-4 opacity-20" />
               <p className="text-lg font-medium">No documents found.</p>
               <p className="text-sm">
-                You have access to your personal documents and company policies.
+                {t('employeeAccess')}
               </p>
             </div>
           )}
@@ -759,7 +762,7 @@ export const Documents: React.FC = () => {
                   onClick={(e) => handleDownload(e, previewDoc.id)}
                   className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
                 >
-                  <Download size={16} /> Download
+                  <Download size={16} /> {t('actions.download')}
                 </button>
                 <button
                   onClick={() => setPreviewDoc(null)}
@@ -790,17 +793,16 @@ export const Documents: React.FC = () => {
                 <div className="text-center p-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm max-w-lg w-full border border-border-light dark:border-border-dark">
                   <div className="flex justify-center mb-6">{getFileIcon(previewDoc.type, 64)}</div>
                   <h4 className="text-xl font-semibold text-text-light dark:text-text-dark mb-2">
-                    Preview not available
+                    {t('preview.notAvailable')}
                   </h4>
                   <p className="text-text-muted-light mb-6">
-                    This file type cannot be previewed directly in the browser. Please download the
-                    file to view its contents.
+                    {t('preview.notAvailableDesc')}
                   </p>
                   <button
                     onClick={(e) => handleDownload(e, previewDoc.id)}
                     className="px-6 py-2.5 border border-border-light dark:border-border-dark rounded-lg font-medium text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    Download File
+                    {t('preview.downloadFile')}
                   </button>
                 </div>
               )}
@@ -815,7 +817,7 @@ export const Documents: React.FC = () => {
           <div className="bg-white dark:bg-card-dark rounded-xl shadow-2xl border border-border-light dark:border-border-dark w-full max-w-md overflow-hidden">
             <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
               <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
-                Upload Document
+                {t('upload.title')}
               </h3>
               <button
                 onClick={() => {
@@ -854,10 +856,10 @@ export const Documents: React.FC = () => {
                   <div className="flex flex-col items-center gap-2">
                     <UploadCloud size={48} className="text-text-muted-light" />
                     <p className="text-sm text-text-light dark:text-text-dark">
-                      Click to select a file
+                      {t('upload.dragDrop')}
                     </p>
                     <p className="text-xs text-text-muted-light">
-                      PDF, DOCX, XLSX, JPG, PNG (max 50MB)
+                      {t('upload.hint')}
                     </p>
                   </div>
                 )}
@@ -866,7 +868,7 @@ export const Documents: React.FC = () => {
               {/* Category Selector */}
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Category
+                  {t('upload.category')}
                 </label>
                 <Dropdown
                   id="upload-category"
@@ -892,14 +894,14 @@ export const Documents: React.FC = () => {
                 }}
                 className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light transition-colors"
               >
-                Cancel
+                {t('upload.cancel')}
               </button>
               <button
                 onClick={handleUpload}
                 disabled={!selectedFile}
                 className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Upload
+                {t('upload.upload')}
               </button>
             </div>
           </div>
@@ -915,10 +917,10 @@ export const Documents: React.FC = () => {
                 <Trash2 className="text-red-600 dark:text-red-400" size={24} />
               </div>
               <h3 className="font-bold text-lg text-text-light dark:text-text-dark mb-2">
-                Delete Document?
+                {t('deleteDialog.title')}
               </h3>
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                This action cannot be undone. The document will be permanently deleted.
+                {t('deleteDialog.message')}
               </p>
             </div>
             <div className="flex justify-center gap-3 p-4 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50">
@@ -926,13 +928,13 @@ export const Documents: React.FC = () => {
                 onClick={() => setDeleteConfirmId(null)}
                 className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light transition-colors"
               >
-                Cancel
+                {t('deleteDialog.cancel')}
               </button>
               <button
                 onClick={confirmDelete}
                 className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2"
               >
-                <Trash2 size={16} /> Delete
+                <Trash2 size={16} /> {t('deleteDialog.delete')}
               </button>
             </div>
           </div>

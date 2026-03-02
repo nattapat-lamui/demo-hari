@@ -1,27 +1,28 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
 import { useEmployeeDetail, useSurveyDetail } from '../hooks/queries';
 
 /**
  * Route name mapping configuration
- * Maps URL segments to human-readable display names
+ * Maps URL segments to translation keys in the 'breadcrumbs' namespace
  */
 const ROUTE_NAME_MAP: Record<string, string> = {
-  'time-off': 'Time Off',
-  'request': 'Request Leave',
-  'leave-requests': 'Leave Requests',
-  'wellbeing': 'Well-being',
-  'employees': 'Employees',
-  'org-chart': 'Org Chart',
-  'compliance': 'Compliance',
-  'analytics': 'Analytics',
-  'documents': 'Documents',
-  'onboarding': 'Onboarding',
-  'settings': 'Settings',
-  'notifications': 'Notifications',
-  'help': 'Help & Support',
-  'surveys': 'Surveys',
+  'time-off': 'breadcrumbs.timeOff',
+  'request': 'breadcrumbs.requestLeave',
+  'leave-requests': 'breadcrumbs.leaveRequests',
+  'wellbeing': 'breadcrumbs.wellbeing',
+  'employees': 'breadcrumbs.employees',
+  'org-chart': 'breadcrumbs.orgChart',
+  'compliance': 'breadcrumbs.compliance',
+  'analytics': 'breadcrumbs.analytics',
+  'documents': 'breadcrumbs.documents',
+  'onboarding': 'breadcrumbs.onboarding',
+  'settings': 'breadcrumbs.settings',
+  'notifications': 'breadcrumbs.notifications',
+  'help': 'breadcrumbs.helpSupport',
+  'surveys': 'breadcrumbs.surveys',
 };
 
 /**
@@ -119,6 +120,7 @@ const BreadcrumbItem: React.FC<BreadcrumbItemProps> = ({
  * // Renders: Home > Settings
  */
 export const Breadcrumbs: React.FC = () => {
+  const { t } = useTranslation('common');
   const location = useLocation();
 
   // Parse URL pathname into individual segments, filtering out empty strings
@@ -141,12 +143,12 @@ export const Breadcrumbs: React.FC = () => {
   const getDisplayName = (pathSegment: string, segmentIndex: number) => {
     const previousSegment = segmentIndex > 0 ? pathSegments[segmentIndex - 1] : undefined;
     if (isEmployeeDetailPage(previousSegment)) {
-      return employeeName || 'Employee Details';
+      return employeeName || t('breadcrumbs.employeeDetails');
     }
     if (previousSegment === 'surveys') {
-      return surveyTitle || 'Survey';
+      return surveyTitle || t('breadcrumbs.survey');
     }
-    return ROUTE_NAME_MAP[pathSegment] || formatPathSegment(pathSegment);
+    return ROUTE_NAME_MAP[pathSegment] ? t(ROUTE_NAME_MAP[pathSegment]) : formatPathSegment(pathSegment);
   };
 
   return (
@@ -164,7 +166,7 @@ export const Breadcrumbs: React.FC = () => {
         }`}
       >
         <Home size={16} className="mr-1.5" />
-        <span>Home</span>
+        <span>{t('breadcrumbs.home')}</span>
       </Link>
 
       {/* Dynamic breadcrumb items based on current URL path */}

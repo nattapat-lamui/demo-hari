@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PaginationProps {
@@ -18,6 +19,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   itemsPerPage,
   className = '',
 }) => {
+  const { t } = useTranslation('common');
   const startItem = totalItems && itemsPerPage ? (currentPage - 1) * itemsPerPage + 1 : null;
   const endItem = totalItems && itemsPerPage ? Math.min(currentPage * itemsPerPage, totalItems) : null;
 
@@ -68,7 +70,7 @@ export const Pagination: React.FC<PaginationProps> = ({
       {/* Items count */}
       {totalItems && itemsPerPage && (
         <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
-          Showing {startItem} to {endItem} of {totalItems} items
+          {t('pagination.showing')} {startItem} {t('pagination.to')} {endItem} {t('pagination.of')} {totalItems} {t('pagination.results')}
         </div>
       )}
 

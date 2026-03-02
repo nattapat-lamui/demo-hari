@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -19,7 +20,7 @@ import { SearchableSelect } from '../components/SearchableSelect';
 import type { SearchableSelectOption } from '../components/SearchableSelect';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import type { LeaveBalance } from '../types';
-import { buildLeaveOptions, requiresMedicalCert, getLeaveColor } from '../lib/leaveTypeConfig';
+import { buildLeaveOptions, requiresMedicalCert, getLeaveColor, translateLeaveType } from '../lib/leaveTypeConfig';
 
 interface FormState {
   type: string;
@@ -49,6 +50,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function LeaveRequestForm() {
+  const { t } = useTranslation(['leave', 'common']);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -143,22 +145,22 @@ export function LeaveRequestForm() {
     e.preventDefault();
 
     if (!form.startDate || !form.endDate) {
-      showToast('Please select both start and end dates', 'error');
+      showToast(t('leave:requestForm.selectDates'), 'error');
       return;
     }
     if (new Date(form.endDate) < new Date(form.startDate)) {
-      showToast('End date must be after start date', 'error');
+      showToast(t('leave:requestModal.endAfterStart'), 'error');
       return;
     }
     if (quotaExceeded) {
-      showToast(`Insufficient balance. You have ${remaining} day(s) remaining.`, 'error');
+      showToast(t('leave:requestForm.insufficientBalance', { remaining }), 'error');
       return;
     }
     if (needsMedicalCert && !form.medicalCertificate && !isEditMode) {
       showToast(
         form.type === 'Maternity Leave'
-          ? 'Medical certificate required for maternity leave'
-          : 'Medical certificate required for sick leave of 3+ days',
+          ? t('leave:requestForm.medicalRequired')
+          : t('leave:requestForm.medicalRequiredSick'),
         'error',
       );
       return;
@@ -179,10 +181,10 @@ export function LeaveRequestForm() {
     try {
       if (isEditMode) {
         await editLeaveRequest.mutateAsync({ id: id!, formData });
-        showToast('Leave request updated successfully', 'success');
+        showToast(t('leave:requestForm.updateSuccess'), 'success');
       } else {
         await addLeaveRequest.mutateAsync(formData);
-        showToast('Leave request submitted successfully', 'success');
+        showToast(t('leave:requestForm.submitSuccess'), 'success');
       }
       navigate('/time-off');
     } catch (error: any) {
@@ -205,14 +207,14 @@ export function LeaveRequestForm() {
         <div className="lg:col-span-2">
           <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-6">
             <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-6">
-              {isEditMode ? 'Edit Leave Request' : 'New Leave Request'}
+              {isEditMode ? t('leave:requestForm.editTitle') : t('leave:requestForm.newTitle')}
             </h2>
 
             {/* Warning for editing approved request */}
             {isEditMode && existingRequest?.status === 'Approved' && (
               <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <p className="text-amber-800 dark:text-amber-200 text-sm">
-                  Editing an approved request will reset its status to Pending and require re-approval.
+                  {t('leave:requestForm.editWarning')}
                 </p>
               </div>
             )}
@@ -221,7 +223,7 @@ export function LeaveRequestForm() {
               {/* Leave Type */}
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Leave Type <span className="text-red-500">*</span>
+                  {t('leave:requestForm.leaveType')} <span className="text-red-500">*</span>
                 </label>
                 <Dropdown
                   options={LEAVE_OPTIONS}
@@ -231,7 +233,7 @@ export function LeaveRequestForm() {
                     type: value,
                     medicalCertificate: (value !== 'Sick Leave' && value !== 'Maternity Leave') ? null : prev.medicalCertificate,
                   }))}
-                  placeholder="Select leave type"
+                  placeholder={t('leave:requestForm.selectType')}
                 />
               </div>
 
@@ -239,7 +241,7 @@ export function LeaveRequestForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    From Date <span className="text-red-500">*</span>
+                    {t('leave:requestForm.fromDate')} <span className="text-red-500">*</span>
                   </label>
                   <DatePicker
                     value={form.startDate}
@@ -249,7 +251,7 @@ export function LeaveRequestForm() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    To Date <span className="text-red-500">*</span>
+                    {t('leave:requestForm.toDate')} <span className="text-red-500">*</span>
                   </label>
                   <DatePicker
                     value={form.endDate}
@@ -264,7 +266,7 @@ export function LeaveRequestForm() {
                 <div className="w-full max-w-full overflow-hidden rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 space-y-3">
                   <div className="flex flex-wrap items-center gap-2 min-w-0">
                     <span className="text-sm font-medium text-text-light dark:text-text-dark shrink-0">
-                      Total Duration:
+                      {t('leave:requestForm.totalDuration')}
                     </span>
                     <span
                       className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium shrink-0 ${
@@ -273,11 +275,11 @@ export function LeaveRequestForm() {
                           : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200'
                       }`}
                     >
-                      {dayCount} {dayCount === 1 ? 'Day' : 'Days'}
+                      {dayCount} {dayCount === 1 ? t('leave:requestForm.day') : t('leave:requestForm.days')}
                     </span>
                     {quotaExceeded && (
                       <span className="text-sm text-red-600 dark:text-red-400 min-w-0 break-words">
-                        Exceeds available balance
+                        {t('leave:requestForm.exceedsBalance')}
                       </span>
                     )}
                   </div>
@@ -287,7 +289,7 @@ export function LeaveRequestForm() {
                     <div className="min-w-0">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-text-muted-light dark:text-text-muted-dark">
-                          Available: {remaining} / {currentBalance.total} days
+                          {t('leave:requestForm.available', { remaining, total: currentBalance.total })}
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -312,7 +314,7 @@ export function LeaveRequestForm() {
               {/* Reason */}
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Reason
+                  {t('leave:requestForm.reason')}
                 </label>
                 <textarea
                   value={form.reason}
@@ -320,10 +322,10 @@ export function LeaveRequestForm() {
                   maxLength={500}
                   rows={4}
                   className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-gray-800 text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                  placeholder="Provide a reason for your leave request..."
+                  placeholder={t('leave:requestForm.reasonPlaceholder')}
                 />
                 <div className="text-right text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                  {form.reason.length} / 500
+                  {t('leave:requestForm.charCount', { count: form.reason.length })}
                 </div>
               </div>
 
@@ -335,12 +337,12 @@ export function LeaveRequestForm() {
                     onChange={(file) => setForm({ ...form, medicalCertificate: file })}
                     accept=".pdf,.jpg,.jpeg,.png"
                     maxSizeMB={10}
-                    label="Medical Certificate"
+                    label={t('leave:requestForm.medicalCert')}
                     required
                   />
                   {isEditMode && existingRequest?.medicalCertificatePath && !form.medicalCertificate && (
                     <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                      A certificate was previously uploaded. Upload a new one only if you want to replace it.
+                      {t('leave:requestForm.certUploaded')}
                     </p>
                   )}
                 </div>
@@ -354,8 +356,8 @@ export function LeaveRequestForm() {
                   options={employeeOptions}
                   onSearch={handleEmployeeSearch}
                   isLoading={isSearching}
-                  placeholder="Search employee..."
-                  label="Handover Person"
+                  placeholder={t('leave:requestForm.searchEmployee')}
+                  label={t('leave:requestForm.handoverPerson')}
                   excludeValues={user?.employeeId ? [user.employeeId] : []}
                 />
               </div>
@@ -364,14 +366,14 @@ export function LeaveRequestForm() {
               {form.handoverEmployeeId && (
                 <div>
                   <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    Handover Notes
+                    {t('leave:requestModal.handoverNotes')}
                   </label>
                   <textarea
                     value={form.handoverNotes}
                     onChange={(e) => setForm({ ...form, handoverNotes: e.target.value })}
                     rows={3}
                     className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-gray-800 text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                    placeholder="Provide handover instructions..."
+                    placeholder={t('leave:requestForm.handoverPlaceholder')}
                   />
                 </div>
               )}
@@ -383,7 +385,7 @@ export function LeaveRequestForm() {
                   onClick={() => navigate('/time-off')}
                   className="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
-                  Cancel
+                  {t('leave:requestForm.cancel')}
                 </button>
                 <button
                   type="submit"
@@ -391,10 +393,10 @@ export function LeaveRequestForm() {
                   className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {addLeaveRequest.isPending || editLeaveRequest.isPending
-                    ? 'Submitting...'
+                    ? t('common:buttons.submitting')
                     : isEditMode
-                    ? 'Update Request'
-                    : 'Submit Request'}
+                    ? t('leave:requestForm.update')
+                    : t('leave:requestForm.submit')}
                 </button>
               </div>
             </form>
@@ -406,7 +408,7 @@ export function LeaveRequestForm() {
           {/* Current Balance Card */}
           <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-6">
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
-              Current Balance
+              {t('leave:requestForm.currentBalance')}
             </h3>
             {balances.length > 0 ? (
               <div className="space-y-4">
@@ -422,9 +424,9 @@ export function LeaveRequestForm() {
                   return (
                     <div key={bal.type}>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-text-light dark:text-text-dark">{bal.type}</span>
+                        <span className="text-text-light dark:text-text-dark">{translateLeaveType(bal.type)}</span>
                         <span className="font-medium text-text-light dark:text-text-dark">
-                          {isUnlimitedBal ? 'Unlimited' : `${bal.remaining} / ${bal.total}`}
+                          {isUnlimitedBal ? t('leave:requestForm.unlimited') : `${bal.remaining} / ${bal.total}`}
                         </span>
                       </div>
                       {!isUnlimitedBal && (
@@ -441,18 +443,18 @@ export function LeaveRequestForm() {
               </div>
             ) : (
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                No balance data available
+                {t('leave:requestForm.noBalanceData')}
               </p>
             )}
             <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-4">
-              Balances update automatically when leave requests are approved.
+              {t('leave:requestForm.balanceNote')}
             </p>
           </div>
 
           {/* Recent Requests Card */}
           <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-6">
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
-              Recent Requests
+              {t('leave:requestForm.recentRequests')}
             </h3>
             {requestsLoading ? (
               <div className="flex justify-center py-4">
@@ -472,13 +474,13 @@ export function LeaveRequestForm() {
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">
-                        {req.type}
+                        {translateLeaveType(req.type)}
                       </p>
                       <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
                         {req.dates}
                       </p>
                       <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">
-                        {req.status}
+                        {t(`common:status.${req.status === 'Cancel Requested' ? 'cancelRequested' : req.status.toLowerCase()}`, { defaultValue: req.status })}
                       </p>
                     </div>
                   </div>
@@ -486,7 +488,7 @@ export function LeaveRequestForm() {
               </div>
             ) : (
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                No recent requests
+                {t('leave:requestForm.noRecentRequests')}
               </p>
             )}
           </div>

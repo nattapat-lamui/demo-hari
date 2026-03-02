@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MoreHorizontal, Mail, MapPin, Eye, User, Briefcase, Users, Calendar, Check, Circle, CheckCircle2, Clock, Pencil, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmployeeList, useAddEmployee, useDeleteEmployee } from '../hooks/queries';
 import { Toast } from '../components/Toast';
@@ -12,6 +13,7 @@ import { FilterToolbar } from '../components/FilterToolbar';
 import QueryErrorState from '../components/QueryErrorState';
 
 export const Employees: React.FC = () => {
+  const { t } = useTranslation(['employees', 'common']);
   const { user, isAdminView } = useAuth();
   const isAdmin = isAdminView;
 
@@ -79,29 +81,29 @@ export const Employees: React.FC = () => {
     try {
       await deleteEmployeeMutation.mutateAsync(deleteConfirmId);
       setDeleteConfirmId(null);
-      showToast('Employee deleted successfully.', 'success');
+      showToast(t('employees:toast.employeeDeleted'), 'success');
     } catch (error) {
-      showToast((error as Error).message || 'Failed to delete employee.', 'error');
+      showToast((error as Error).message || t('employees:toast.deleteFailed'), 'error');
     }
   };
 
   // Extract unique departments for filter dropdown
   const departments: DropdownOption[] = [
-    { value: 'All', label: 'All Departments' },
-    { value: 'Engineering', label: 'Engineering' },
-    { value: 'Human Resources', label: 'Human Resources' },
-    { value: 'Marketing', label: 'Marketing' },
-    { value: 'Sales', label: 'Sales' },
-    { value: 'Finance', label: 'Finance' },
-    { value: 'Operations', label: 'Operations' },
-    { value: 'Product', label: 'Product' },
-    { value: 'Design', label: 'Design' },
+    { value: 'All', label: t('common:departments.allDepartments') },
+    { value: 'Engineering', label: t('common:departments.engineering') },
+    { value: 'Human Resources', label: t('common:departments.humanResources') },
+    { value: 'Marketing', label: t('common:departments.marketing') },
+    { value: 'Sales', label: t('common:departments.sales') },
+    { value: 'Finance', label: t('common:departments.finance') },
+    { value: 'Operations', label: t('common:departments.operations') },
+    { value: 'Product', label: t('common:departments.product') },
+    { value: 'Design', label: t('common:departments.design') },
   ];
   const statuses: DropdownOption[] = [
-    { value: 'All', label: 'All Statuses' },
-    { value: 'Active', label: 'Active' },
-    { value: 'On Leave', label: 'On Leave' },
-    { value: 'Terminated', label: 'Terminated' }
+    { value: 'All', label: t('employees:status.allStatuses') },
+    { value: 'Active', label: t('employees:status.active') },
+    { value: 'On Leave', label: t('employees:status.onLeave') },
+    { value: 'Terminated', label: t('employees:status.terminated') }
   ];
 
   // Server-side filtering - no need for client-side filtering
@@ -124,7 +126,7 @@ export const Employees: React.FC = () => {
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmployee.name || !newEmployee.role || !newEmployee.department || !newEmployee.email || !newEmployee.joinDate) {
-      showToast('Please fill in all required fields.', 'warning');
+      showToast(t('employees:toast.fillRequired'), 'warning');
       return;
     }
 
@@ -140,14 +142,14 @@ export const Employees: React.FC = () => {
 
       setIsAddModalOpen(false);
       setNewEmployee({ name: '', role: '', department: '', email: '', joinDate: '' });
-      showToast(`${newEmployee.name} has been added successfully!`, 'success');
+      showToast(`${newEmployee.name} ${t('employees:toast.addedSuccess')}`, 'success');
 
     } catch (error) {
       const apiError = error as Error;
       console.error('Error adding employee:', apiError);
-      let errorMessage = 'Failed to add employee. Please try again.';
+      let errorMessage = t('employees:toast.addFailed');
       if (apiError.message?.includes('already exists')) {
-        errorMessage = `This email (${newEmployee.email}) is already registered.`;
+        errorMessage = `${t('employees:toast.emailExists')} (${newEmployee.email})`;
       }
       showToast(errorMessage, 'error');
     }
@@ -168,14 +170,14 @@ export const Employees: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">Employee Directory</h1>
+        <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">{t('employees:list.title')}</h1>
         {isAdmin && (
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary-hover transition-colors"
             >
-              Add Employee
+              {t('employees:list.addEmployee')}
             </button>
           </div>
         )}
@@ -186,7 +188,7 @@ export const Employees: React.FC = () => {
         <FilterToolbar
           searchValue={searchTerm}
           onSearchChange={handleSearchChange}
-          searchPlaceholder="Search by name, role, department, or skills..."
+          searchPlaceholder={t('employees:list.searchPlaceholder')}
         >
           <Dropdown
             options={departments}
@@ -207,12 +209,12 @@ export const Employees: React.FC = () => {
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 dark:bg-gray-800/50 text-xs uppercase text-text-muted-light dark:text-text-muted-dark font-semibold tracking-wide">
               <tr>
-                <th className="px-6 py-4">Employee</th>
-                <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Onboarding</th>
-                <th className="px-6 py-4">Location</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-6 py-4">{t('employees:list.employee')}</th>
+                <th className="px-6 py-4">{t('employees:list.role')}</th>
+                <th className="px-6 py-4">{t('employees:list.status')}</th>
+                <th className="px-6 py-4">{t('employees:list.onboarding')}</th>
+                <th className="px-6 py-4">{t('employees:list.location')}</th>
+                <th className="px-6 py-4 text-right">{t('employees:list.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
@@ -266,7 +268,7 @@ export const Employees: React.FC = () => {
                       <button
                         onClick={(e) => { e.stopPropagation(); navigate(`/employees/${emp.id}`); }}
                         className="p-2 text-text-muted-light dark:text-text-muted-dark hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                        title="View Profile"
+                        title={t('employees:list.viewProfile')}
                       >
                         <Eye size={18} />
                       </button>
@@ -275,7 +277,7 @@ export const Employees: React.FC = () => {
                           <button
                             onClick={(e) => { e.stopPropagation(); setActionMenuId(actionMenuId === emp.id ? null : emp.id); }}
                             className="p-2 text-text-muted-light dark:text-text-muted-dark hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                            title="More Actions"
+                            title={t('employees:list.moreActions')}
                           >
                             <MoreHorizontal size={18} />
                           </button>
@@ -285,19 +287,19 @@ export const Employees: React.FC = () => {
                                 onClick={(e) => { e.stopPropagation(); setActionMenuId(null); navigate(`/employees/${emp.id}`); }}
                                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-text-light dark:text-text-dark flex items-center gap-2 rounded-t-lg"
                               >
-                                <Eye size={14} /> View
+                                <Eye size={14} /> {t('employees:list.view')}
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); setActionMenuId(null); navigate(`/employees/${emp.id}?edit=true`); }}
                                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-text-light dark:text-text-dark flex items-center gap-2"
                               >
-                                <Pencil size={14} /> Edit
+                                <Pencil size={14} /> {t('employees:list.edit')}
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); setActionMenuId(null); setDeleteConfirmId(emp.id); }}
                                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 flex items-center gap-2 rounded-b-lg"
                               >
-                                <Trash2 size={14} /> Delete
+                                <Trash2 size={14} /> {t('employees:list.delete')}
                               </button>
                             </div>
                           )}
@@ -341,22 +343,22 @@ export const Employees: React.FC = () => {
               {/* Details Grid */}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-text-muted-light dark:text-text-muted-dark text-xs">Role</p>
+                  <p className="text-text-muted-light dark:text-text-muted-dark text-xs">{t('employees:list.role')}</p>
                   <p className="text-text-light dark:text-text-dark font-medium">{emp.role}</p>
                 </div>
                 <div>
-                  <p className="text-text-muted-light dark:text-text-muted-dark text-xs">Department</p>
+                  <p className="text-text-muted-light dark:text-text-muted-dark text-xs">{t('employees:list.department')}</p>
                   <p className="text-text-light dark:text-text-dark font-medium">{emp.department}</p>
                 </div>
                 <div>
-                  <p className="text-text-muted-light dark:text-text-muted-dark text-xs">Onboarding</p>
+                  <p className="text-text-muted-light dark:text-text-muted-dark text-xs">{t('employees:list.onboarding')}</p>
                   <div className="flex items-center gap-1">
                     {getOnboardingIcon(emp.onboardingStatus)}
                     <span className="text-text-light dark:text-text-dark text-sm">{emp.onboardingStatus}</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-text-muted-light dark:text-text-muted-dark text-xs">Location</p>
+                  <p className="text-text-muted-light dark:text-text-muted-dark text-xs">{t('employees:list.location')}</p>
                   <div className="flex items-center gap-1">
                     <MapPin size={12} />
                     <span className="text-text-light dark:text-text-dark text-sm">{emp.location}</span>
@@ -370,7 +372,7 @@ export const Employees: React.FC = () => {
                   onClick={(e) => { e.stopPropagation(); navigate(`/employees/${emp.id}`); }}
                   className="flex-1 px-3 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                 >
-                  <Eye size={16} /> View Profile
+                  <Eye size={16} /> {t('employees:list.viewProfile')}
                 </button>
                 {isAdmin && (
                   <>
@@ -398,7 +400,7 @@ export const Employees: React.FC = () => {
         {/* Empty State */}
         {employeesList.length === 0 && (
           <div className="p-12 text-center text-text-muted-light dark:text-text-muted-dark">
-            <p>No employees found matching your filters.</p>
+            <p>{t('employees:list.noEmployees')}</p>
             <button
               onClick={() => {
                 setSearchTerm('');
@@ -408,7 +410,7 @@ export const Employees: React.FC = () => {
               }}
               className="mt-2 text-primary hover:underline text-sm"
             >
-              Clear all filters
+              {t('employees:list.clearFilters')}
             </button>
           </div>
         )}
@@ -431,12 +433,12 @@ export const Employees: React.FC = () => {
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Onboard New Employee"
+        title={t('employees:modals.onboardTitle')}
         maxWidth="lg"
       >
         <form onSubmit={handleAddEmployee} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Full Name</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.onboardFullName')}</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
               <input
@@ -452,7 +454,7 @@ export const Employees: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Role / Job Title</label>
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.onboardRole')}</label>
               <div className="relative">
                 <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
                 <input
@@ -467,7 +469,7 @@ export const Employees: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Department</label>
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.onboardDepartment')}</label>
               <div className="relative">
                 <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
                 <input
@@ -483,7 +485,7 @@ export const Employees: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Email Address</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.onboardEmail')}</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
               <input
@@ -498,7 +500,7 @@ export const Employees: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Starting Date</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('employees:modals.onboardStartDate')}</label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
               <input
@@ -517,13 +519,13 @@ export const Employees: React.FC = () => {
               onClick={() => setIsAddModalOpen(false)}
               className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
             >
-              Cancel
+              {t('employees:modals.cancel')}
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
             >
-              <Check size={16} /> Add Employee
+              <Check size={16} /> {t('employees:list.addEmployee')}
             </button>
           </div>
         </form>
@@ -533,7 +535,7 @@ export const Employees: React.FC = () => {
       <Modal
         isOpen={!!deleteConfirmId}
         onClose={() => setDeleteConfirmId(null)}
-        title="Delete Employee"
+        title={t('employees:modals.deleteTitle')}
         maxWidth="sm"
       >
         <div className="p-6 text-center">
@@ -541,21 +543,21 @@ export const Employees: React.FC = () => {
             <Trash2 className="text-red-600 dark:text-red-400" size={24} />
           </div>
           <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-6">
-            This will permanently delete this employee and reassign their direct reports to their manager. This action cannot be undone.
+            {t('employees:modals.deleteConfirm')}
           </p>
           <div className="flex justify-center gap-3">
             <button
               onClick={() => setDeleteConfirmId(null)}
               className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
             >
-              Cancel
+              {t('employees:modals.cancel')}
             </button>
             <button
               onClick={handleDeleteEmployee}
               disabled={deleteEmployeeMutation.isPending}
               className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2 disabled:opacity-50"
             >
-              <Trash2 size={16} /> {deleteEmployeeMutation.isPending ? 'Deleting...' : 'Delete'}
+              <Trash2 size={16} /> {deleteEmployeeMutation.isPending ? t('employees:modals.deleting') : t('employees:modals.delete')}
             </button>
           </div>
         </div>

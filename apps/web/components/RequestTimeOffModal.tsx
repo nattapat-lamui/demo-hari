@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 import { Dropdown } from './Dropdown';
 import { DatePicker } from './DatePicker';
@@ -45,6 +46,7 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
   isPending = false,
   employeeId,
 }) => {
+  const { t } = useTranslation(['leave', 'common']);
   const [form, setForm] = useState<FormState>(initialForm);
   const [error, setError] = useState('');
   const [employeeSearch, setEmployeeSearch] = useState('');
@@ -120,22 +122,22 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
     setError('');
 
     if (!form.startDate || !form.endDate) {
-      setError('Please select both start and end dates.');
+      setError(t('leave:requestModal.selectDates'));
       return;
     }
     if (new Date(form.endDate) < new Date(form.startDate)) {
-      setError('End date must be after start date.');
+      setError(t('leave:requestModal.endAfterStart'));
       return;
     }
     if (quotaExceeded) {
-      setError(`Insufficient balance. You have ${remaining} day(s) remaining.`);
+      setError(t('leave:requestModal.insufficientBalance', { remaining }));
       return;
     }
     if (needsMedicalCert && !form.medicalCertificate) {
       setError(
         form.type === 'Maternity Leave'
-          ? 'A medical certificate is required for maternity leave.'
-          : 'A medical certificate is required for sick leave of 3+ days.',
+          ? t('leave:requestModal.medicalRequiredMaternity')
+          : t('leave:requestModal.medicalRequiredSick'),
       );
       return;
     }
@@ -154,7 +156,7 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
       await onSubmit(formData);
       setForm(initialForm);
     } catch (err: any) {
-      setError(err?.message || 'Failed to submit leave request.');
+      setError(err?.message || t('leave:requestModal.submitFailed'));
     }
   };
 
@@ -164,32 +166,32 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
     : 0;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Request Time Off" maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('leave:requestModal.title')} maxWidth="lg">
       <div className="p-6 space-y-4">
         {/* 1. Leave Type */}
         <div>
-          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Type</label>
+          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('leave:requestModal.type')}</label>
           <Dropdown
             value={form.type}
             onChange={handleTypeChange}
             options={LEAVE_OPTIONS}
-            placeholder="Select leave type"
+            placeholder={t('leave:requestForm.selectType')}
           />
         </div>
 
         {/* 2. Date pickers + day count badge */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <DatePicker
-            label="Start Date"
+            label={t('leave:requestModal.startDate')}
             value={form.startDate}
             onChange={(date) => setForm((p) => ({ ...p, startDate: date }))}
-            placeholder="Select start date"
+            placeholder={t('leave:requestModal.selectStartDate')}
           />
           <DatePicker
-            label="End Date"
+            label={t('leave:requestModal.endDate')}
             value={form.endDate}
             onChange={(date) => setForm((p) => ({ ...p, endDate: date }))}
-            placeholder="Select end date"
+            placeholder={t('leave:requestModal.selectEndDate')}
             minDate={form.startDate}
           />
         </div>
@@ -200,8 +202,8 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
               ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
               : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
           }`}>
-            {dayCount} day{dayCount !== 1 ? 's' : ''} requested
-            {quotaExceeded && ` — exceeds remaining balance (${remaining})`}
+            {dayCount} {dayCount === 1 ? t('common:time.day') : t('common:time.days')} {t('leave:requestModal.requested')}
+            {quotaExceeded && ` — ${t('leave:requestModal.exceedsBalance')}`}
           </div>
         )}
 
@@ -210,12 +212,12 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="text-text-muted-light dark:text-text-muted-dark">
-                {form.type} Balance
+                {t('leave:requestModal.balance', { type: form.type })}
               </span>
               <span className={`font-medium ${
                 remaining <= 0 ? 'text-red-600 dark:text-red-400' : 'text-text-light dark:text-text-dark'
               }`}>
-                {remaining} of {currentBalance.total} remaining
+                {t('leave:requestModal.remaining', { remaining, total: currentBalance.total })}
               </span>
             </div>
             <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -232,20 +234,20 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
 
         {/* 4. Reason */}
         <div>
-          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Reason</label>
+          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('leave:requestModal.reason')}</label>
           <textarea
             rows={3}
             value={form.reason}
             onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
             className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm resize-none text-text-light dark:text-text-dark"
-            placeholder="Optional reason for leave"
+            placeholder={t('leave:requestModal.reasonPlaceholder')}
           />
         </div>
 
         {/* 5. Medical Certificate — conditional: Sick Leave >= 3 days */}
         {needsMedicalCert && (
           <FileUpload
-            label="Medical Certificate"
+            label={t('leave:requestModal.medicalCert')}
             value={form.medicalCertificate}
             onChange={(file) => setForm((p) => ({ ...p, medicalCertificate: file }))}
             accept=".pdf,.jpg,.jpeg,.png"
@@ -257,26 +259,26 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
 
         {/* 6. Handover Person — optional */}
         <SearchableSelect
-          label="Handover Person"
+          label={t('leave:requestModal.handoverPerson')}
           value={form.handoverEmployeeId}
           onChange={(val) => setForm((p) => ({ ...p, handoverEmployeeId: val, handoverNotes: val ? p.handoverNotes : '' }))}
           options={employeeOptions}
           onSearch={handleEmployeeSearch}
           isLoading={isSearching}
-          placeholder="Select handover person (optional)"
+          placeholder={t('leave:requestModal.handoverPlaceholder')}
           excludeValues={[employeeId]}
         />
 
         {/* 7. Handover Notes — conditional: only when handover person selected */}
         {showHandoverNotes && (
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Handover Notes</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('leave:requestModal.handoverNotes')}</label>
             <textarea
               rows={3}
               value={form.handoverNotes}
               onChange={(e) => setForm((p) => ({ ...p, handoverNotes: e.target.value }))}
               className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm resize-none text-text-light dark:text-text-dark"
-              placeholder="Describe tasks to hand over..."
+              placeholder={t('leave:requestModal.handoverNotesPlaceholder')}
               maxLength={2000}
             />
           </div>
@@ -294,7 +296,7 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
             onClick={handleClose}
             className="px-4 py-2 text-sm text-text-muted-light hover:text-text-light dark:hover:text-text-dark transition-colors"
           >
-            Cancel
+            {t('leave:requestModal.cancel')}
           </button>
           <button
             type="button"
@@ -302,7 +304,7 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
             disabled={isPending || quotaExceeded}
             className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isPending ? 'Submitting...' : 'Submit'}
+            {isPending ? t('common:buttons.submitting') : t('leave:requestModal.submit')}
           </button>
         </div>
       </div>

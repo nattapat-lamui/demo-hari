@@ -1,0 +1,35 @@
+{
+  "title": "Compliance & Reporting",
+  "subtitle": "Monitor regulatory adherence and generate custom reports.",
+  "exportData": "Export Data",
+  "exportSuccess": "Data exported successfully!",
+  "checklist": {
+    "title": "Compliance Checklist",
+    "subtitle": "Track key regulatory requirements."
+  },
+  "auditLog": {
+    "title": "HR Audit Log",
+    "subtitle": "Recent changes and approvals across the module."
+  },
+  "reportBuilder": {
+    "title": "Custom Report Builder",
+    "subtitle": "Generate reports by selecting data points.",
+    "reportName": "Report Name",
+    "reportPlaceholder": "e.g., Q3 Headcount Analysis",
+    "dataPoints": "Data Points",
+    "dateRange": "Date Range",
+    "generateReport": "Generate Report",
+    "reportGenerated": "Report \"{{name}}\" generated successfully!",
+    "nameRequired": "Please enter a report name.",
+    "dataPointEmployeeCount": "Employee Count",
+    "dataPointDepartment": "Department Breakdown",
+    "dataPointLeave": "Leave Usage",
+    "dataPointAttendance": "Attendance Summary",
+    "dataPointTurnover": "Turnover Rate",
+    "dataPointCompliance": "Compliance Score",
+    "rangeLast30": "Last 30 Days",
+    "rangeLast90": "Last 90 Days",
+    "rangeThisYear": "This Year",
+    "rangeCustom": "Custom Range"
+  }
+}

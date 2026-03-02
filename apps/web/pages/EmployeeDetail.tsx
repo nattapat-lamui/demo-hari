@@ -16,6 +16,7 @@ import {
 } from '../hooks/queries';
 import { Toast } from '../components/Toast';
 import { Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
     EmployeeHero,
     EmployeeSidebar,
@@ -30,6 +31,7 @@ import {
 import type { EmployeePermissions, EmployeeTab } from '../components/employee-detail';
 
 export const EmployeeDetail: React.FC = () => {
+    const { t } = useTranslation(['employees', 'common']);
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -186,14 +188,14 @@ export const EmployeeDetail: React.FC = () => {
 
             setAvatarPreview(null);
             setIsEditProfileOpen(false);
-            showToast('Profile updated successfully!', 'success');
+            showToast(t('employees:toast.profileUpdated'), 'success');
 
             qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id!) });
             qc.invalidateQueries({ queryKey: queryKeys.employees.all });
             qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
         } catch (error) {
             const apiError = error as Error;
-            showToast(apiError.message || 'Failed to update profile.', 'error');
+            showToast(apiError.message || t('employees:toast.profileUpdateFailed'), 'error');
         }
     };
 
@@ -207,13 +209,13 @@ export const EmployeeDetail: React.FC = () => {
             const file = event.target.files[0];
 
             if (file.size > 5 * 1024 * 1024) {
-                showToast('Image size must be less than 5MB.', 'error');
+                showToast(t('employees:toast.avatarSizeError'), 'error');
                 return;
             }
 
             const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
             if (!allowedTypes.includes(file.type)) {
-                showToast('Please upload a JPG, PNG, or GIF image.', 'error');
+                showToast(t('employees:toast.avatarTypeError'), 'error');
                 return;
             }
 
@@ -251,13 +253,13 @@ export const EmployeeDetail: React.FC = () => {
                     updateUser({ avatar: data.avatarUrl });
                 }
 
-                showToast('Avatar updated successfully!', 'success');
+                showToast(t('employees:toast.avatarUpdated'), 'success');
 
                 qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id!) });
                 qc.invalidateQueries({ queryKey: queryKeys.employees.all });
             } catch (error) {
                 console.error('Avatar upload error:', error);
-                showToast('Failed to upload avatar. Please try again.', 'error');
+                showToast(t('employees:toast.avatarFailed'), 'error');
                 setAvatarPreview(null);
             }
         }
@@ -283,12 +285,12 @@ export const EmployeeDetail: React.FC = () => {
                 skills: currentSkills
             });
             setIsEditingSkills(false);
-            showToast('Skills updated successfully!', 'success');
+            showToast(t('employees:toast.skillsUpdated'), 'success');
 
             qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id!) });
         } catch (error) {
             const apiError = error as Error;
-            showToast(apiError.message || 'Failed to update skills.', 'error');
+            showToast(apiError.message || t('employees:toast.skillsFailed'), 'error');
         }
     };
 
@@ -346,12 +348,12 @@ export const EmployeeDetail: React.FC = () => {
 
             setHistoryList([newItem, ...historyList]);
             setIsAddHistoryModalOpen(false);
-            showToast('Employment history added successfully!', 'success');
+            showToast(t('employees:toast.historyAdded'), 'success');
 
             qc.invalidateQueries({ queryKey: queryKeys.jobHistory.byEmployee(id!) });
         } catch (error) {
             const apiError = error as Error;
-            showToast(apiError.message || 'Failed to add employment history.', 'error');
+            showToast(apiError.message || t('employees:toast.historyFailed'), 'error');
         }
     };
 
@@ -383,14 +385,14 @@ export const EmployeeDetail: React.FC = () => {
                 const uploadedDoc = await response.json();
 
                 setDocumentsList([uploadedDoc, ...documentsList]);
-                showToast('Document uploaded successfully!', 'success');
+                showToast(t('employees:toast.documentUploaded'), 'success');
 
                 qc.invalidateQueries({ queryKey: queryKeys.employeeDocuments.byEmployee(id!) });
 
                 e.target.value = '';
             } catch (error: any) {
                 console.error('Upload error:', error);
-                showToast(error.message || 'Failed to upload document', 'error');
+                showToast(error.message || t('employees:toast.documentFailed'), 'error');
             }
         }
     };
@@ -402,7 +404,7 @@ export const EmployeeDetail: React.FC = () => {
             await api.patch(`/employees/${id}`, { bannerColor: color });
             qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id) });
         } catch (error) {
-            showToast((error as Error).message || 'Failed to save banner color.', 'error');
+            showToast((error as Error).message || t('employees:toast.bannerFailed'), 'error');
         }
     };
 
@@ -432,10 +434,10 @@ export const EmployeeDetail: React.FC = () => {
         try {
             await api.delete(`/performance/reviews/${deleteConfirmId}`);
             setReviewsList(reviewsList.filter(r => r.id !== deleteConfirmId));
-            showToast('Review deleted successfully.', 'success');
+            showToast(t('employees:toast.reviewDeleted'), 'success');
             qc.invalidateQueries({ queryKey: queryKeys.performanceReviews.byEmployee(id!) });
         } catch (error) {
-            showToast((error as Error).message || 'Failed to delete review.', 'error');
+            showToast((error as Error).message || t('employees:toast.reviewDeleteFailed'), 'error');
         } finally {
             setDeleteConfirmId(null);
         }
@@ -467,13 +469,13 @@ export const EmployeeDetail: React.FC = () => {
                 description: `Promoted from ${oldRole}`,
             });
             setIsPromoteOpen(false);
-            showToast('Employee promoted successfully!', 'success');
+            showToast(t('employees:toast.promoted'), 'success');
             qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id) });
             qc.invalidateQueries({ queryKey: queryKeys.employees.all });
             qc.invalidateQueries({ queryKey: queryKeys.jobHistory.byEmployee(id) });
             qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
         } catch (error) {
-            showToast((error as Error).message || 'Failed to promote employee.', 'error');
+            showToast((error as Error).message || t('employees:toast.promoteFailed'), 'error');
         }
     };
 
@@ -497,13 +499,13 @@ export const EmployeeDetail: React.FC = () => {
                 description: `Transferred from ${oldDept}`,
             });
             setIsTransferOpen(false);
-            showToast('Employee transferred successfully!', 'success');
+            showToast(t('employees:toast.transferred'), 'success');
             qc.invalidateQueries({ queryKey: queryKeys.employees.detail(id) });
             qc.invalidateQueries({ queryKey: queryKeys.employees.all });
             qc.invalidateQueries({ queryKey: queryKeys.jobHistory.byEmployee(id) });
             qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
         } catch (error) {
-            showToast((error as Error).message || 'Failed to transfer employee.', 'error');
+            showToast((error as Error).message || t('employees:toast.transferFailed'), 'error');
         }
     };
 
@@ -521,12 +523,12 @@ export const EmployeeDetail: React.FC = () => {
                 description: 'Employment terminated',
             });
             setIsTerminateOpen(false);
-            showToast('Employee terminated successfully.', 'success');
+            showToast(t('employees:toast.terminated'), 'success');
             qc.invalidateQueries({ queryKey: queryKeys.employees.all });
             qc.invalidateQueries({ queryKey: queryKeys.orgChart.all });
             navigate('/employees');
         } catch (error) {
-            showToast((error as Error).message || 'Failed to terminate employee.', 'error');
+            showToast((error as Error).message || t('employees:toast.terminateFailed'), 'error');
         }
     };
 
@@ -553,10 +555,10 @@ export const EmployeeDetail: React.FC = () => {
                 setReviewsList(prev => [created, ...prev]);
             }
             setIsReviewModalOpen(false);
-            showToast(reviewForm.id ? 'Review updated successfully.' : 'Review added successfully.', 'success');
+            showToast(reviewForm.id ? t('employees:toast.reviewUpdated') : t('employees:toast.reviewAdded'), 'success');
             qc.invalidateQueries({ queryKey: queryKeys.performanceReviews.byEmployee(id!) });
         } catch (error) {
-            showToast((error as Error).message || 'Failed to save review.', 'error');
+            showToast((error as Error).message || t('employees:toast.reviewFailed'), 'error');
         }
     };
 
@@ -617,8 +619,8 @@ export const EmployeeDetail: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center h-[50vh] text-text-muted-light dark:text-text-muted-dark animate-fade-in">
                 <Users size={48} className="mb-4 opacity-20" />
-                <p className="text-lg">Employee not found.</p>
-                <button onClick={() => navigate('/employees')} className="mt-4 text-primary hover:underline">Return to Directory</button>
+                <p className="text-lg">{t('employees:detail.notFound')}</p>
+                <button onClick={() => navigate('/employees')} className="mt-4 text-primary hover:underline">{t('employees:detail.returnToDirectory')}</button>
             </div>
         );
     }
@@ -653,13 +655,13 @@ export const EmployeeDetail: React.FC = () => {
                                 className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent text-text-muted-light hover:text-text-light dark:hover:text-text-dark'}`}
                                 onClick={() => setActiveTab('overview')}
                             >
-                                Overview
+                                {t('employees:detail.overview')}
                             </button>
                             <button
                                 className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-text-muted-light hover:text-text-light dark:hover:text-text-dark'}`}
                                 onClick={() => setActiveTab('history')}
                             >
-                                History
+                                {t('employees:detail.history')}
                             </button>
                             {canViewSensitiveTabs && (
                                 <>
@@ -667,13 +669,13 @@ export const EmployeeDetail: React.FC = () => {
                                         className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'documents' ? 'border-primary text-primary' : 'border-transparent text-text-muted-light hover:text-text-light dark:hover:text-text-dark'}`}
                                         onClick={() => setActiveTab('documents')}
                                     >
-                                        Documents
+                                        {t('employees:detail.documents')}
                                     </button>
                                     <button
                                         className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'training' ? 'border-primary text-primary' : 'border-transparent text-text-muted-light hover:text-text-light dark:hover:text-text-dark'}`}
                                         onClick={() => setActiveTab('training')}
                                     >
-                                        Training
+                                        {t('employees:detail.training')}
                                     </button>
                                 </>
                             )}
@@ -681,14 +683,14 @@ export const EmployeeDetail: React.FC = () => {
                                 className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'performance' ? 'border-primary text-primary' : 'border-transparent text-text-muted-light hover:text-text-light dark:hover:text-text-dark'}`}
                                 onClick={() => setActiveTab('performance')}
                             >
-                                Performance
+                                {t('employees:detail.performance')}
                             </button>
                             {isAdmin && (
                                 <button
                                     className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'leave-quotas' ? 'border-primary text-primary' : 'border-transparent text-text-muted-light hover:text-text-light dark:hover:text-text-dark'}`}
                                     onClick={() => setActiveTab('leave-quotas')}
                                 >
-                                    Leave Quotas
+                                    {t('employees:detail.leaveQuota')}
                                 </button>
                             )}
                         </div>

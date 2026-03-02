@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, X, CheckCircle2 } from 'lucide-react';
 import { Modal } from './Modal';
 import { LeaveRequest } from '../types';
+import { translateLeaveType } from '../lib/leaveTypeConfig';
 
 /**
  * Props for LeaveManagementModal component
@@ -34,11 +36,12 @@ export const LeaveManagementModal: React.FC<LeaveManagementModalProps> = ({
   onDecline,
   onRowClick,
 }) => {
+  const { t } = useTranslation(['leave', 'common']);
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Manage Leave Requests"
+      title={t('leave:management.title')}
       maxWidth="xl"
     >
       <div className="p-0 overflow-y-auto max-h-[60vh]">
@@ -46,10 +49,10 @@ export const LeaveManagementModal: React.FC<LeaveManagementModalProps> = ({
           <table className="w-full text-left text-sm">
             <thead className="bg-background-light dark:bg-background-dark text-xs uppercase text-text-muted-light font-semibold">
               <tr>
-                <th className="px-6 py-3">Employee</th>
-                <th className="px-6 py-3">Type</th>
-                <th className="px-6 py-3">Dates</th>
-                <th className="px-6 py-3 text-right">Actions</th>
+                <th className="px-6 py-3">{t('leave:management.employee')}</th>
+                <th className="px-6 py-3">{t('leave:management.type')}</th>
+                <th className="px-6 py-3">{t('leave:management.dates')}</th>
+                <th className="px-6 py-3 text-right">{t('leave:management.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
@@ -68,7 +71,7 @@ export const LeaveManagementModal: React.FC<LeaveManagementModalProps> = ({
                     </div>
                   </td>
                   <td className="py-4 px-6 text-text-muted-light dark:text-text-muted-dark">
-                    {request.type}
+                    {translateLeaveType(request.type)}
                   </td>
                   <td className="py-4 px-6 text-text-muted-light dark:text-text-muted-dark">
                     {request.dates}
@@ -100,8 +103,8 @@ export const LeaveManagementModal: React.FC<LeaveManagementModalProps> = ({
         ) : (
           <div className="p-12 text-center text-text-muted-light dark:text-text-muted-dark">
             <CheckCircle2 size={48} className="mx-auto mb-4 text-accent-green opacity-50" />
-            <p className="text-lg font-medium">No pending requests</p>
-            <p className="text-sm">You've cleared the queue!</p>
+            <p className="text-lg font-medium">{t('leave:management.noPending')}</p>
+            <p className="text-sm">{t('leave:management.clearedQueue')}</p>
           </div>
         )}
       </div>
@@ -110,7 +113,7 @@ export const LeaveManagementModal: React.FC<LeaveManagementModalProps> = ({
           onClick={onClose}
           className="px-4 py-2 bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
-          Close
+          {t('leave:management.close')}
         </button>
       </div>
     </Modal>

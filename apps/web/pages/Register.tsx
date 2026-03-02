@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import { UserPlus, Mail, Lock, CheckCircle, AlertCircle, Eye, EyeOff, Users, Sparkles, Shield, Award } from "lucide-react";
 import { BASE_URL } from "../lib/api";
 
@@ -42,6 +43,7 @@ const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showEmailVerified, setShowEmailVerified] = useState(true);
   const navigate = useNavigate();
+  const { t } = useTranslation('auth');
 
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
 
@@ -65,10 +67,10 @@ const Register: React.FC = () => {
     setError("");
 
     if (!email.trim()) {
-      setFieldErrors({ email: "Please enter your email address" });
+      setFieldErrors({ email: t('login.emailRequired') });
       return;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setFieldErrors({ email: "Please enter a valid email address" });
+      setFieldErrors({ email: t('login.emailInvalid') });
       return;
     }
     setFieldErrors({});
@@ -86,7 +88,7 @@ const Register: React.FC = () => {
         setError(data.message);
       }
     } catch {
-      setError("Failed to verify email. Please try again.");
+      setError(t('register.emailVerifyFailed'));
     } finally {
       setLoading(false);
     }
@@ -98,10 +100,10 @@ const Register: React.FC = () => {
 
     const errors: typeof fieldErrors = {};
     if (!password) {
-      errors.password = "Please enter a password";
+      errors.password = t('register.passwordRequired');
     }
     if (!confirmPassword) {
-      errors.confirmPassword = "Please confirm your password";
+      errors.confirmPassword = t('register.confirmRequired');
     }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -110,17 +112,17 @@ const Register: React.FC = () => {
     setFieldErrors({});
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t('register.passwordsMismatch'));
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t('register.passwordTooShort'));
       return;
     }
 
     if (passwordStrength.score < 3) {
-      setError("Password is too weak. Add uppercase, lowercase, numbers, and special characters.");
+      setError(t('register.passwordTooWeak'));
       return;
     }
 
@@ -139,24 +141,24 @@ const Register: React.FC = () => {
         navigate("/login", {
           state: {
             registrationSuccess: true,
-            message: "Registration successful! Please login with your new password."
+            message: t('register.registerSuccess')
           }
         });
       } else {
-        setError(data.error || "Registration failed");
+        setError(data.error || t('register.registerFailed'));
       }
     } catch {
-      setError("Registration failed. Please try again.");
+      setError(t('register.registerFailedGeneric'));
     } finally {
       setLoading(false);
     }
   };
 
   const benefits = [
-    { icon: Users, title: "Team Collaboration", desc: "Connect with your colleagues" },
-    { icon: Sparkles, title: "Smart Features", desc: "AI-powered HR assistance" },
-    { icon: Shield, title: "Secure Access", desc: "Enterprise-grade protection" },
-    { icon: Award, title: "Self-Service", desc: "Manage your profile easily" },
+    { icon: Users, title: t('register.feature1'), desc: t('register.feature1Desc') },
+    { icon: Sparkles, title: t('register.feature2'), desc: t('register.feature2Desc') },
+    { icon: Shield, title: t('register.feature3'), desc: t('register.feature3Desc') },
+    { icon: Award, title: t('register.feature4'), desc: t('register.feature4Desc') },
   ];
 
   return (
@@ -189,7 +191,7 @@ const Register: React.FC = () => {
               />
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">HARI</h1>
-                <p className="text-white/70 text-sm">HR Intelligence by AIYA</p>
+                <p className="text-white/70 text-sm">{t('login.tagline')}</p>
               </div>
             </div>
           </div>
@@ -197,11 +199,11 @@ const Register: React.FC = () => {
           {/* Main Message */}
           <div className="flex-1 flex flex-col justify-center max-w-lg">
             <h2 className="text-4xl xl:text-5xl font-bold leading-tight mb-6">
-              Join Your Team
-              <span className="block text-white/90">on HARI Today</span>
+              {t('register.heroTitle1')}
+              <span className="block text-white/90">{t('register.heroTitle2')}</span>
             </h2>
             <p className="text-white/80 text-lg leading-relaxed mb-10">
-              Get started with your company's HR portal. Access your profile, timekeeping, and more.
+              {t('register.heroDesc')}
             </p>
 
             {/* Benefits Grid */}
@@ -221,7 +223,7 @@ const Register: React.FC = () => {
 
           {/* Footer */}
           <div className="text-white/50 text-sm">
-            © 2026 AIYA Technology. All rights reserved.
+            {t('login.copyright')}
           </div>
         </div>
       </div>
@@ -238,7 +240,7 @@ const Register: React.FC = () => {
             />
             <div>
               <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">HARI</h1>
-              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">HR Intelligence by AIYA</p>
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('login.tagline')}</p>
             </div>
           </div>
 
@@ -248,11 +250,11 @@ const Register: React.FC = () => {
               <div className="inline-flex items-center justify-center h-14 w-14 bg-gradient-to-br from-accent-teal to-accent-green text-white rounded-xl shadow-lg shadow-accent-teal/30 mb-4">
                 <UserPlus size={26} />
               </div>
-              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Create Account</h2>
+              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">{t('register.title')}</h2>
               <p className="text-text-muted-light dark:text-text-muted-dark mt-2">
                 {step === 'email'
-                  ? "Enter your company email to get started"
-                  : `Welcome ${employeeName}! Set your password`
+                  ? t('register.subtitle')
+                  : t('register.subtitlePassword', { name: employeeName })
                 }
               </p>
             </div>
@@ -274,7 +276,7 @@ const Register: React.FC = () => {
               <form onSubmit={handleCheckEmail} noValidate className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                    Company Email
+                    {t('register.companyEmail')}
                   </label>
                   <div className="relative group">
                     <Mail
@@ -286,14 +288,14 @@ const Register: React.FC = () => {
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); setFieldErrors((prev) => ({ ...prev, email: undefined })); }}
                       className={`w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${fieldErrors.email ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-accent-teal"}`}
-                      placeholder="yourname@company.com"
+                      placeholder={t('register.emailPlaceholder')}
                     />
                   </div>
                   {fieldErrors.email ? (
                     <p className="mt-1.5 text-sm text-accent-red">{fieldErrors.email}</p>
                   ) : (
                     <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
-                      Use the company email provided by HR
+                      {t('register.emailHint')}
                     </p>
                   )}
                 </div>
@@ -311,9 +313,9 @@ const Register: React.FC = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Checking...
+                      {t('register.checking')}
                     </span>
-                  ) : "Continue"}
+                  ) : t('register.continue')}
                 </button>
               </form>
             ) : (
@@ -321,13 +323,13 @@ const Register: React.FC = () => {
                 {showEmailVerified && (
                   <div className="bg-accent-green/10 p-4 rounded-xl flex items-center gap-3 text-accent-green text-sm border border-accent-green/20 animate-slide-in-right">
                     <CheckCircle size={20} />
-                    <span>Email verified: {email}</span>
+                    <span>{t('register.emailVerified', { email })}</span>
                   </div>
                 )}
 
                 <div>
                   <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                    Create Password
+                    {t('register.createPassword')}
                   </label>
                   <div className="relative group">
                     <Lock
@@ -357,9 +359,9 @@ const Register: React.FC = () => {
                   {password.length > 0 && (
                     <div className="mt-3">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark">Password strength</span>
+                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('register.passwordStrength')}</span>
                         <span className={`text-xs font-medium ${passwordStrength.color}`}>
-                          {passwordStrength.label}
+                          {passwordStrength.label === 'Weak' ? t('register.weak') : passwordStrength.label === 'Medium' ? t('register.medium') : t('register.strong')}
                         </span>
                       </div>
                       <div className="h-2 bg-border-light dark:bg-border-dark rounded-full overflow-hidden">
@@ -370,19 +372,19 @@ const Register: React.FC = () => {
                       </div>
                       <div className="mt-2 grid grid-cols-2 gap-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                         <span className={password.length >= 8 ? "text-accent-green" : ""}>
-                          {password.length >= 8 ? "✓" : "○"} 8+ characters
+                          {password.length >= 8 ? "\u2713" : "\u25CB"} {t('register.rule8chars')}
                         </span>
                         <span className={/[A-Z]/.test(password) ? "text-accent-green" : ""}>
-                          {/[A-Z]/.test(password) ? "✓" : "○"} Uppercase
+                          {/[A-Z]/.test(password) ? "\u2713" : "\u25CB"} {t('register.ruleUppercase')}
                         </span>
                         <span className={/[a-z]/.test(password) ? "text-accent-green" : ""}>
-                          {/[a-z]/.test(password) ? "✓" : "○"} Lowercase
+                          {/[a-z]/.test(password) ? "\u2713" : "\u25CB"} {t('register.ruleLowercase')}
                         </span>
                         <span className={/[0-9]/.test(password) ? "text-accent-green" : ""}>
-                          {/[0-9]/.test(password) ? "✓" : "○"} Number
+                          {/[0-9]/.test(password) ? "\u2713" : "\u25CB"} {t('register.ruleNumber')}
                         </span>
                         <span className={/[@$!%*?&#^()_+\-=]/.test(password) ? "text-accent-green" : ""}>
-                          {/[@$!%*?&#^()_+\-=]/.test(password) ? "✓" : "○"} Special char
+                          {/[@$!%*?&#^()_+\-=]/.test(password) ? "\u2713" : "\u25CB"} {t('register.ruleSpecial')}
                         </span>
                       </div>
                     </div>
@@ -391,7 +393,7 @@ const Register: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                    Confirm Password
+                    {t('register.confirmPassword')}
                   </label>
                   <div className="relative group">
                     <Lock
@@ -425,10 +427,10 @@ const Register: React.FC = () => {
                     <p className="mt-1.5 text-sm text-accent-red">{fieldErrors.confirmPassword}</p>
                   )}
                   {!fieldErrors.confirmPassword && confirmPassword && password !== confirmPassword && (
-                    <p className="text-xs text-accent-red mt-1">Passwords do not match</p>
+                    <p className="text-xs text-accent-red mt-1">{t('register.passwordsMismatch')}</p>
                   )}
                   {!fieldErrors.confirmPassword && confirmPassword && password === confirmPassword && (
-                    <p className="text-xs text-accent-green mt-1">Passwords match</p>
+                    <p className="text-xs text-accent-green mt-1">{t('register.passwordsMatch')}</p>
                   )}
                 </div>
 
@@ -438,7 +440,7 @@ const Register: React.FC = () => {
                     onClick={() => setStep('email')}
                     className="flex-1 bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark py-3 rounded-xl font-medium hover:bg-border-light dark:hover:bg-border-dark transition-colors border border-border-light dark:border-border-dark"
                   >
-                    Back
+                    {t('register.back')}
                   </button>
                   <button
                     type="submit"
@@ -455,9 +457,9 @@ const Register: React.FC = () => {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        Creating...
+                        {t('register.creating')}
                       </span>
-                    ) : "Create Account"}
+                    ) : t('register.title')}
                   </button>
                 </div>
               </form>
@@ -465,9 +467,9 @@ const Register: React.FC = () => {
 
             <div className="mt-8 pt-6 border-t border-border-light dark:border-border-dark text-center">
               <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                Already have an account?{" "}
+                {t('register.alreadyHaveAccount')}{" "}
                 <Link to="/login" className="text-primary font-semibold hover:text-primary-hover transition-colors">
-                  Sign in
+                  {t('register.signIn')}
                 </Link>
               </p>
             </div>
@@ -475,7 +477,7 @@ const Register: React.FC = () => {
 
           {/* Additional Info */}
           <p className="text-center text-xs text-text-muted-light dark:text-text-muted-dark mt-6">
-            Secured with 256-bit SSL encryption
+            {t('login.sslEncryption')}
           </p>
         </div>
       </div>

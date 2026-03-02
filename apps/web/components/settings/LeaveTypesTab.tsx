@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Check } from 'lucide-react';
 import { useLeaveTypeConfig, useUpdateLeaveTypeConfig } from '../../hooks/queries';
 import { COLOR_PALETTE, AVAILABLE_COLORS } from '../../lib/leaveTypeConfig';
@@ -14,6 +15,7 @@ interface FormState {
 const emptyForm: FormState = { type: '', total: '', color: 'blue' };
 
 export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' | 'error') => void }> = ({ showToast }) => {
+  const { t } = useTranslation(['settings', 'common']);
   const { data: configs = [], isPending } = useLeaveTypeConfig();
   const updateMutation = useUpdateLeaveTypeConfig();
 
@@ -53,13 +55,13 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
     const isDuplicate = configs.some(
       (c, i) => c.type.toLowerCase() === trimmed.toLowerCase() && i !== editIndex,
     );
-    return isDuplicate ? 'A leave type with this name already exists' : '';
+    return isDuplicate ? t('leaveTypes.nameDuplicate') : '';
   }, [form.type, configs, editIndex]);
 
   const handleSave = async () => {
     const trimmed = form.type.trim();
     if (!trimmed) {
-      showToast('Leave type name is required', 'error');
+      showToast(t('leaveTypes.nameRequired'), 'error');
       return;
     }
     if (nameError) {
@@ -68,7 +70,7 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
     }
     const totalNum = form.total.trim() === '' ? 0 : Number(form.total);
     if (isNaN(totalNum)) {
-      showToast('Quota must be a number (-1 for unlimited)', 'error');
+      showToast(t('leaveTypes.quotaInvalid'), 'error');
       return;
     }
 
@@ -83,10 +85,10 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
 
     try {
       await updateMutation.mutateAsync(updated);
-      showToast(isEditing ? 'Leave type updated' : 'Leave type added', 'success');
+      showToast(isEditing ? t('leaveTypes.typeUpdated') : t('leaveTypes.typeAdded'), 'success');
       closeModal();
     } catch {
-      showToast('Failed to save leave type', 'error');
+      showToast(t('leaveTypes.saveFailed'), 'error');
     }
   };
 
@@ -95,9 +97,9 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
     const updated = configs.filter((_, i) => i !== deleteIndex);
     try {
       await updateMutation.mutateAsync(updated);
-      showToast('Leave type deleted', 'success');
+      showToast(t('leaveTypes.typeDeleted'), 'success');
     } catch {
-      showToast('Failed to delete leave type', 'error');
+      showToast(t('leaveTypes.deleteFailed'), 'error');
     } finally {
       setDeleteIndex(null);
     }
@@ -115,16 +117,16 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
     <div className="p-6 space-y-6 animate-fade-in">
       <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark pb-4">
         <div>
-          <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Leave Types</h2>
+          <h2 className="text-xl font-bold text-text-light dark:text-text-dark">{t('leaveTypes.title')}</h2>
           <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-            Manage leave types available for all employees.
+            {t('leaveTypes.subtitle')}
           </p>
         </div>
         <button
           onClick={openAdd}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
         >
-          <Plus size={16} /> Add Leave Type
+          <Plus size={16} /> {t('leaveTypes.addType')}
         </button>
       </div>
 
@@ -133,17 +135,17 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border-light dark:border-border-dark">
-              <th className="text-left py-3 px-4 font-medium text-text-muted-light dark:text-text-muted-dark">Type Name</th>
-              <th className="text-left py-3 px-4 font-medium text-text-muted-light dark:text-text-muted-dark">Annual Quota</th>
-              <th className="text-left py-3 px-4 font-medium text-text-muted-light dark:text-text-muted-dark">Color</th>
-              <th className="text-right py-3 px-4 font-medium text-text-muted-light dark:text-text-muted-dark">Actions</th>
+              <th className="text-left py-3 px-4 font-medium text-text-muted-light dark:text-text-muted-dark">{t('leaveTypes.typeName')}</th>
+              <th className="text-left py-3 px-4 font-medium text-text-muted-light dark:text-text-muted-dark">{t('leaveTypes.annualQuota')}</th>
+              <th className="text-left py-3 px-4 font-medium text-text-muted-light dark:text-text-muted-dark">{t('leaveTypes.color')}</th>
+              <th className="text-right py-3 px-4 font-medium text-text-muted-light dark:text-text-muted-dark">{t('leaveTypes.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light dark:divide-border-dark">
             {configs.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-8 text-center text-text-muted-light dark:text-text-muted-dark">
-                  No leave types configured. Click "Add Leave Type" to get started.
+                  {t('leaveTypes.noTypes')}
                 </td>
               </tr>
             ) : (
@@ -158,9 +160,9 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
                     </td>
                     <td className="py-3 px-4 text-text-light dark:text-text-dark">
                       {cfg.total === -1 ? (
-                        <span className="text-text-muted-light dark:text-text-muted-dark italic">Unlimited</span>
+                        <span className="text-text-muted-light dark:text-text-muted-dark italic">{t('leaveTypes.unlimited')}</span>
                       ) : (
-                        <>{cfg.total} days</>
+                        <>{cfg.total} {t('leaveTypes.days')}</>
                       )}
                     </td>
                     <td className="py-3 px-4">
@@ -201,14 +203,14 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
-        title={isEditing ? 'Edit Leave Type' : 'Add Leave Type'}
+        title={isEditing ? t('leaveTypes.editType') : t('leaveTypes.addTypeTitle')}
         maxWidth="sm"
       >
         <div className="p-6 space-y-4">
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-              Type Name <span className="text-red-500">*</span>
+              {t('leaveTypes.typeNameLabel')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -217,7 +219,7 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
               className={`w-full px-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary ${
                 nameError ? 'border-red-500' : 'border-border-light dark:border-border-dark'
               }`}
-              placeholder="e.g. Training Leave"
+              placeholder={t('leaveTypes.typeNamePlaceholder')}
             />
             {nameError && <p className="mt-1 text-xs text-red-500">{nameError}</p>}
           </div>
@@ -225,24 +227,24 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
           {/* Quota */}
           <div>
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-              Annual Quota (days)
+              {t('leaveTypes.quotaLabel')}
             </label>
             <input
               type="number"
               value={form.total}
               onChange={(e) => setForm((p) => ({ ...p, total: e.target.value }))}
               className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="e.g. 10 (-1 for unlimited)"
+              placeholder={t('leaveTypes.quotaPlaceholder')}
             />
             <p className="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-              Use -1 for unlimited quota
+              {t('leaveTypes.quotaHint')}
             </p>
           </div>
 
           {/* Color picker */}
           <div>
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-              Color
+              {t('leaveTypes.colorLabel')}
             </label>
             <div className="flex flex-wrap gap-2">
               {AVAILABLE_COLORS.map((colorKey) => {
@@ -270,7 +272,7 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
               onClick={closeModal}
               className="px-4 py-2 text-sm text-text-muted-light hover:text-text-light dark:hover:text-text-dark transition-colors"
             >
-              Cancel
+              {t('leaveTypes.cancel')}
             </button>
             <button
               type="button"
@@ -279,7 +281,7 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check size={16} />
-              {updateMutation.isPending ? 'Saving...' : isEditing ? 'Update' : 'Add'}
+              {updateMutation.isPending ? t('leaveTypes.saving') : isEditing ? t('leaveTypes.update') : t('leaveTypes.add')}
             </button>
           </div>
         </div>
@@ -289,14 +291,14 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
       <Modal
         isOpen={deleteIndex !== null}
         onClose={() => setDeleteIndex(null)}
-        title="Delete Leave Type"
+        title={t('leaveTypes.deleteType')}
         maxWidth="sm"
       >
         <div className="p-6 space-y-4">
           <p className="text-sm text-text-light dark:text-text-dark">
-            Are you sure you want to delete{' '}
+            {t('leaveTypes.deleteConfirm')}{' '}
             <strong>{deleteIndex !== null ? configs[deleteIndex]?.type : ''}</strong>?
-            Existing leave requests of this type will still be visible but may show a default color.
+            {' '}{t('leaveTypes.deleteWarning')}
           </p>
           <div className="flex justify-end gap-3">
             <button
@@ -304,7 +306,7 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
               onClick={() => setDeleteIndex(null)}
               className="px-4 py-2 text-sm text-text-muted-light hover:text-text-light dark:hover:text-text-dark transition-colors"
             >
-              Cancel
+              {t('leaveTypes.cancel')}
             </button>
             <button
               type="button"
@@ -313,7 +315,7 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
             >
               <Trash2 size={16} />
-              {updateMutation.isPending ? 'Deleting...' : 'Delete'}
+              {updateMutation.isPending ? t('leaveTypes.deleting') : t('common:buttons.delete')}
             </button>
           </div>
         </div>

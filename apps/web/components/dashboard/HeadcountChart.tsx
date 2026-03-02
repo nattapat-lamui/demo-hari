@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ResponsiveContainer, XAxis, YAxis, AreaChart, Area, Tooltip } from 'recharts';
 import { TrendingUp, MoreHorizontal } from 'lucide-react';
 
@@ -14,8 +15,10 @@ interface HeadcountChartProps {
 
 export const HeadcountChart: React.FC<HeadcountChartProps> = React.memo(({
   data,
-  title = 'Headcount Trend',
+  title,
 }) => {
+  const { t } = useTranslation(['dashboard']);
+  const resolvedTitle = title ?? t('dashboard:headcount.title');
   const { latestValue, growthPercent } = useMemo(() => {
     const latest = data[data.length - 1]?.value ?? 0;
     const previous = data[data.length - 2]?.value ?? latest;
@@ -29,7 +32,7 @@ export const HeadcountChart: React.FC<HeadcountChartProps> = React.memo(({
     <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-5 shadow-sm">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="font-semibold text-text-light dark:text-text-dark">{title}</h3>
+          <h3 className="font-semibold text-text-light dark:text-text-dark">{resolvedTitle}</h3>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-bold text-text-light dark:text-text-dark">
               {latestValue}

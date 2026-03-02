@@ -5,6 +5,7 @@ import {
   Check,
   AlertCircle
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 import { DatePicker } from './DatePicker';
 import { Dropdown } from './Dropdown';
@@ -57,6 +58,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   onClose,
   onSubmit
 }) => {
+  const { t } = useTranslation(['employees', 'common']);
   const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>({
     name: '',
     role: '',
@@ -152,14 +154,14 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Add New Employee"
+      title={t('employees:addModal.title')}
       maxWidth="lg"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
         {/* Full Name Field */}
         <div>
           <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-            Full Name
+            {t('employees:addModal.fullName')}
           </label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
@@ -189,7 +191,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-              Role
+              {t('employees:addModal.role')}
             </label>
             <Dropdown
               value={newEmployee.role}
@@ -204,7 +206,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-              Department
+              {t('employees:addModal.department')}
             </label>
             <Dropdown
               value={newEmployee.department}
@@ -221,7 +223,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         {/* Email Field */}
         <div>
           <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-            Email
+            {t('employees:addModal.email')}
           </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
@@ -248,7 +250,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         {/* Start Date Field */}
         <div>
           <DatePicker
-            label="Start Date"
+            label={t('employees:addModal.startDate')}
             value={newEmployee.joinDate}
             onChange={(date) => updateField('joinDate', date)}
             placeholder="Select start date"
@@ -268,13 +270,13 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             onClick={handleClose}
             className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
           >
-            Cancel
+            {t('employees:addModal.cancel')}
           </button>
           <button
             type="submit"
             className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
           >
-            <Check size={16} /> Add Employee
+            <Check size={16} /> {t('employees:addModal.add')}
           </button>
         </div>
       </form>

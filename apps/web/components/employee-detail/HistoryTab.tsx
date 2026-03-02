@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus, Edit2, Briefcase } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { HistoryTabProps } from './EmployeeDetailTypes';
 import { formatDate } from '../../lib/date';
 
@@ -14,28 +15,29 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
     onSaveHistory,
     onAddClick,
 }) => {
+    const { t } = useTranslation(['employees', 'common']);
     const { isAdmin, isOwnProfile } = permissions;
     const canEdit = isAdmin || isOwnProfile;
 
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Employment History</h3>
+                <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{t('employees:history.title')}</h3>
                 {canEdit && (
                     <button
                         onClick={onAddClick}
                         className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
                     >
                         <Plus size={16} />
-                        Add Position
+                        {t('employees:history.addPosition')}
                     </button>
                 )}
             </div>
             {historyList.length === 0 ? (
                 <div className="text-center py-12 text-text-muted-light dark:text-text-muted-dark border-2 border-dashed border-border-light dark:border-border-dark rounded-xl">
                     <Briefcase size={48} className="mx-auto mb-4 opacity-20" />
-                    <p>No employment history recorded.</p>
-                    {canEdit && <p className="text-xs mt-1">Click "Add Position" to add the first entry.</p>}
+                    <p>{t('employees:history.noHistory')}</p>
+                    {canEdit && <p className="text-xs mt-1">{t('employees:history.addFirstEntry')}</p>}
                 </div>
             ) : (
             <div className="relative border-l-2 border-border-light dark:border-border-dark ml-3 space-y-8">
@@ -47,7 +49,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                             <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-4 space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">Role</label>
+                                        <label className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">{t('employees:history.role')}</label>
                                         <input
                                             value={tempHistoryItem.role}
                                             onChange={(e) => onSetTempHistoryItem({ ...tempHistoryItem, role: e.target.value })}
@@ -55,7 +57,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">Department</label>
+                                        <label className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">{t('employees:history.department')}</label>
                                         <input
                                             value={tempHistoryItem.department}
                                             onChange={(e) => onSetTempHistoryItem({ ...tempHistoryItem, department: e.target.value })}
@@ -63,7 +65,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">Start Date</label>
+                                        <label className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">{t('employees:history.startDate')}</label>
                                         <input
                                             type="date"
                                             value={tempHistoryItem.startDate}
@@ -72,7 +74,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">End Date</label>
+                                        <label className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">{t('employees:history.endDate')}</label>
                                         <input
                                             type="date"
                                             value={tempHistoryItem.endDate && tempHistoryItem.endDate !== 'Present' ? tempHistoryItem.endDate : ''}
@@ -87,12 +89,12 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                                 onChange={(e) => onSetTempHistoryItem({ ...tempHistoryItem, endDate: e.target.checked ? 'Present' : '' })}
                                                 className="w-3 h-3 text-primary bg-card-light dark:bg-card-dark border-border-light dark:border-border-dark rounded focus:ring-1 focus:ring-primary"
                                             />
-                                            <span className="ml-1 text-xs text-text-muted-light dark:text-text-muted-dark">Current</span>
+                                            <span className="ml-1 text-xs text-text-muted-light dark:text-text-muted-dark">{t('employees:history.current')}</span>
                                         </label>
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">Description</label>
+                                    <label className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark">{t('employees:history.description')}</label>
                                     <textarea
                                         value={tempHistoryItem.description}
                                         onChange={(e) => onSetTempHistoryItem({ ...tempHistoryItem, description: e.target.value })}
@@ -105,13 +107,13 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                         onClick={onCancelEditHistory}
                                         className="px-3 py-1.5 text-xs font-medium text-text-muted-light hover:text-text-light dark:hover:text-text-dark"
                                     >
-                                        Cancel
+                                        {t('employees:history.cancel')}
                                     </button>
                                     <button
                                         onClick={onSaveHistory}
                                         className="px-3 py-1.5 bg-primary text-white text-xs font-medium rounded hover:bg-primary/90"
                                     >
-                                        Save
+                                        {t('employees:history.save')}
                                     </button>
                                 </div>
                             </div>
@@ -137,7 +139,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                         </p>
                                     </div>
                                     <span className={`text-sm font-medium whitespace-nowrap ${index === 0 ? 'text-green-600 dark:text-green-400' : 'text-text-muted-light dark:text-text-muted-dark'}`}>
-                                        {formatDate(job.startDate)} - {job.endDate === 'Present' || !job.endDate ? 'Present' : formatDate(job.endDate)}
+                                        {formatDate(job.startDate)} - {job.endDate === 'Present' || !job.endDate ? t('employees:history.present') : formatDate(job.endDate)}
                                     </span>
                                 </div>
                             </div>

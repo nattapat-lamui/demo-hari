@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 
 interface RejectReasonDialogProps {
@@ -14,6 +15,7 @@ export const RejectReasonDialog: React.FC<RejectReasonDialogProps> = ({
   onConfirm,
   employeeName,
 }) => {
+  const { t } = useTranslation(['leave']);
   const [reason, setReason] = useState('');
 
   const handleConfirm = () => {
@@ -28,7 +30,7 @@ export const RejectReasonDialog: React.FC<RejectReasonDialogProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Reject Leave Request" maxWidth="sm">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('leave:rejectDialog.title')} maxWidth="sm">
       <div className="p-6 space-y-4">
         {employeeName && (
           <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
@@ -37,13 +39,13 @@ export const RejectReasonDialog: React.FC<RejectReasonDialogProps> = ({
         )}
         <div>
           <label htmlFor="rejectReason" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1.5">
-            Rejection Reason <span className="text-red-500">*</span>
+            {t('leave:rejectDialog.label')} <span className="text-red-500">*</span>
           </label>
           <textarea
             id="rejectReason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Enter the reason for rejection..."
+            placeholder={t('leave:rejectDialog.placeholder')}
             rows={3}
             className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-muted-light focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary resize-none transition-colors"
             autoFocus
@@ -55,7 +57,7 @@ export const RejectReasonDialog: React.FC<RejectReasonDialogProps> = ({
           onClick={handleClose}
           className="px-5 py-2.5 bg-white dark:bg-card-dark border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
         >
-          Cancel
+          {t('leave:rejectDialog.cancel')}
         </button>
         <button
           onClick={handleConfirm}
@@ -63,7 +65,7 @@ export const RejectReasonDialog: React.FC<RejectReasonDialogProps> = ({
           aria-label="Confirm rejection"
           className="px-5 py-2.5 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 active:bg-red-800 dark:active:bg-red-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 shadow-sm hover:shadow-md"
         >
-          Confirm Reject
+          {t('leave:rejectDialog.reject')}
         </button>
       </div>
     </Modal>

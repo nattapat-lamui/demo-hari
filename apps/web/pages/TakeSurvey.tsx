@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Star, Send, Shield, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Toast } from '../components/Toast';
 import { useSurveyDetail, useSubmitSurveyResponse } from '../hooks/queries';
 import type { SurveyQuestion } from '../types';
@@ -25,15 +26,17 @@ const CATEGORY_BG: Record<string, string> = {
   Management: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
 };
 
-const RATING_LABELS = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+// RATING_LABELS moved inside component to use translations
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export const TakeSurvey: React.FC = () => {
+  const { t } = useTranslation(['help', 'common']);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const RATING_LABELS = ['', t('takeSurvey.ratingPoor'), t('takeSurvey.ratingFair'), t('takeSurvey.ratingGood'), t('takeSurvey.ratingVeryGood'), t('takeSurvey.ratingExcellent')];
   const { data: survey, isLoading } = useSurveyDetail(id);
   const submitMutation = useSubmitSurveyResponse();
 
@@ -125,7 +128,7 @@ export const TakeSurvey: React.FC = () => {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-3" />
-          <p className="text-text-muted-light dark:text-text-muted-dark text-sm">Loading survey...</p>
+          <p className="text-text-muted-light dark:text-text-muted-dark text-sm">{t('takeSurvey.loading')}</p>
         </div>
       </div>
     );
@@ -135,8 +138,8 @@ export const TakeSurvey: React.FC = () => {
   if (!survey) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">Survey Not Found</h2>
-        <button onClick={() => navigate('/surveys')} className="text-primary text-sm hover:underline">Back to Surveys</button>
+        <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">{t('takeSurvey.notFound')}</h2>
+        <button onClick={() => navigate('/surveys')} className="text-primary text-sm hover:underline">{t('takeSurvey.backToSurveys')}</button>
       </div>
     );
   }
@@ -147,10 +150,10 @@ export const TakeSurvey: React.FC = () => {
         <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
           <CheckCircle2 size={32} className="text-green-600 dark:text-green-400" />
         </div>
-        <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">Already Completed</h2>
-        <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">You have already submitted your response for this survey.</p>
+        <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">{t('takeSurvey.alreadyCompleted')}</h2>
+        <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{t('takeSurvey.alreadyCompletedDesc')}</p>
         <button onClick={() => navigate('/surveys')} className="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors">
-          Back to Surveys
+          {t('takeSurvey.backToSurveys')}
         </button>
       </div>
     );
@@ -163,12 +166,12 @@ export const TakeSurvey: React.FC = () => {
         <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-6">
           <CheckCircle2 size={40} className="text-green-600 dark:text-green-400" />
         </div>
-        <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">Thank You!</h2>
+        <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">{t('takeSurvey.thankYou')}</h2>
         <p className="text-text-muted-light dark:text-text-muted-dark mb-6 max-w-md">
-          Your anonymous response has been submitted successfully. Your feedback helps us build a better workplace.
+          {t('takeSurvey.thankYouDesc')}
         </p>
         <button onClick={() => navigate('/surveys')} className="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-          Back to Surveys
+          {t('takeSurvey.backToSurveys')}
         </button>
       </div>
     );
@@ -183,13 +186,13 @@ export const TakeSurvey: React.FC = () => {
           onClick={() => navigate('/surveys')}
           className="flex items-center gap-1 text-sm text-text-muted-light hover:text-text-light dark:hover:text-text-dark transition-colors mb-3"
         >
-          <ChevronLeft size={16} /> Back to Surveys
+          <ChevronLeft size={16} /> {t('takeSurvey.backToSurveys')}
         </button>
         <h1 className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark">{survey.title}</h1>
         <div className="flex items-center gap-2 mt-1.5">
           <Shield size={14} className="text-primary" />
           <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-            Your responses are <span className="font-medium text-primary">completely anonymous</span>
+            Your responses are <span className="font-medium text-primary">{t('takeSurvey.anonymous')}</span>
           </span>
         </div>
       </div>
@@ -198,10 +201,10 @@ export const TakeSurvey: React.FC = () => {
       <div className="mb-8">
         <div className="flex justify-between items-center mb-2">
           <span className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">
-            Question {currentIndex + 1} of {total}
+            {t('takeSurvey.questionOf', { current: currentIndex + 1, total })}
           </span>
           <span className="text-xs font-semibold text-primary">
-            {answeredCount}/{total} answered
+            {t('takeSurvey.answered', { count: answeredCount, total })}
           </span>
         </div>
 
@@ -303,7 +306,7 @@ export const TakeSurvey: React.FC = () => {
               disabled={currentIndex === 0}
               className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:hover:text-text-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeft size={18} /> Previous
+              <ChevronLeft size={18} /> {t('common:pagination.previous')}
             </button>
 
             {currentIndex === total - 1 ? (
@@ -313,14 +316,14 @@ export const TakeSurvey: React.FC = () => {
                 className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send size={16} />
-                {submitMutation.isPending ? 'Submitting...' : 'Submit'}
+                {submitMutation.isPending ? t('common:buttons.submitting') : t('common:buttons.submit')}
               </button>
             ) : (
               <button
                 onClick={() => setCurrentIndex((i) => Math.min(total - 1, i + 1))}
                 className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
               >
-                Next <ChevronRight size={18} />
+                {t('common:buttons.next')} <ChevronRight size={18} />
               </button>
             )}
           </div>

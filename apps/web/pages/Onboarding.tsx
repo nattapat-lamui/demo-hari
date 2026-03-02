@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { OnboardingTask, Employee, OnboardingDocument } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useOrg } from '../contexts/OrgContext';
@@ -21,6 +22,7 @@ import { useOnboardingTasks, useOnboardingContacts, useOnboardingDocuments, useA
 import { FlowGraph, TaskList, KeyContacts, DocumentChecklist, InviteModal, OnboardingOverview } from '../components/onboarding';
 
 export const Onboarding: React.FC = () => {
+    const { t, i18n } = useTranslation(['onboarding', 'common']);
     const { user, isAdminView } = useAuth();
     const { addNode } = useOrg();
     const qc = useQueryClient();
@@ -86,7 +88,7 @@ export const Onboarding: React.FC = () => {
         const idsInTasks = new Set(tasks.map(t => t.employeeId).filter(Boolean) as string[]);
         const matched = allEmployees.filter(e => idsInTasks.has(e.id));
         return [
-            { value: '__overview__', label: 'All Employees (Overview)' },
+            { value: '__overview__', label: t('allEmployeesOverview') },
             ...matched.map(e => ({ value: e.id, label: e.name })),
         ];
     }, [isAdmin, tasks, allEmployees]);
@@ -121,7 +123,7 @@ export const Onboarding: React.FC = () => {
             qc.setQueryData<OnboardingTask[]>(queryKeys.onboarding.tasks(), old =>
                 (old || []).map(t => t.id === id ? { ...t, completed: task.completed } : t)
             );
-            showToast('Failed to update task', 'error');
+            showToast(t('failedUpdateTask'), 'error');
         }
     };
 
@@ -143,7 +145,7 @@ export const Onboarding: React.FC = () => {
             qc.setQueryData<OnboardingTask[]>(queryKeys.onboarding.tasks(), old =>
                 (old || []).map(t => t.id === id ? { ...t, priority: currentPriority } as OnboardingTask : t)
             );
-            showToast('Failed to update priority', 'error');
+            showToast(t('failedUpdatePriority'), 'error');
         }
     };
 
@@ -167,7 +169,7 @@ export const Onboarding: React.FC = () => {
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return dateString;
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return date.toLocaleDateString(i18n.language === 'th' ? 'th-TH' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
 
     const isDueSoon = (dateString: string) => {
@@ -218,27 +220,27 @@ export const Onboarding: React.FC = () => {
         const errors: Record<string, string> = {};
 
         if (!inviteForm.name.trim()) {
-            errors.name = 'Full name is required';
+            errors.name = t('validation.nameRequired');
         } else if (inviteForm.name.trim().length < 2) {
-            errors.name = 'Name must be at least 2 characters';
+            errors.name = t('validation.nameRequired');
         }
 
         if (!inviteForm.email.trim()) {
-            errors.email = 'Email address is required';
+            errors.email = t('validation.emailRequired');
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteForm.email)) {
-            errors.email = 'Please enter a valid email address';
+            errors.email = t('validation.emailInvalid');
         }
 
         if (!inviteForm.role.trim()) {
-            errors.role = 'Role is required';
+            errors.role = t('validation.roleRequired');
         }
 
         if (!inviteForm.department.trim()) {
-            errors.department = 'Department is required';
+            errors.department = t('validation.departmentRequired');
         }
 
         if (!inviteForm.startDate) {
-            errors.startDate = 'Start date is required';
+            errors.startDate = t('validation.startDateRequired');
         }
 
         setInviteErrors(errors);
@@ -270,7 +272,7 @@ export const Onboarding: React.FC = () => {
                 // Invalidate onboarding queries to show newly seeded data
                 qc.invalidateQueries({ queryKey: queryKeys.onboarding.all });
 
-                showToast(`Onboarding invitation sent to ${inviteForm.name}!`, 'success');
+                showToast(t('inviteSent', { name: inviteForm.name }), 'success');
             } else {
                 // Employee doesn't exist - create new employee
                 await addNode({
@@ -304,7 +306,7 @@ export const Onboarding: React.FC = () => {
                 // Invalidate onboarding queries to refetch tasks/docs
                 qc.invalidateQueries({ queryKey: queryKeys.onboarding.all });
 
-                showToast(`New employee ${inviteForm.name} added and invited to onboarding!`, 'success');
+                showToast(t('employeeAdded', { name: inviteForm.name }), 'success');
             }
 
             setIsInviteModalOpen(false);
@@ -312,12 +314,12 @@ export const Onboarding: React.FC = () => {
             setInviteErrors({});
         } catch (error) {
             console.error('Error in handleInviteSubmit:', error);
-            showToast('Failed to process invitation. Please try again.', 'error');
+            showToast(t('inviteFailed'), 'error');
         }
     };
 
     const handleSaveTemplate = () => {
-        showToast('Template saved successfully!', 'success');
+        showToast(t('templateSaved'), 'success');
     };
 
     const getPriorityBadgeClass = (priority: string) => {
@@ -348,9 +350,9 @@ export const Onboarding: React.FC = () => {
             qc.setQueryData<OnboardingDocument[]>(queryKeys.onboarding.documents(), old =>
                 (old || []).map(d => d.id === docId ? updatedDoc : d)
             );
-            showToast('Document uploaded!', 'success');
+            showToast(t('documentUploaded'), 'success');
         } catch (error: any) {
-            showToast(error.message || 'Upload failed', 'error');
+            showToast(error.message || t('uploadFailed'), 'error');
         } finally {
             setUploadingDocId(null);
         }
@@ -363,7 +365,7 @@ export const Onboarding: React.FC = () => {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!response.ok) {
-                showToast('Download failed', 'error');
+                showToast(t('downloadFailed'), 'error');
                 return;
             }
             const blob = await response.blob();
@@ -375,9 +377,9 @@ export const Onboarding: React.FC = () => {
             a.click();
             window.URL.revokeObjectURL(url);
             a.remove();
-            showToast('Download started!', 'success');
+            showToast(t('downloadStarted'), 'success');
         } catch {
-            showToast('Download failed', 'error');
+            showToast(t('downloadFailed'), 'error');
         }
     };
 
@@ -387,11 +389,11 @@ export const Onboarding: React.FC = () => {
             qc.setQueryData<OnboardingDocument[]>(queryKeys.onboarding.documents(), old =>
                 (old || []).map(d => d.id === docId ? updatedDoc : d)
             );
-            showToast(`Document ${status.toLowerCase()}!`, status === 'Approved' ? 'success' : 'warning');
+            showToast(status === 'Approved' ? t('documentApproved') : t('documentRejected'), status === 'Approved' ? 'success' : 'warning');
             setReviewNoteDocId(null);
             setReviewNote('');
         } catch {
-            showToast('Failed to review document', 'error');
+            showToast(t('failedReviewDocument'), 'error');
         }
     };
 
@@ -411,14 +413,14 @@ export const Onboarding: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-6 items-start justify-between">
                 <div className="flex-1">
                     <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight mb-1">
-                        {!isAdminView ? 'My Onboarding Checklist' : 'Onboarding Center'}
+                        {!isAdminView ? t('titleEmployee') : t('title')}
                     </h1>
                     <p className="text-text-muted-light dark:text-text-muted-dark">
                         {!isAdminView
-                            ? `Welcome aboard, ${user?.name?.split(' ')[0] || 'User'}! Complete these tasks to get started.`
+                            ? t('subtitleEmployee', { name: user?.name?.split(' ')[0] || 'User' })
                             : selectedEmployee
-                                ? <><span className="font-semibold text-text-light dark:text-text-dark">{selectedEmployee.name}</span> ({selectedEmployee.role}) - Onboarding Dashboard</>
-                                : 'Overview of all employee onboarding progress'
+                                ? t('subtitleAdminEmployee', { name: selectedEmployee.name, role: selectedEmployee.role })
+                                : t('subtitleAdminOverview')
                         }
                     </p>
                 </div>
@@ -430,7 +432,7 @@ export const Onboarding: React.FC = () => {
                                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark transition-colors"
                             >
                                 <ArrowLeft size={16} />
-                                Back to Overview
+                                {t('backToOverview')}
                             </button>
                         )}
                         <Dropdown
@@ -443,13 +445,13 @@ export const Onboarding: React.FC = () => {
                             onClick={handleSaveTemplate}
                             className="px-4 py-2 bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                         >
-                            Save as Template
+                            {t('saveTemplate')}
                         </button>
                         <button
                             onClick={() => setIsInviteModalOpen(true)}
                             className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
                         >
-                            Invite Employee
+                            {t('inviteEmployee')}
                         </button>
                     </div>
                 )}
@@ -475,7 +477,7 @@ export const Onboarding: React.FC = () => {
                         }`}
                     >
                         <ListChecks size={16} />
-                        Checklist
+                        {t('checklist')}
                     </button>
                     <button
                         onClick={() => setActiveTab('flow')}
@@ -486,7 +488,7 @@ export const Onboarding: React.FC = () => {
                         }`}
                     >
                         <GitBranch size={16} />
-                        Onboarding Flow
+                        {t('onboardingFlow')}
                     </button>
                 </div>
 

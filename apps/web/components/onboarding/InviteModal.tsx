@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import {
     User,
     Mail,
@@ -23,6 +24,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
     onSelectEmployee,
     onSubmit,
 }) => {
+    const { t } = useTranslation(['onboarding', 'common']);
     // Internalized autocomplete state
     const [emailSuggestions, setEmailSuggestions] = useState<Employee[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -105,14 +107,14 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Invite New Employee"
+            title={t('inviteModal.title')}
             maxWidth="lg"
         >
             <form onSubmit={onSubmit} noValidate className="p-6 space-y-4">
                 {/* Full Name */}
                 <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                        Full Name <span className="text-red-500">*</span>
+                        {t('inviteModal.fullName')} <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
@@ -123,7 +125,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                                 onSetInviteForm({ ...inviteForm, name: e.target.value });
                                 if (inviteErrors.name) onSetInviteErrors((() => { const { name, ...rest } = inviteErrors; return rest; })());
                             }}
-                            placeholder="e.g. Sarah Connor"
+                            placeholder={t('inviteModal.namePlaceholder')}
                             className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 text-text-light dark:text-text-dark ${
                                 inviteErrors.name
                                     ? 'border-red-400 dark:border-red-500 focus:ring-red-300'
@@ -141,7 +143,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                 {/* Email Address */}
                 <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                        Email Address <span className="text-red-500">*</span>
+                        {t('inviteModal.email')} <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light z-10" size={16} />
@@ -166,7 +168,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                                     setShowSuggestions(true);
                                 }
                             }}
-                            placeholder="e.g. sarah@example.com"
+                            placeholder={t('inviteModal.emailPlaceholder')}
                             autoComplete="off"
                             className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 text-text-light dark:text-text-dark ${
                                 inviteErrors.email
@@ -229,7 +231,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                         </p>
                     ) : (
                         <p className="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                            Start typing to search for existing employees
+                            {t('inviteModal.searchExisting')}
                         </p>
                     )}
                 </div>
@@ -238,7 +240,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                            Role <span className="text-red-500">*</span>
+                            {t('inviteModal.role')} <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
                             <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
@@ -249,7 +251,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                                     onSetInviteForm({ ...inviteForm, role: e.target.value });
                                     if (inviteErrors.role) onSetInviteErrors((() => { const { role, ...rest } = inviteErrors; return rest; })());
                                 }}
-                                placeholder="e.g. Developer"
+                                placeholder={t('inviteModal.rolePlaceholder')}
                                 className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 text-text-light dark:text-text-dark ${
                                     inviteErrors.role
                                         ? 'border-red-400 dark:border-red-500 focus:ring-red-300'
@@ -266,7 +268,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
 
                     <div>
                         <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                            Department <span className="text-red-500">*</span>
+                            {t('inviteModal.department')} <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
                             <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />
@@ -277,7 +279,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                                     onSetInviteForm({ ...inviteForm, department: e.target.value });
                                     if (inviteErrors.department) onSetInviteErrors((() => { const { department, ...rest } = inviteErrors; return rest; })());
                                 }}
-                                placeholder="e.g. Engineering"
+                                placeholder={t('inviteModal.departmentPlaceholder')}
                                 className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 text-text-light dark:text-text-dark ${
                                     inviteErrors.department
                                         ? 'border-red-400 dark:border-red-500 focus:ring-red-300'
@@ -296,13 +298,13 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                 {/* Start Date */}
                 <div>
                     <DatePicker
-                        label="Start Date"
+                        label={t('inviteModal.startDate')}
                         value={inviteForm.startDate}
                         onChange={(date) => {
                             onSetInviteForm({ ...inviteForm, startDate: date });
                             if (inviteErrors.startDate) onSetInviteErrors((() => { const { startDate, ...rest } = inviteErrors; return rest; })());
                         }}
-                        placeholder="Select start date"
+                        placeholder={t('inviteModal.selectStartDate')}
                     />
                     {inviteErrors.startDate && (
                         <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
@@ -317,13 +319,13 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                         onClick={onClose}
                         className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
                     >
-                        Cancel
+                        {t('inviteModal.cancel')}
                     </button>
                     <button
                         type="submit"
                         className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
                     >
-                        <Mail size={16} /> Send Invitation
+                        <Mail size={16} /> {t('inviteModal.sendInvitation')}
                     </button>
                 </div>
             </form>

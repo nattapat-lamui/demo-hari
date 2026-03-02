@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 import { Dropdown, DropdownOption } from './Dropdown';
 import { DatePicker } from './DatePicker';
@@ -21,10 +22,7 @@ interface UpsertAttendanceModalProps {
   isPending?: boolean;
 }
 
-const STATUS_OPTIONS: DropdownOption[] = [
-  { value: 'Absent', label: 'Absent' },
-  { value: 'On-leave', label: 'On-leave' },
-];
+/* STATUS_OPTIONS moved inside component for i18n */
 
 export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
   isOpen,
@@ -34,6 +32,13 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
   editingRecord,
   isPending = false,
 }) => {
+  const { t } = useTranslation(['attendance', 'common']);
+
+  const STATUS_OPTIONS: DropdownOption[] = [
+    { value: 'Absent', label: t('common:status.absent') },
+    { value: 'On-leave', label: t('common:status.onLeave') },
+  ];
+
   const [employeeId, setEmployeeId] = useState('');
   const [date, setDate] = useState('');
   const [clockIn, setClockIn] = useState('');
@@ -87,12 +92,12 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
   }));
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Edit Attendance Record' : 'Add Attendance Record'} maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? t('attendance:upsertModal.editTitle') : t('attendance:upsertModal.addTitle')} maxWidth="lg">
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
         {/* Employee */}
         <div>
           <label className="text-sm font-medium text-text-light dark:text-text-dark mb-1 block">
-            Employee
+            {t('attendance:upsertModal.employee')}
           </label>
           {isEditing ? (
             <div className="px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark">
@@ -103,7 +108,7 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
               options={employeeOptions}
               value={employeeId}
               onChange={setEmployeeId}
-              placeholder="Select employee"
+              placeholder={t('attendance:upsertModal.selectEmployee')}
               width="w-full"
             />
           )}
@@ -111,14 +116,14 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
 
         {/* Date */}
         <div>
-          <DatePicker value={date} onChange={setDate} label="Date" placeholder="Select date" />
+          <DatePicker value={date} onChange={setDate} label={t('attendance:upsertModal.date')} placeholder={t('attendance:upsertModal.selectDate')} />
         </div>
 
         {/* Clock In / Clock Out */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium text-text-light dark:text-text-dark mb-1 block">
-              Clock In
+              {t('attendance:upsertModal.clockIn')}
             </label>
             <input
               type="time"
@@ -129,7 +134,7 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
           </div>
           <div>
             <label className="text-sm font-medium text-text-light dark:text-text-dark mb-1 block">
-              Clock Out
+              {t('attendance:upsertModal.clockOut')}
             </label>
             <input
               type="time"
@@ -144,7 +149,7 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
         {!clockIn && (
           <div>
             <label className="text-sm font-medium text-text-light dark:text-text-dark mb-1 block">
-              Status
+              {t('attendance:upsertModal.status')}
             </label>
             <Dropdown
               options={STATUS_OPTIONS}
@@ -158,13 +163,13 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
         {/* Notes */}
         <div>
           <label className="text-sm font-medium text-text-light dark:text-text-dark mb-1 block">
-            Notes <span className="font-normal text-text-muted-light dark:text-text-muted-dark">(optional)</span>
+            {t('attendance:upsertModal.notes')} <span className="font-normal text-text-muted-light dark:text-text-muted-dark">{t('attendance:upsertModal.optional')}</span>
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="Optional notes..."
+            placeholder={t('attendance:upsertModal.optionalNotes')}
             className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-muted-light/50 dark:placeholder:text-text-muted-dark/50 focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
           />
         </div>
@@ -176,14 +181,14 @@ export const UpsertAttendanceModal: React.FC<UpsertAttendanceModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-text-light dark:text-text-dark border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            Cancel
+            {t('attendance:upsertModal.cancel')}
           </button>
           <button
             type="submit"
             disabled={!employeeId || !date || isPending}
             className="px-5 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isPending ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Record'}
+            {isPending ? t('attendance:upsertModal.saving') : isEditing ? t('attendance:upsertModal.saveChanges') : t('attendance:upsertModal.addRecord')}
           </button>
         </div>
       </form>

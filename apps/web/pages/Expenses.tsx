@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { DollarSign, Plus, FileText, Clock } from 'lucide-react';
 
 export const Expenses: React.FC = () => {
+  useTranslation(['common']);
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}

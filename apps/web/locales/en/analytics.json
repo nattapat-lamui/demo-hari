@@ -1,0 +1,14 @@
+{
+  "title": "Deep Analytics",
+  "headcountGrowth": {
+    "title": "Headcount Growth",
+    "subtitle": "Monthly employee count"
+  },
+  "departmentDistribution": {
+    "title": "Department Distribution",
+    "subtitle": "Employee count by department"
+  },
+  "performanceDistribution": {
+    "title": "Performance Review Distribution"
+  }
+}

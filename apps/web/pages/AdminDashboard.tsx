@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Users,
   TrendingUp,
@@ -50,6 +51,7 @@ import {
 } from '../hooks/queries';
 
 export const AdminDashboard: React.FC = () => {
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user } = useAuth();
   const { requests, updateRequestStatus } = useLeave();
   const navigate = useNavigate();
@@ -107,7 +109,7 @@ export const AdminDashboard: React.FC = () => {
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNames = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].map(m => t('common:monthsShort.' + m));
     const generatedData: ChartDataPoint[] = [];
 
     for (let i = 5; i >= 0; i--) {
@@ -130,7 +132,7 @@ export const AdminDashboard: React.FC = () => {
     }
 
     return generatedData;
-  }, [allEmployees, headcountStats]);
+  }, [allEmployees, headcountStats, t]);
 
   // ----- COMPUTED ONBOARDING SUMMARY -----
   const onboardingSummary = useMemo<OnboardingProgressSummary[]>(() => {
@@ -228,11 +230,11 @@ export const AdminDashboard: React.FC = () => {
     setIsSavingNote(true);
     try {
       await addNoteMutation.mutateAsync({ content: quickNote.trim() });
-      showToast("Note saved successfully!", "success");
+      showToast(t('dashboard:employee.noteSaved'), "success");
       setQuickNote('');
     } catch (error) {
       console.error('Error saving note:', error);
-      showToast("Failed to save note", "error");
+      showToast(t('dashboard:employee.noteSaveFailed'), "error");
     } finally {
       setIsSavingNote(false);
     }
@@ -242,10 +244,10 @@ export const AdminDashboard: React.FC = () => {
     setDeletingNoteId(noteId);
     try {
       await deleteNoteMutation.mutateAsync(noteId);
-      showToast("Note deleted", "success");
+      showToast(t('dashboard:employee.noteDeleted'), "success");
     } catch (error) {
       console.error('Error deleting note:', error);
-      showToast("Failed to delete note", "error");
+      showToast(t('dashboard:employee.noteDeleteFailed'), "error");
     } finally {
       setDeletingNoteId(null);
     }
@@ -256,7 +258,7 @@ export const AdminDashboard: React.FC = () => {
       await togglePinMutation.mutateAsync(noteId);
     } catch (error) {
       console.error('Error toggling pin:', error);
-      showToast("Failed to pin note", "error");
+      showToast(t('dashboard:employee.notePinFailed'), "error");
     }
   };
 
@@ -322,8 +324,8 @@ export const AdminDashboard: React.FC = () => {
         {/* Top Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">HR Overview</h1>
-          <p className="text-sm sm:text-base text-text-muted-light dark:text-text-muted-dark mt-1">Welcome back, {user?.name?.split(' ')[0]}. Here's what's happening today.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">{t('dashboard:admin.title')}</h1>
+          <p className="text-sm sm:text-base text-text-muted-light dark:text-text-muted-dark mt-1">{t('dashboard:admin.welcome', { name: user?.name?.split(' ')[0] })}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -331,14 +333,14 @@ export const AdminDashboard: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2.5 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark font-medium rounded-lg text-sm border border-border-light dark:border-border-dark shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <Rocket size={18} className="text-accent-teal" />
-            Initiate Onboarding
+            {t('dashboard:admin.initiateOnboarding')}
           </button>
           <button
             onClick={() => setIsAddEmployeeModalOpen(true)}
             className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary-hover transition-colors"
           >
             <UserPlus size={18} />
-            Add Employee
+            {t('dashboard:admin.addEmployee')}
           </button>
         </div>
       </div>
@@ -347,7 +349,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div onClick={() => navigate('/admin-attendance')} className="cursor-pointer">
           <StatCard
-            title="Active Now"
+            title={t('dashboard:admin.activeNow')}
             value={attendanceSnapshot?.activeNow ?? 0}
             icon={<Briefcase size={22} />}
             color="primary"
@@ -355,7 +357,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
         <div onClick={() => navigate('/admin-attendance')} className="cursor-pointer">
           <StatCard
-            title="On Leave Today"
+            title={t('dashboard:admin.onLeaveToday')}
             value={attendanceSnapshot?.onLeave ?? 0}
             icon={<UserMinus size={22} />}
             color="orange"
@@ -363,7 +365,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
         <div onClick={() => navigate('/onboarding')} className="cursor-pointer">
           <StatCard
-            title="New Hires (Month)"
+            title={t('dashboard:admin.newHiresMonth')}
             value={newHiresCount}
             trend={newHiresTrend}
             icon={<UserPlus size={22} />}
@@ -372,7 +374,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
         <div onClick={() => navigate('/analytics')} className="cursor-pointer">
           <StatCard
-            title="Turnover Rate"
+            title={t('dashboard:admin.turnoverRate')}
             value={`${turnoverRate.toFixed(1)}%`}
             trend={turnoverTrend}
             icon={<TrendingUp size={22} />}
@@ -399,7 +401,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="p-2 bg-primary/10 rounded-lg text-primary">
                 <Users size={18} className="md:w-5 md:h-5" />
               </div>
-              <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Headcount Trends</h2>
+              <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">{t('dashboard:admin.headcountTrends')}</h2>
             </div>
             <button className="text-text-muted-light hover:text-primary hidden md:block"><MoreHorizontal size={20} /></button>
           </div>
@@ -425,8 +427,8 @@ export const AdminDashboard: React.FC = () => {
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-text-muted-light dark:text-text-muted-dark">
                 <Users size={40} className="mb-3 opacity-20" />
-                <p className="text-sm font-medium">No headcount data available</p>
-                <p className="text-xs mt-1 opacity-70">Data will appear once employee records are added</p>
+                <p className="text-sm font-medium">{t('dashboard:admin.noHeadcountData')}</p>
+                <p className="text-xs mt-1 opacity-70">{t('dashboard:admin.headcountHint')}</p>
               </div>
             )}
           </div>
@@ -436,9 +438,9 @@ export const AdminDashboard: React.FC = () => {
         <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
             <div className="flex items-center gap-2 md:gap-3">
-              <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Events</h2>
+              <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">{t('dashboard:admin.events')}</h2>
             </div>
-            <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">View All</button>
+            <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">{t('common:buttons.viewAll')}</button>
           </div>
           <div className="p-3 md:p-4 flex-1 flex flex-col">
             {upcomingEvents.length > 0 ? (
@@ -466,7 +468,7 @@ export const AdminDashboard: React.FC = () => {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-text-muted-light dark:text-text-muted-dark">
                 <CalendarIcon size={32} className="mb-2 opacity-20" />
-                <p className="text-sm">No upcoming events</p>
+                <p className="text-sm">{t('dashboard:admin.noUpcomingEvents')}</p>
               </div>
             )}
           </div>
@@ -476,9 +478,9 @@ export const AdminDashboard: React.FC = () => {
         <div className="md:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm overflow-y-auto">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
             <div className="flex items-center gap-2 md:gap-3">
-              <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Onboarding</h2>
+              <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">{t('dashboard:admin.onboarding')}</h2>
             </div>
-            <button onClick={() => navigate('/onboarding')} className="text-xs text-primary font-medium hover:underline">View All</button>
+            <button onClick={() => navigate('/onboarding')} className="text-xs text-primary font-medium hover:underline">{t('common:buttons.viewAll')}</button>
           </div>
           <div className="p-3 md:p-4 max-h-[400px] overflow-y-auto">
             <ul className="space-y-5">
@@ -499,7 +501,7 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </li>
               ))}
-              {onboardingSummary.length === 0 && <li className="text-text-muted-light text-sm italic">No active onboarding.</li>}
+              {onboardingSummary.length === 0 && <li className="text-text-muted-light text-sm italic">{t('dashboard:admin.noActiveOnboarding')}</li>}
             </ul>
           </div>
         </div>
@@ -508,9 +510,9 @@ export const AdminDashboard: React.FC = () => {
         <div className="lg:col-span-2 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Pending Leave Requests</h2>
+              <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">{t('dashboard:admin.pendingLeaveRequests')}</h2>
             </div>
-            <span className="text-xs bg-accent-orange/10 text-accent-orange px-2 py-1 rounded-full">{pendingRequests.length} pending</span>
+            <span className="text-xs bg-accent-orange/10 text-accent-orange px-2 py-1 rounded-full">{t('dashboard:admin.pending', { count: pendingRequests.length })}</span>
           </div>
           <div className="p-4 flex-grow">
             {pendingRequests.length > 0 ? (
@@ -535,13 +537,13 @@ export const AdminDashboard: React.FC = () => {
                                 onClick={(e) => handleApproveLeave(req.id, e)}
                                 className="px-3 py-1 text-xs font-medium text-accent-green bg-accent-green/10 rounded-full hover:bg-accent-green/20 transition-colors"
                               >
-                                Approve
+                                {t('common:buttons.approve')}
                               </button>
                               <button
                                 onClick={(e) => handleDeclineLeave(req.id, e)}
                                 className="px-3 py-1 text-xs font-medium text-accent-red bg-accent-red/10 rounded-full hover:bg-accent-red/20 transition-colors"
                               >
-                                Decline
+                                {t('common:buttons.decline')}
                               </button>
                             </div>
                           </td>
@@ -566,13 +568,13 @@ export const AdminDashboard: React.FC = () => {
                           onClick={(e) => handleApproveLeave(req.id, e)}
                           className="flex-1 px-3 py-1.5 text-xs font-medium text-accent-green bg-accent-green/10 rounded-lg hover:bg-accent-green/20 transition-colors text-center"
                         >
-                          Approve
+                          {t('common:buttons.approve')}
                         </button>
                         <button
                           onClick={(e) => handleDeclineLeave(req.id, e)}
                           className="flex-1 px-3 py-1.5 text-xs font-medium text-accent-red bg-accent-red/10 rounded-lg hover:bg-accent-red/20 transition-colors text-center"
                         >
-                          Decline
+                          {t('common:buttons.decline')}
                         </button>
                       </div>
                     </div>
@@ -582,7 +584,7 @@ export const AdminDashboard: React.FC = () => {
             ) : (
               <div className="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
                 <CheckCircle2 size={32} className="mx-auto mb-2 opacity-30" />
-                <p>All caught up! No pending requests.</p>
+                <p>{t('dashboard:admin.allCaughtUp')}</p>
               </div>
             )}
           </div>
@@ -594,7 +596,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
             <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
               <div className="flex items-center gap-3">
-                <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Recent Activity</h2>
+                <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">{t('dashboard:admin.recentActivity')}</h2>
               </div>
             </div>
             <div className="p-4 space-y-4 max-h-[280px] overflow-y-auto flex-grow">
@@ -618,7 +620,7 @@ export const AdminDashboard: React.FC = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-text-muted-light dark:text-text-muted-dark">
                   <Activity size={32} className="mb-2 opacity-20" />
-                  <p className="text-sm">No recent activity</p>
+                  <p className="text-sm">{t('dashboard:admin.noRecentActivity')}</p>
                 </div>
               )}
             </div>
@@ -631,10 +633,10 @@ export const AdminDashboard: React.FC = () => {
                 <div className="p-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-500 rounded-lg">
                   <StickyNote size={16} />
                 </div>
-                <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Notes</h2>
+                <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">{t('dashboard:admin.notes')}</h2>
               </div>
               {notesData.length > 0 && (
-                <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark">{notesData.length} saved</span>
+                <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark">{t('dashboard:admin.saved', { count: notesData.length })}</span>
               )}
             </div>
             <div className="p-4 flex-grow flex flex-col">
@@ -645,24 +647,24 @@ export const AdminDashboard: React.FC = () => {
                   name="adminNote"
                   value={quickNote}
                   onChange={(e) => setQuickNote(e.target.value)}
-                  placeholder="Write a quick note..."
+                  placeholder={t('dashboard:admin.writeNote')}
                   className="w-full min-h-[70px] px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm text-text-light dark:text-text-dark placeholder:text-text-muted-light transition-colors"
                 />
                 <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark">{quickNote.length} chars</span>
+                  <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark">{t('dashboard:admin.chars', { count: quickNote.length })}</span>
                   <button
                     onClick={handleSaveNote}
                     disabled={isSavingNote || !quickNote.trim()}
                     className={`flex items-center gap-1.5 text-xs bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary-hover transition-colors font-medium ${isSavingNote || !quickNote.trim() ? 'opacity-40 cursor-not-allowed' : 'shadow-sm'}`}
                   >
                     <Send size={12} />
-                    {isSavingNote ? 'Saving...' : 'Save'}
+                    {isSavingNote ? t('common:buttons.saving') : t('common:buttons.save')}
                   </button>
                 </div>
               </div>
               {notesData.length > 0 && (
                 <div className="mt-3 pt-2 border-t border-border-light dark:border-border-dark">
-                  <p className="text-[10px] font-medium text-text-muted-light dark:text-text-muted-dark mb-1.5 uppercase tracking-wide">Recent</p>
+                  <p className="text-[10px] font-medium text-text-muted-light dark:text-text-muted-dark mb-1.5 uppercase tracking-wide">{t('dashboard:admin.recent')}</p>
                   <div className="space-y-1 max-h-20 overflow-y-auto">
                     {notesData.slice(0, 3).map(note => (
                       <div
@@ -688,7 +690,7 @@ export const AdminDashboard: React.FC = () => {
                                 ? 'text-amber-500 opacity-100'
                                 : 'text-text-muted-light hover:text-amber-500 opacity-0 group-hover:opacity-100'
                             }`}
-                            title={note.pinned ? 'Unpin note' : 'Pin note'}
+                            title={note.pinned ? t('dashboard:admin.unpinNote') : t('dashboard:admin.pinNote')}
                           >
                             <Pin size={10} className={note.pinned ? 'fill-amber-500' : ''} />
                           </button>
@@ -696,7 +698,7 @@ export const AdminDashboard: React.FC = () => {
                             onClick={(e) => { e.stopPropagation(); handleDeleteNote(note.id); }}
                             disabled={deletingNoteId === note.id}
                             className="flex-shrink-0 opacity-0 group-hover:opacity-100 p-0.5 text-text-muted-light hover:text-red-500 transition-all"
-                            title="Delete note"
+                            title={t('dashboard:admin.deleteNote')}
                           >
                             <Trash2 size={10} />
                           </button>

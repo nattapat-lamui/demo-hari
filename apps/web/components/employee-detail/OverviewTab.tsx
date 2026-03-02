@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Edit2, Save, Plus, X, Shield, Clock, Calendar, Award } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { OverviewTabProps } from './EmployeeDetailTypes';
 
 function formatServiceDuration(joinDate: string): string {
@@ -31,6 +32,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     onSaveSkills,
     onCancelSkills,
 }) => {
+    const { t } = useTranslation(['employees', 'common']);
     const { canEditBasicInfo } = permissions;
 
     const formattedJoinDate = useMemo(() => {
@@ -47,22 +49,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return (
         <div className="space-y-8 animate-fade-in">
             <div>
-                <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">About</h3>
+                <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('employees:overview.about')}</h3>
                 <p className="text-sm text-text-muted-light dark:text-text-muted-dark leading-relaxed">
-                    {employee.bio || "No bio available."}
+                    {employee.bio || t('employees:overview.noBio')}
                 </p>
             </div>
 
             <div>
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Skills</h3>
+                    <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{t('employees:overview.skills')}</h3>
                     {canEditBasicInfo && (
                         !isEditingSkills ? (
                             <button
                                 onClick={() => onSetIsEditingSkills(true)}
                                 className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
                             >
-                                <Edit2 size={12} /> Edit Skills
+                                <Edit2 size={12} /> {t('employees:overview.editSkills')}
                             </button>
                         ) : (
                             <div className="flex gap-2">
@@ -70,13 +72,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     onClick={onCancelSkills}
                                     className="text-xs font-medium text-text-muted-light hover:text-text-light dark:hover:text-text-dark px-2 py-1"
                                 >
-                                    Cancel
+                                    {t('employees:overview.cancel')}
                                 </button>
                                 <button
                                     onClick={onSaveSkills}
                                     className="flex items-center gap-1 text-xs font-medium bg-primary text-white px-2.5 py-1 rounded hover:bg-primary/90"
                                 >
-                                    <Save size={12} /> Save
+                                    <Save size={12} /> {t('employees:overview.save')}
                                 </button>
                             </div>
                         )
@@ -91,7 +93,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 value={newSkillInput}
                                 onChange={(e) => onSetNewSkillInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && onAddSkill()}
-                                placeholder="Add a new skill..."
+                                placeholder={t('employees:overview.addNewSkill')}
                                 className="flex-1 px-3 py-1.5 text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded focus:outline-none focus:ring-1 focus:ring-primary text-text-light dark:text-text-dark"
                             />
                             <button
@@ -125,7 +127,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 </span>
                             ))
                         ) : (
-                            <span className="text-sm text-text-muted-light dark:text-text-muted-dark">No skills listed.</span>
+                            <span className="text-sm text-text-muted-light dark:text-text-muted-dark">{t('employees:overview.noSkills')}</span>
                         )}
                     </div>
                 )}
@@ -135,28 +137,28 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <div className="p-4 bg-background-light dark:bg-background-dark/50 rounded-lg border border-border-light dark:border-border-dark">
                     <div className="flex items-center gap-3 mb-2">
                         <Shield className="text-accent-green" size={20} />
-                        <p className="font-semibold text-text-light dark:text-text-dark">Employment Status</p>
+                        <p className="font-semibold text-text-light dark:text-text-dark">{t('employees:overview.employmentStatus')}</p>
                     </div>
-                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">Full-Time • Permanent</p>
+                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">{t('employees:overview.fullTimePermanent')}</p>
                 </div>
                 <div className="p-4 bg-background-light dark:bg-background-dark/50 rounded-lg border border-border-light dark:border-border-dark">
                     <div className="flex items-center gap-3 mb-2">
                         <Clock className="text-accent-orange" size={20} />
-                        <p className="font-semibold text-text-light dark:text-text-dark">Work Schedule</p>
+                        <p className="font-semibold text-text-light dark:text-text-dark">{t('employees:overview.workSchedule')}</p>
                     </div>
-                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">Mon-Fri • 09:00 - 18:00</p>
+                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">{t('employees:overview.workScheduleValue')}</p>
                 </div>
                 <div className="p-4 bg-background-light dark:bg-background-dark/50 rounded-lg border border-border-light dark:border-border-dark">
                     <div className="flex items-center gap-3 mb-2">
                         <Calendar className="text-primary" size={20} />
-                        <p className="font-semibold text-text-light dark:text-text-dark">Start Date</p>
+                        <p className="font-semibold text-text-light dark:text-text-dark">{t('employees:overview.startDate')}</p>
                     </div>
                     <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">{formattedJoinDate}</p>
                 </div>
                 <div className="p-4 bg-background-light dark:bg-background-dark/50 rounded-lg border border-border-light dark:border-border-dark">
                     <div className="flex items-center gap-3 mb-2">
                         <Award className="text-accent-teal" size={20} />
-                        <p className="font-semibold text-text-light dark:text-text-dark">Service Years</p>
+                        <p className="font-semibold text-text-light dark:text-text-dark">{t('employees:overview.serviceYears')}</p>
                     </div>
                     <p className="text-sm text-text-muted-light dark:text-text-muted-dark pl-8">{serviceDuration}</p>
                 </div>

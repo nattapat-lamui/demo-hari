@@ -1,0 +1,14 @@
+{
+  "title": "วิเคราะห์เชิงลึก",
+  "headcountGrowth": {
+    "title": "การเติบโตจำนวนพนักงาน",
+    "subtitle": "จำนวนพนักงานรายเดือน"
+  },
+  "departmentDistribution": {
+    "title": "การกระจายตามแผนก",
+    "subtitle": "จำนวนพนักงานแยกตามแผนก"
+  },
+  "performanceDistribution": {
+    "title": "การกระจายผลการประเมิน"
+  }
+}

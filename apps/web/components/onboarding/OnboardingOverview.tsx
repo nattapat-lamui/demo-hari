@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FileText, Users } from 'lucide-react';
 import { Avatar } from '../Avatar';
 import { OnboardingOverviewProps } from './OnboardingTypes';
@@ -9,6 +10,7 @@ export const OnboardingOverview: React.FC<OnboardingOverviewProps> = ({
     documents,
     onSelectEmployee,
 }) => {
+    const { t } = useTranslation(['onboarding', 'common']);
     // Build per-employee stats from tasks & documents
     const employeeStats = employees.map(emp => {
         const empTasks = tasks.filter(t => t.employeeId === emp.id);
@@ -43,10 +45,10 @@ export const OnboardingOverview: React.FC<OnboardingOverviewProps> = ({
             <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center">
                 <Users size={48} className="mx-auto text-text-muted-light dark:text-text-muted-dark mb-4" />
                 <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
-                    No Onboarding in Progress
+                    {t('overview.noOnboarding')}
                 </h3>
                 <p className="text-text-muted-light dark:text-text-muted-dark">
-                    Use the "Invite Employee" button above to start onboarding a new employee.
+                    {t('overview.noOnboardingHint')}
                 </p>
             </div>
         );
@@ -91,7 +93,7 @@ export const OnboardingOverview: React.FC<OnboardingOverviewProps> = ({
                     {/* Progress bar */}
                     <div className="mb-3">
                         <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-text-muted-light dark:text-text-muted-dark">Progress</span>
+                            <span className="text-text-muted-light dark:text-text-muted-dark">{t('overview.progress')}</span>
                             <span className="font-medium text-text-light dark:text-text-dark">{progress}%</span>
                         </div>
                         <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
@@ -108,15 +110,15 @@ export const OnboardingOverview: React.FC<OnboardingOverviewProps> = ({
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                         <div className="flex items-center gap-1.5" title="Tasks assigned to the employee">
                             <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
-                            <span>Employee {selfCompleted}/{selfTotal}</span>
+                            <span>{t('overview.employee')} {selfCompleted}/{selfTotal}</span>
                         </div>
                         <div className="flex items-center gap-1.5" title="Tasks assigned to IT/HR">
                             <div className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
-                            <span>IT/HR {adminCompleted}/{adminTotal}</span>
+                            <span>{t('overview.itHr')} {adminCompleted}/{adminTotal}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <FileText size={12} className={uploadedDocs === totalDocs ? 'text-green-500' : ''} />
-                            <span>{uploadedDocs}/{totalDocs} docs</span>
+                            <span>{uploadedDocs}/{totalDocs} {t('overview.docs')}</span>
                         </div>
                     </div>
                 </button>

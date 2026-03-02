@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, Mail, MapPin, HeartPulse, Home } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { EmployeeSidebarProps } from './EmployeeDetailTypes';
 import { EmployeeAddress } from '../../types';
 
@@ -21,6 +22,7 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     manager,
     directReports,
 }) => {
+    const { t } = useTranslation(['employees', 'common']);
     const navigate = useNavigate();
     const { canViewSensitiveTabs } = permissions;
 
@@ -28,24 +30,24 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
         <div className="space-y-6">
             {/* Contact Info */}
             <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">Contact Information</h2>
+                <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">{t('employees:sidebar.contactInfo')}</h2>
                 <div className="space-y-4 text-sm">
                     <div>
-                        <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Phone</p>
+                        <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">{t('employees:sidebar.phone')}</p>
                         <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-medium">
                             <Phone size={16} />
                             {employee.phone || '-'}
                         </div>
                     </div>
                     <div>
-                        <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Work Email</p>
+                        <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">{t('employees:sidebar.workEmail')}</p>
                         <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-medium">
                             <Mail size={16} />
                             {employee.email}
                         </div>
                     </div>
                     <div>
-                        <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Office Address</p>
+                        <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">{t('employees:sidebar.officeAddress')}</p>
                         <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-medium">
                             <MapPin size={16} />
                             {employee.location || '-'}
@@ -53,7 +55,7 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                     </div>
                     {canViewSensitiveTabs && employee.address && (
                         <div>
-                            <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Current Address</p>
+                            <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">{t('employees:sidebar.currentAddress')}</p>
                             <div className="flex items-start gap-2 text-text-light dark:text-text-dark font-medium">
                                 <Home size={16} className="mt-0.5 shrink-0" />
                                 <span>{formatAddress(employee.address)}</span>
@@ -62,7 +64,7 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                     )}
                     {employee.emergencyContact && canViewSensitiveTabs && (
                         <div>
-                            <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">Emergency Contact</p>
+                            <p className="text-text-muted-light dark:text-text-muted-dark text-xs mb-1">{t('employees:sidebar.emergencyContact')}</p>
                             <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-medium">
                                 <HeartPulse size={16} className="text-accent-red" />
                                 {employee.emergencyContact}
@@ -75,11 +77,11 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             {/* Team Hierarchy */}
             {(manager || directReports.length > 0) && (
                 <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
-                    <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">Team</h2>
+                    <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">{t('employees:sidebar.team')}</h2>
                     <div className="space-y-4">
                         {manager && (
                             <div>
-                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2 uppercase font-semibold">Reports To</p>
+                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2 uppercase font-semibold">{t('employees:sidebar.reportsTo')}</p>
                                 <div
                                     className="flex items-center gap-3 p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors cursor-pointer"
                                     onClick={() => navigate(`/employees/${manager.id}`)}
@@ -99,7 +101,7 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
                         {directReports.length > 0 && (
                             <div>
-                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2 uppercase font-semibold">Direct Reports</p>
+                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2 uppercase font-semibold">{t('employees:sidebar.directReports')}</p>
                                 <div className="flex -space-x-2 overflow-hidden py-1">
                                     {directReports.slice(0, 3).map((report) => (
                                         <img

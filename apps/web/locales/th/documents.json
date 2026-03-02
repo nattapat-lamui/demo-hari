@@ -1,0 +1,66 @@
+{
+  "title": "เอกสาร",
+  "searchPlaceholder": "ค้นหาไฟล์...",
+  "uploadNew": "อัปโหลดใหม่",
+  "storage": "พื้นที่จัดเก็บ",
+  "usedOfTotal": "ใช้แล้ว {{used}}",
+  "totalStorage": "ทั้งหมด {{total}}",
+  "categories": {
+    "allFiles": "ไฟล์ทั้งหมด",
+    "contracts": "สัญญา",
+    "policies": "นโยบาย",
+    "finance": "การเงิน",
+    "hr": "HR",
+    "recent": "ล่าสุด",
+    "trash": "ถังขยะ"
+  },
+  "fileTypes": {
+    "all": "ทั้งหมด",
+    "pdf": "PDF",
+    "docx": "DOCX",
+    "xlsx": "XLSX",
+    "jpg": "JPG",
+    "png": "PNG"
+  },
+  "actions": {
+    "download": "ดาวน์โหลด",
+    "share": "แชร์",
+    "restore": "กู้คืน",
+    "deletePermanently": "ลบถาวร",
+    "moveToTrash": "ย้ายไปถังขยะ"
+  },
+  "preview": {
+    "notAvailable": "ไม่สามารถแสดงตัวอย่างได้",
+    "notAvailableDesc": "ไม่สามารถแสดงตัวอย่างไฟล์ประเภทนี้ได้โดยตรง กรุณาดาวน์โหลดไฟล์เพื่อดู",
+    "downloadFile": "ดาวน์โหลดไฟล์"
+  },
+  "upload": {
+    "title": "อัปโหลดเอกสาร",
+    "dragDrop": "คลิกเพื่อเลือกไฟล์",
+    "hint": "PDF, DOCX, XLSX, JPG, PNG (สูงสุด 50MB)",
+    "category": "หมวดหมู่",
+    "cancel": "ยกเลิก",
+    "upload": "อัปโหลด",
+    "success": "อัปโหลด {{filename}} สำเร็จ!",
+    "failed": "อัปโหลดไม่สำเร็จ กรุณาลองอีกครั้ง"
+  },
+  "deleteDialog": {
+    "title": "ลบเอกสาร?",
+    "message": "การดำเนินการนี้ไม่สามารถยกเลิกได้ เอกสารจะถูกลบถาวร",
+    "cancel": "ยกเลิก",
+    "delete": "ลบ"
+  },
+  "toast": {
+    "downloadStarted": "เริ่มดาวน์โหลดแล้ว!",
+    "downloadFailed": "ดาวน์โหลดไม่สำเร็จ กรุณาลองอีกครั้ง",
+    "linkCopied": "คัดลอกลิงก์แล้ว!",
+    "linkCopyFailed": "ไม่สามารถคัดลอกลิงก์อัตโนมัติได้",
+    "movedToTrash": "ย้ายเอกสารไปถังขยะแล้ว",
+    "deleteFailed": "ไม่สามารถลบเอกสารได้",
+    "restored": "กู้คืนเอกสารสำเร็จ",
+    "restoreFailed": "ไม่สามารถกู้คืนเอกสารได้",
+    "permanentlyDeleted": "ลบเอกสารถาวรแล้ว",
+    "permanentDeleteFailed": "ไม่สามารถลบเอกสารถาวรได้"
+  },
+  "employeeAccess": "คุณสามารถเข้าถึงเอกสารส่วนตัวและนโยบายบริษัทได้"
+}

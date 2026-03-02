@@ -1,0 +1,66 @@
+{
+  "title": "Documents",
+  "searchPlaceholder": "Search files...",
+  "uploadNew": "Upload New",
+  "storage": "Storage",
+  "usedOfTotal": "{{used}} used",
+  "totalStorage": "{{total}} total",
+  "categories": {
+    "allFiles": "All Files",
+    "contracts": "Contracts",
+    "policies": "Policies",
+    "finance": "Finance",
+    "hr": "HR",
+    "recent": "Recent",
+    "trash": "Trash"
+  },
+  "fileTypes": {
+    "all": "All",
+    "pdf": "PDF",
+    "docx": "DOCX",
+    "xlsx": "XLSX",
+    "jpg": "JPG",
+    "png": "PNG"
+  },
+  "actions": {
+    "download": "Download",
+    "share": "Share",
+    "restore": "Restore",
+    "deletePermanently": "Delete Permanently",
+    "moveToTrash": "Move to Trash"
+  },
+  "preview": {
+    "notAvailable": "Preview not available",
+    "notAvailableDesc": "This file type cannot be previewed directly in the browser. Please download the file to view its contents.",
+    "downloadFile": "Download File"
+  },
+  "upload": {
+    "title": "Upload Document",
+    "dragDrop": "Click to select a file",
+    "hint": "PDF, DOCX, XLSX, JPG, PNG (max 50MB)",
+    "category": "Category",
+    "cancel": "Cancel",
+    "upload": "Upload",
+    "success": "{{filename}} uploaded successfully!",
+    "failed": "Upload failed. Please try again."
+  },
+  "deleteDialog": {
+    "title": "Delete Document?",
+    "message": "This action cannot be undone. The document will be permanently deleted.",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "toast": {
+    "downloadStarted": "Download started!",
+    "downloadFailed": "Download failed. Please try again.",
+    "linkCopied": "Link copied to clipboard!",
+    "linkCopyFailed": "Could not copy link automatically.",
+    "movedToTrash": "Document moved to trash.",
+    "deleteFailed": "Failed to delete document.",
+    "restored": "Document restored successfully.",
+    "restoreFailed": "Failed to restore document.",
+    "permanentlyDeleted": "Document permanently deleted.",
+    "permanentDeleteFailed": "Failed to permanently delete document."
+  },
+  "employeeAccess": "You have access to your personal documents and company policies."
+}

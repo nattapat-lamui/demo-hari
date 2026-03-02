@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { ExclamationTriangleIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import errorLogging from '../services/errorLogging';
+import i18n from '../lib/i18n';
 
 interface Props {
   children: ReactNode;
@@ -82,18 +83,18 @@ class ErrorBoundary extends Component<Props, State> {
                 </div>
 
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                  A new version is available
+                  {i18n.t('common:errors.newVersionAvailable')}
                 </h1>
 
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  The app has been updated since you last loaded it. Please reload to get the latest version.
+                  {i18n.t('common:errors.appUpdatedMessage')}
                 </p>
 
                 <button
                   onClick={() => window.location.reload()}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Reload Page
+                  {i18n.t('common:errors.reloadPage')}
                 </button>
               </div>
             </div>
@@ -114,23 +115,23 @@ class ErrorBoundary extends Component<Props, State> {
               </div>
 
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Oops! Something went wrong
+                {i18n.t('common:errors.somethingWentWrong')}
               </h1>
 
               <p className="text-gray-600 mb-6">
-                We're sorry for the inconvenience. The application encountered an unexpected error.
+                {i18n.t('common:errors.unexpectedError')}
               </p>
 
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <div className="w-full bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-left">
-                  <p className="text-sm font-semibold text-red-800 mb-2">Error Details:</p>
+                  <p className="text-sm font-semibold text-red-800 mb-2">{i18n.t('common:errors.errorDetails')}</p>
                   <p className="text-xs text-red-700 font-mono break-all">
                     {this.state.error.toString()}
                   </p>
                   {this.state.errorInfo && (
                     <details className="mt-2">
                       <summary className="text-xs text-red-600 cursor-pointer">
-                        Stack Trace
+                        {i18n.t('common:errors.stackTrace')}
                       </summary>
                       <pre className="text-xs text-red-600 mt-2 overflow-auto max-h-40">
                         {this.state.errorInfo.componentStack}
@@ -145,13 +146,13 @@ class ErrorBoundary extends Component<Props, State> {
                   onClick={this.handleReset}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Reload Page
+                  {i18n.t('common:errors.reloadPage')}
                 </button>
                 <button
                   onClick={() => window.history.back()}
                   className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                 >
-                  Go Back
+                  {i18n.t('common:errors.goBack')}
                 </button>
               </div>
             </div>

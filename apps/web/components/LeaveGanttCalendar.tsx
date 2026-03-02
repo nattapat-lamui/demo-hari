@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { LeaveRequest } from '../types';
 import { useLeaveTypeConfig } from '../hooks/queries';
-import { buildLeaveColorMap, getShortLabel } from '../lib/leaveTypeConfig';
+import { buildLeaveColorMap, getShortLabel, translateLeaveType } from '../lib/leaveTypeConfig';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,12 +33,7 @@ interface PersonRow {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-const SHORT_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// MONTH_NAMES and SHORT_DAY_NAMES are defined inside the component to access translations
 
 const DEFAULT_TYPE_COLOR = { bar: 'bg-gray-400', barDark: 'dark:bg-gray-500', text: 'text-white', legend: 'bg-gray-400 dark:bg-gray-500' };
 
@@ -96,7 +92,21 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
   isManager = false,
   onLeaveClick,
 }) => {
+  const { t } = useTranslation(['leave', 'common']);
   const { data: leaveConfigs = [] } = useLeaveTypeConfig();
+
+  const MONTH_NAMES = useMemo(() => [
+    t('common:months.january'), t('common:months.february'), t('common:months.march'),
+    t('common:months.april'), t('common:months.may'), t('common:months.june'),
+    t('common:months.july'), t('common:months.august'), t('common:months.september'),
+    t('common:months.october'), t('common:months.november'), t('common:months.december'),
+  ], [t]);
+
+  const SHORT_DAY_NAMES = useMemo(() => [
+    t('common:weekdaysShort.sun'), t('common:weekdaysShort.mon'), t('common:weekdaysShort.tue'),
+    t('common:weekdaysShort.wed'), t('common:weekdaysShort.thu'), t('common:weekdaysShort.fri'),
+    t('common:weekdaysShort.sat'),
+  ], [t]);
   const TYPE_COLORS = useMemo(() => {
     const colorMap = buildLeaveColorMap(leaveConfigs);
     const result: Record<string, { bar: string; barDark: string; text: string; legend: string }> = {};
@@ -249,7 +259,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
     <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-4 md:p-6 flex flex-col">
       {/* Header: title + view toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Team Calendar</h2>
+        <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('leave:calendar.teamCalendar')}</h2>
         <div className="flex items-center gap-1 bg-background-light dark:bg-background-dark rounded-lg p-0.5">
           {(['week', '2weeks', 'month'] as ViewMode[]).map((mode) => (
             <button
@@ -261,7 +271,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
                   : 'text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark'
               }`}
             >
-              {mode === 'week' ? 'Week' : mode === '2weeks' ? '2 Weeks' : 'Month'}
+              {mode === 'week' ? t('leave:calendar.week') : mode === '2weeks' ? t('leave:calendar.twoWeeks') : t('leave:calendar.month')}
             </button>
           ))}
         </div>
@@ -283,7 +293,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
             onClick={handleToday}
             className="px-2.5 py-1 text-xs font-medium rounded-md border border-border-light dark:border-border-dark text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors"
           >
-            Today
+            {t('leave:calendar.today')}
           </button>
         </div>
         <button
@@ -337,7 +347,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
               className="text-center py-10 text-sm text-text-muted-light dark:text-text-muted-dark"
               style={{ gridRow: 2, gridColumn: `1 / ${dayCount + 2}` }}
             >
-              No leave requests in this period.
+              {t('leave:calendar.noRequests')}
             </div>
           )}
 
@@ -361,7 +371,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
                     }`}
                     title={person.name}
                   >
-                    {rowIsUser ? 'You' : person.name}
+                    {rowIsUser ? t('leave:calendar.you') : person.name}
                   </span>
                 </div>
 
@@ -394,7 +404,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
                   let label: string;
                   if (!isManager && !isBarUser) {
                     colors = TEAM_GRAY_COLOR;
-                    label = `${person.name} - On Leave`;
+                    label = `${person.name} - ${t('leave:calendar.onLeave')}`;
                   } else {
                     colors = TYPE_COLORS[bar.request.type] || DEFAULT_TYPE_COLOR;
                     const shortType = getShortLabel(bar.request.type);
@@ -420,7 +430,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
                         height: 26,
                         alignSelf: 'center',
                       }}
-                      title={`${bar.request.employeeName} — ${bar.request.type} (${bar.request.status})`}
+                      title={`${bar.request.employeeName} — ${translateLeaveType(bar.request.type)} (${bar.request.status})`}
                       onClick={canClick ? () => onLeaveClick!(bar.request) : undefined}
                     >
                       <span className="truncate">{label}</span>
@@ -448,7 +458,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
         {isManager && (
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-2 rounded-sm bg-gray-300 dark:bg-gray-500 opacity-60 border border-dashed border-gray-500 dark:border-gray-300" />
-            <span className="text-xs text-text-muted-light dark:text-text-muted-dark">Pending</span>
+            <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('common:status.pending')}</span>
           </div>
         )}
 
@@ -456,7 +466,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
         {!isManager && (
           <div className="flex items-center gap-1.5">
             <span className={`w-3 h-2 rounded-sm ${TEAM_GRAY_COLOR.legend}`} />
-            <span className="text-xs text-text-muted-light dark:text-text-muted-dark">Team on Leave</span>
+            <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('leave:calendar.teamOnLeave')}</span>
           </div>
         )}
       </div>

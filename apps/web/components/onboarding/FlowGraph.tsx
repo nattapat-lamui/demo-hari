@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     CheckCircle2,
     Clock,
@@ -13,6 +14,7 @@ import { OnboardingTask } from '../../types';
 import { FlowStage } from './OnboardingTypes';
 
 export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
+    const { t } = useTranslation(['onboarding', 'common']);
     // Group tasks by stage
     const stageMap = tasks.reduce((acc, task) => {
         if (!acc[task.stage]) acc[task.stage] = [];
@@ -23,7 +25,7 @@ export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
     const stages: FlowStage[] = [
         {
             id: 'pre-boarding',
-            label: 'Pre-boarding',
+            label: t('flowGraph.preBoarding'),
             icon: <FileText size={22} />,
             color: 'text-blue-600 dark:text-blue-400',
             bgColor: 'bg-blue-50 dark:bg-blue-900/20',
@@ -32,7 +34,7 @@ export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
         },
         {
             id: 'week-1',
-            label: 'Week 1',
+            label: t('flowGraph.week1'),
             icon: <Calendar size={22} />,
             color: 'text-violet-600 dark:text-violet-400',
             bgColor: 'bg-violet-50 dark:bg-violet-900/20',
@@ -41,7 +43,7 @@ export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
         },
         {
             id: 'month-1',
-            label: 'Month 1',
+            label: t('flowGraph.month1'),
             icon: <Clock size={22} />,
             color: 'text-amber-600 dark:text-amber-400',
             bgColor: 'bg-amber-50 dark:bg-amber-900/20',
@@ -50,7 +52,7 @@ export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
         },
         {
             id: 'completed',
-            label: 'Completed',
+            label: t('flowGraph.completed'),
             icon: <Trophy size={22} />,
             color: 'text-emerald-600 dark:text-emerald-400',
             bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
@@ -83,13 +85,13 @@ export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
             {/* Flow Overview Card */}
             <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Onboarding Pipeline</h2>
+                    <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('flowGraph.title')}</h2>
                     <span className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                        {completedTasks}/{totalTasks} tasks completed
+                        {completedTasks}/{totalTasks} {t('flowGraph.tasksCompleted')}
                     </span>
                 </div>
                 <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-6">
-                    Visual overview of the onboarding journey from pre-boarding to full integration.
+                    {t('flowGraph.description')}
                 </p>
 
                 {/* Horizontal Flow Pipeline */}
@@ -135,7 +137,7 @@ export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
                                                 </h3>
                                                 <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
                                                     {stage.id === 'completed'
-                                                        ? (allDone ? 'All done!' : 'Pending')
+                                                        ? (allDone ? t('flowGraph.allDone') : t('flowGraph.pending'))
                                                         : `${stageCompleted}/${stageTotal} tasks`
                                                     }
                                                 </p>
@@ -191,12 +193,12 @@ export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
                                             {allDone ? (
                                                 <div className="py-3">
                                                     <Trophy size={28} className="text-emerald-500 mx-auto mb-1" />
-                                                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Onboarding Complete!</p>
+                                                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{t('flowGraph.onboardingComplete')}</p>
                                                 </div>
                                             ) : (
                                                 <div className="py-3">
                                                     <Trophy size={28} className="text-gray-300 dark:text-gray-600 mx-auto mb-1" />
-                                                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark">Complete all stages</p>
+                                                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('flowGraph.completeAllStages')}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -296,7 +298,7 @@ export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
                                     ))}
                                     {stage.tasks.length === 0 && (
                                         <p className="text-sm text-text-muted-light dark:text-text-muted-dark italic">
-                                            No tasks assigned yet
+                                            {t('flowGraph.noTasks')}
                                         </p>
                                     )}
                                 </div>

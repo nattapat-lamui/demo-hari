@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { LeaveRequest } from '../types';
 import { useLeaveTypeConfig } from '../hooks/queries';
-import { buildLeaveColorMap, getShortLabel } from '../lib/leaveTypeConfig';
+import { buildLeaveColorMap, getShortLabel, translateLeaveType } from '../lib/leaveTypeConfig';
 
 interface LeaveCalendarProps {
   userLeaves: LeaveRequest[];
@@ -11,12 +12,7 @@ interface LeaveCalendarProps {
   onLeaveClick?: (request: LeaveRequest) => void;
 }
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-const DAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+// MONTH_NAMES and DAY_NAMES are defined inside the component to access translations
 
 const DEFAULT_COLOR = { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-800 dark:text-gray-200', dot: 'bg-gray-400 dark:bg-gray-500', badge: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' };
 
@@ -101,7 +97,21 @@ function buildDateTypeMap(leaves: LeaveRequest[], isManager: boolean): Map<strin
 }
 
 export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLeaves, isManager = false, onLeaveClick }) => {
+  const { t } = useTranslation(['leave', 'common']);
   const { data: leaveConfigs = [] } = useLeaveTypeConfig();
+
+  const MONTH_NAMES = useMemo(() => [
+    t('common:months.january'), t('common:months.february'), t('common:months.march'),
+    t('common:months.april'), t('common:months.may'), t('common:months.june'),
+    t('common:months.july'), t('common:months.august'), t('common:months.september'),
+    t('common:months.october'), t('common:months.november'), t('common:months.december'),
+  ], [t]);
+
+  const DAY_NAMES = useMemo(() => [
+    t('common:weekdays.su'), t('common:weekdays.mo'), t('common:weekdays.tu'),
+    t('common:weekdays.we'), t('common:weekdays.th'), t('common:weekdays.fr'),
+    t('common:weekdays.sa'),
+  ], [t]);
   const TYPE_COLORS = useMemo(() => {
     const colorMap = buildLeaveColorMap(leaveConfigs);
     const result: Record<string, { bg: string; text: string; dot: string; badge: string }> = {};
@@ -218,7 +228,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
 
   return (
     <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-4 md:p-6 flex flex-col h-full">
-      <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">Team Calendar</h2>
+      <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">{t('leave:calendar.teamCalendar')}</h2>
 
       {/* Month navigation */}
       <div className="flex items-center justify-between mb-4">
@@ -335,16 +345,16 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
                     <>
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${colors.dot}`} />
                       <span className="text-xs text-text-light dark:text-text-dark truncate">
-                        {entry.isUser ? 'You' : entry.name}
+                        {entry.isUser ? t('leave:calendar.you') : entry.name}
                       </span>
                       {isManager || entry.isUser ? (
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ml-auto shrink-0 ${colors.badge}`}>
                           {getShortLabel(entry.type)}
-                          {entry.request.status === 'Pending' && isManager ? ' (Pending)' : ''}
+                          {entry.request.status === 'Pending' && isManager ? ` ${t('leave:calendar.pendingLabel')}` : ''}
                         </span>
                       ) : (
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ml-auto shrink-0 ${DEFAULT_COLOR.badge}`}>
-                          On Leave
+                          {t('leave:calendar.onLeave')}
                         </span>
                       )}
                     </>
@@ -379,7 +389,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
         {Object.entries(TYPE_COLORS).map(([type, colors]) => (
           <div key={type} className="flex items-center gap-1.5">
             <span className={`w-3 h-3 rounded ${colors.bg}`} />
-            <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{type}</span>
+            <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{translateLeaveType(type)}</span>
           </div>
         ))}
         <div className="flex items-center gap-1.5">
@@ -387,7 +397,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ userLeaves, teamLe
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500" />
           </div>
           <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
-            {isManager ? 'Team' : 'Team on Leave'}
+            {isManager ? t('leave:calendar.team') : t('leave:calendar.teamOnLeave')}
           </span>
         </div>
       </div>

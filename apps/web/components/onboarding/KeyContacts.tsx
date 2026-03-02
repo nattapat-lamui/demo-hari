@@ -1,13 +1,15 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Mail } from 'lucide-react';
 import { Avatar } from '../Avatar';
 import { KeyContactsProps } from './OnboardingTypes';
 
 export const KeyContacts: React.FC<KeyContactsProps> = ({ contacts, showToast }) => {
+    const { t } = useTranslation(['onboarding', 'common']);
     return (
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <div className="p-5 border-b border-border-light dark:border-border-dark">
-                <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Key Contacts</h2>
+                <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('keyContacts.title')}</h2>
             </div>
             <div className="p-4 space-y-3">
                 {contacts.map(contact => (
@@ -18,9 +20,9 @@ export const KeyContacts: React.FC<KeyContactsProps> = ({ contacts, showToast })
                             <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{contact.role} • {contact.relation}</p>
                         </div>
                         <button
-                            onClick={() => showToast('Email client opened!', 'info')}
+                            onClick={() => showToast(t('keyContacts.emailOpened'), 'info')}
                             className="p-2 text-text-muted-light hover:text-primary transition-colors"
-                            title="Send Email"
+                            title={t('keyContacts.sendEmail')}
                         >
                             <Mail size={16} />
                         </button>

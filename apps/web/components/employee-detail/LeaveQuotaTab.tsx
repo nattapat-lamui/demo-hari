@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Save, RotateCcw, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { EffectiveLeaveQuota } from '../../types';
 import {
     useEmployeeLeaveQuotas,
     useUpdateEmployeeLeaveQuotas,
     useDeleteLeaveQuotaOverride,
 } from '../../hooks/queries';
+import { translateLeaveType } from '../../lib/leaveTypeConfig';
 
 interface LeaveQuotaTabProps {
     employeeId: string;
@@ -13,6 +15,7 @@ interface LeaveQuotaTabProps {
 }
 
 export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showToast }) => {
+    const { t } = useTranslation(['employees', 'common']);
     const { data: quotas, isPending } = useEmployeeLeaveQuotas(employeeId);
     const updateMutation = useUpdateEmployeeLeaveQuotas();
     const deleteMutation = useDeleteLeaveQuotaOverride();
@@ -66,19 +69,19 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
             if (overrides.length > 0) {
                 await updateMutation.mutateAsync({ employeeId, overrides });
             }
-            showToast('Leave quotas updated successfully!', 'success');
+            showToast(t('employees:toast.quotaUpdated'), 'success');
             setDirty(false);
         } catch (error: any) {
-            showToast(error.message || 'Failed to update leave quotas', 'error');
+            showToast(error.message || t('employees:toast.quotaFailed'), 'error');
         }
     };
 
     const handleReset = async (type: string) => {
         try {
             await deleteMutation.mutateAsync({ employeeId, leaveType: type });
-            showToast(`${type} quota reset to default`, 'success');
+            showToast(`${type} ${t('employees:toast.quotaResetSuccess')}`, 'success');
         } catch (error: any) {
-            showToast(error.message || 'Failed to reset quota', 'error');
+            showToast(error.message || t('employees:toast.quotaResetFailed'), 'error');
         }
     };
 
@@ -86,7 +89,7 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
         return (
             <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <span className="ml-2 text-text-muted-light dark:text-text-muted-dark">Loading quotas...</span>
+                <span className="ml-2 text-text-muted-light dark:text-text-muted-dark">{t('employees:leaveQuota.loading')}</span>
             </div>
         );
     }
@@ -94,7 +97,7 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
     if (!quotas || quotas.length === 0) {
         return (
             <div className="text-center py-12 text-text-muted-light dark:text-text-muted-dark">
-                No leave types configured.
+                {t('employees:leaveQuota.noData')}
             </div>
         );
     }
@@ -105,9 +108,9 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">Leave Quotas</h3>
+                    <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">{t('employees:leaveQuota.title')}</h3>
                     <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                        Override default quotas for this employee. Changes affect future leave requests.
+                        {t('employees:leaveQuota.overrideDescription')}
                     </p>
                 </div>
                 <button
@@ -116,7 +119,7 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
                     className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                 >
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Save Changes
+                    {t('employees:leaveQuota.saveChanges')}
                 </button>
             </div>
 
@@ -124,11 +127,11 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
                 <table className="w-full">
                     <thead>
                         <tr className="border-b border-border-light dark:border-border-dark">
-                            <th className="text-left py-3 px-4 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Leave Type</th>
-                            <th className="text-center py-3 px-4 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Default</th>
-                            <th className="text-center py-3 px-4 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Current Quota</th>
-                            <th className="text-center py-3 px-4 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Status</th>
-                            <th className="text-center py-3 px-4 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Actions</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('employees:leaveQuota.type')}</th>
+                            <th className="text-center py-3 px-4 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('employees:leaveQuota.default')}</th>
+                            <th className="text-center py-3 px-4 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('employees:leaveQuota.currentQuota')}</th>
+                            <th className="text-center py-3 px-4 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('employees:leaveQuota.status')}</th>
+                            <th className="text-center py-3 px-4 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{t('employees:leaveQuota.actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -143,16 +146,16 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
                                     className="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                                 >
                                     <td className="py-3 px-4">
-                                        <span className="font-medium text-text-light dark:text-text-dark">{q.type}</span>
+                                        <span className="font-medium text-text-light dark:text-text-dark">{translateLeaveType(q.type)}</span>
                                     </td>
                                     <td className="py-3 px-4 text-center">
                                         <span className="text-text-muted-light dark:text-text-muted-dark">
-                                            {q.defaultTotal === -1 ? 'Unlimited' : `${q.defaultTotal} days`}
+                                            {q.defaultTotal === -1 ? t('employees:leaveQuota.unlimited') : `${q.defaultTotal} ${t('employees:leaveQuota.days')}`}
                                         </span>
                                     </td>
                                     <td className="py-3 px-4 text-center">
                                         {q.defaultTotal === -1 ? (
-                                            <span className="text-text-muted-light dark:text-text-muted-dark">Unlimited</span>
+                                            <span className="text-text-muted-light dark:text-text-muted-dark">{t('employees:leaveQuota.unlimited')}</span>
                                         ) : (
                                             <input
                                                 type="number"
@@ -166,11 +169,11 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
                                     <td className="py-3 px-4 text-center">
                                         {isEdited || isCurrentlyOverride ? (
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                                                Custom
+                                                {t('employees:leaveQuota.custom')}
                                             </span>
                                         ) : (
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                                                Default
+                                                {t('employees:leaveQuota.default')}
                                             </span>
                                         )}
                                     </td>
@@ -183,7 +186,7 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
                                                 title="Reset to default"
                                             >
                                                 <RotateCcw className="w-3 h-3" />
-                                                Reset
+                                                {t('employees:leaveQuota.reset')}
                                             </button>
                                         )}
                                     </td>

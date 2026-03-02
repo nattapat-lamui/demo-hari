@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     CheckCircle2,
     Filter,
@@ -32,22 +33,23 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
     isOverdue,
     getPriorityBadgeClass,
 }) => {
+    const { t } = useTranslation(['onboarding', 'common']);
     // Derived options for dropdowns
     const assigneeOptions = [
-        { value: 'All', label: 'All Assignees' },
-        { value: 'My Tasks', label: 'My Tasks' },
+        { value: 'All', label: t('taskList.allAssignees') },
+        { value: 'My Tasks', label: t('taskList.myTasks') },
         ...Array.from(new Set(tasks.map(t => t.assignee))).filter(a => a !== 'HR').map(a => ({ value: a, label: a }))
     ];
     const priorityOptions = [
-        { value: 'All', label: 'All Priorities' },
-        { value: 'High', label: 'High' },
-        { value: 'Medium', label: 'Medium' },
-        { value: 'Low', label: 'Low' },
+        { value: 'All', label: t('taskList.allPriorities') },
+        { value: 'High', label: t('taskList.high') },
+        { value: 'Medium', label: t('taskList.medium') },
+        { value: 'Low', label: t('taskList.low') },
     ];
     const dateFilterOptions = [
-        { value: 'All', label: 'All Dates' },
-        { value: 'Overdue', label: 'Overdue' },
-        { value: 'Due Soon', label: 'Due Soon' },
+        { value: 'All', label: t('taskList.allDates') },
+        { value: 'Overdue', label: t('taskList.overdue') },
+        { value: 'Due Soon', label: t('taskList.dueSoon') },
     ];
 
     // Breakdown by assignee type (admin only)
@@ -61,7 +63,7 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
             {/* Progress Overview Card */}
             <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold text-text-light dark:text-text-dark">Overall Progress</h2>
+                    <h2 className="font-semibold text-text-light dark:text-text-dark">{t('taskList.overallProgress')}</h2>
                     <span className="text-2xl font-bold text-primary">{progress}%</span>
                 </div>
                 <div className="w-full bg-background-light dark:bg-background-dark h-3 rounded-full overflow-hidden">
@@ -76,20 +78,20 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-primary"></div>
                             <span className="text-text-muted-light dark:text-text-muted-dark">
-                                Employee Tasks ({employeeCompleted}/{employeeTasks.length})
+                                {t('taskList.employeeTasks')} ({employeeCompleted}/{employeeTasks.length})
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-purple-500"></div>
                             <span className="text-text-muted-light dark:text-text-muted-dark">
-                                IT/HR Tasks ({adminCompleted}/{adminTasks.length})
+                                {t('taskList.itHrTasks')} ({adminCompleted}/{adminTasks.length})
                             </span>
                         </div>
                     </>) : (
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-primary"></div>
                             <span className="text-text-muted-light dark:text-text-muted-dark">
-                                Tasks ({filteredTasks.filter(t => t.completed).length}/{filteredTasks.length})
+                                {t('taskList.tasks')} ({filteredTasks.filter(t => t.completed).length}/{filteredTasks.length})
                             </span>
                         </div>
                     )}
@@ -105,7 +107,7 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
                         <div className="flex flex-wrap items-center gap-3 bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
                             <div className="flex items-center gap-2 text-text-muted-light dark:text-text-muted-dark text-sm font-medium mr-2">
                                 <Filter size={16} />
-                                <span>Filter Tasks:</span>
+                                <span>{t('taskList.filterTasks')}</span>
                             </div>
 
                             <Dropdown
@@ -133,18 +135,18 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
 
                     <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
                         <div className="p-5 border-b border-border-light dark:border-border-dark flex justify-between items-center">
-                            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Task Checklist</h2>
+                            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('taskList.taskChecklist')}</h2>
                             {userRole === 'HR_ADMIN' && (
                                 <div className="flex gap-2">
-                                    <span className="px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-800">IT Setup</span>
-                                    <span className="px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded border border-purple-200 dark:border-purple-800">HR Ops</span>
+                                    <span className="px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-800">{t('taskList.itSetup')}</span>
+                                    <span className="px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded border border-purple-200 dark:border-purple-800">{t('taskList.hrOps')}</span>
                                 </div>
                             )}
                         </div>
 
                         {Object.keys(groupedTasks).length === 0 && (
                             <div className="p-8 text-center text-text-muted-light dark:text-text-muted-dark">
-                                <p>No tasks found.</p>
+                                <p>{t('taskList.noTasks')}</p>
                             </div>
                         )}
 
@@ -195,7 +197,7 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
                                                             <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">{task.description}</p>
                                                             {task.link && (
                                                                 <a href={task.link} className="flex items-center gap-1 text-xs text-primary hover:underline mt-1">
-                                                                    Read Material <ExternalLink size={10} />
+                                                                    {t('taskList.readMaterial')} <ExternalLink size={10} />
                                                                 </a>
                                                             )}
                                                         </div>

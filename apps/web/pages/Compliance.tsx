@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle2, AlertCircle, Clock, UserPlus, CheckSquare, FileEdit, Download } from 'lucide-react';
 import { Toast } from '../components/Toast';
 
 export const Compliance: React.FC = () => {
+  const { t } = useTranslation(['compliance', 'common']);
   const [items, setItems] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
 
@@ -38,20 +40,20 @@ export const Compliance: React.FC = () => {
     showToast('Exporting compliance data...', 'info');
     // Simulate export
     setTimeout(() => {
-      showToast('Data exported successfully!', 'success');
+      showToast(t('exportSuccess'), 'success');
     }, 1500);
   };
 
   const handleGenerateReport = () => {
     if (!reportName.trim()) {
-      showToast('Please enter a report name.', 'warning');
+      showToast(t('reportBuilder.nameRequired'), 'warning');
       return;
     }
     setIsGenerating(true);
     // Simulate report generation
     setTimeout(() => {
       setIsGenerating(false);
-      showToast(`Report "${reportName}" generated successfully!`, 'success');
+      showToast(t('reportBuilder.reportGenerated', { name: reportName }), 'success');
       setReportName('');
     }, 2000);
   };
@@ -60,8 +62,8 @@ export const Compliance: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <header className="flex flex-wrap justify-between items-center gap-4 mb-8">
         <div className="flex flex-col">
-          <h1 className="text-text-light dark:text-text-dark text-3xl font-bold tracking-tight">Compliance & Reporting</h1>
-          <p className="text-text-muted-light dark:text-text-muted-dark text-base">Monitor regulatory adherence and generate custom reports.</p>
+          <h1 className="text-text-light dark:text-text-dark text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-text-muted-light dark:text-text-muted-dark text-base">{t('subtitle')}</p>
         </div>
         <div className="flex items-center gap-4">
           <button
@@ -69,7 +71,7 @@ export const Compliance: React.FC = () => {
             className="flex items-center gap-2 px-5 py-2.5 bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-medium rounded-lg text-sm border border-border-light dark:border-border-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             <Download size={18} />
-            Export Data
+            {t('exportData')}
           </button>
         </div>
       </header>
@@ -79,8 +81,8 @@ export const Compliance: React.FC = () => {
           {/* Compliance Checklist */}
           <section className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark">
             <div className="p-6 border-b border-border-light dark:border-border-dark">
-              <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">Compliance Checklist</h2>
-              <p className="text-text-muted-light dark:text-text-muted-dark text-sm mt-1">Track key regulatory requirements.</p>
+              <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">{t('checklist.title')}</h2>
+              <p className="text-text-muted-light dark:text-text-muted-dark text-sm mt-1">{t('checklist.subtitle')}</p>
             </div>
             <div className="p-6 space-y-4">
               {items.map((item) => (
@@ -105,8 +107,8 @@ export const Compliance: React.FC = () => {
           {/* HR Audit Log */}
           <section className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark">
             <div className="p-6 border-b border-border-light dark:border-border-dark">
-              <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">HR Audit Log</h2>
-              <p className="text-text-muted-light dark:text-text-muted-dark text-sm mt-1">Recent changes and approvals across the module.</p>
+              <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">{t('auditLog.title')}</h2>
+              <p className="text-text-muted-light dark:text-text-muted-dark text-sm mt-1">{t('auditLog.subtitle')}</p>
             </div>
             <div className="p-6 space-y-6">
               {logs.map((log) => (
@@ -135,24 +137,24 @@ export const Compliance: React.FC = () => {
         <div className="flex flex-col">
           <section className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark h-full">
             <div className="p-6 border-b border-border-light dark:border-border-dark">
-              <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">Custom Report Builder</h2>
-              <p className="text-text-muted-light dark:text-text-muted-dark text-sm mt-1">Generate reports by selecting data points.</p>
+              <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">{t('reportBuilder.title')}</h2>
+              <p className="text-text-muted-light dark:text-text-muted-dark text-sm mt-1">{t('reportBuilder.subtitle')}</p>
             </div>
             <div className="p-6 flex flex-col">
               <div className="space-y-6 flex-grow">
                 <div>
-                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2" htmlFor="report-name">Report Name</label>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2" htmlFor="report-name">{t('reportBuilder.reportName')}</label>
                   <input
                     className="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark placeholder:text-text-muted-light focus:outline-none focus:ring-2 focus:ring-primary"
                     id="report-name"
-                    placeholder="e.g., Q3 Headcount Analysis"
+                    placeholder={t('reportBuilder.reportPlaceholder')}
                     type="text"
                     value={reportName}
                     onChange={(e) => setReportName(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">Data Points</label>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">{t('reportBuilder.dataPoints')}</label>
                   <div className="grid grid-cols-2 gap-4">
                     {['Employee Name', 'Salary', 'Department', 'Start Date', 'Performance Rating', 'Leave Balance'].map((point, idx) => (
                       <label key={idx} className="flex items-center space-x-3 cursor-pointer">
@@ -163,7 +165,7 @@ export const Compliance: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2" htmlFor="date-range">Date Range</label>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2" htmlFor="date-range">{t('reportBuilder.dateRange')}</label>
                   <select className="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" id="date-range">
                     <option>Last 90 Days</option>
                     <option>This Quarter</option>
@@ -179,7 +181,7 @@ export const Compliance: React.FC = () => {
                   className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FileEdit size={18} />
-                  {isGenerating ? 'Generating...' : 'Generate Report'}
+                  {isGenerating ? 'Generating...' : t('reportBuilder.generateReport')}
                 </button>
               </div>
             </div>

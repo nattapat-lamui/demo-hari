@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     FileText,
     Upload,
@@ -35,6 +36,7 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
     onDocDownload,
     onDocReview,
 }) => {
+    const { t } = useTranslation(['onboarding', 'common']);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const docsUploaded = documents.filter(d => d.status !== 'Pending').length;
@@ -45,10 +47,10 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
             <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
                 <div className="p-5 border-b border-border-light dark:border-border-dark">
                     <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Document Checklist</h2>
+                        <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('documentChecklist.title')}</h2>
                         {documents.length > 0 && (
                             <span className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">
-                                {docsUploaded}/{documents.length} uploaded
+                                {docsUploaded}/{documents.length} {t('documentChecklist.uploaded')}
                             </span>
                         )}
                     </div>
@@ -65,8 +67,8 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                     {documents.length === 0 && (
                         <div className="text-center py-6">
                             <FileText size={28} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-                            <p className="text-sm text-text-muted-light dark:text-text-muted-dark">No documents required yet</p>
-                            <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">Documents will appear after onboarding is initiated</p>
+                            <p className="text-sm text-text-muted-light dark:text-text-muted-dark">{t('documentChecklist.noDocuments')}</p>
+                            <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{t('documentChecklist.noDocumentsHint')}</p>
                         </div>
                     )}
                     {documents.map(doc => (
@@ -112,7 +114,7 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                                                 fileInputRef.current?.click();
                                             }}
                                             className="p-1.5 text-text-muted-light hover:text-primary hover:bg-primary/10 rounded transition-colors"
-                                            title="Upload file"
+                                            title={t('documentChecklist.uploadFile')}
                                         >
                                             <Upload size={14} />
                                         </button>
@@ -122,7 +124,7 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                                         <button
                                             onClick={() => onDocDownload(doc.id)}
                                             className="p-1.5 text-text-muted-light hover:text-primary rounded transition-colors"
-                                            title="Download"
+                                            title={t('documentChecklist.download')}
                                         >
                                             <Download size={14} />
                                         </button>
@@ -133,7 +135,7 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                                             <button
                                                 onClick={() => onDocReview(doc.id, 'Approved')}
                                                 className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-colors"
-                                                title="Approve"
+                                                title={t('documentChecklist.approve')}
                                             >
                                                 <ThumbsUp size={14} />
                                             </button>
@@ -143,7 +145,7 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                                                     onSetReviewNote('');
                                                 }}
                                                 className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                                title="Reject"
+                                                title={t('documentChecklist.reject')}
                                             >
                                                 <ThumbsDown size={14} />
                                             </button>
@@ -158,7 +160,7 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                                         type="text"
                                         value={reviewNote}
                                         onChange={e => onSetReviewNote(e.target.value)}
-                                        placeholder="Reason for rejection (optional)"
+                                        placeholder={t('documentChecklist.rejectReason')}
                                         className="flex-1 px-3 py-1.5 text-xs bg-white dark:bg-gray-800 border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-1 focus:ring-red-400 text-text-light dark:text-text-dark"
                                         autoFocus
                                     />
@@ -166,13 +168,13 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                                         onClick={() => onDocReview(doc.id, 'Rejected', reviewNote)}
                                         className="px-3 py-1.5 text-xs font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                                     >
-                                        Reject
+                                        {t('documentChecklist.reject')}
                                     </button>
                                     <button
                                         onClick={() => { onSetReviewNoteDocId(null); onSetReviewNote(''); }}
                                         className="px-2 py-1.5 text-xs text-text-muted-light hover:text-text-light dark:text-text-muted-dark"
                                     >
-                                        Cancel
+                                        {t('documentChecklist.cancel')}
                                     </button>
                                 </div>
                             )}

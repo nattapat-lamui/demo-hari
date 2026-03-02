@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useTranslation } from 'react-i18next';
 import {
   Search,
   Bell,
@@ -29,6 +30,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+  const { t } = useTranslation('common');
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -203,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery && setShowResults(true)}
-              placeholder="Search employees, documents, policies..."
+              placeholder={t('header.searchPlaceholder')}
               autoComplete="off"
               className="w-full pl-10 pr-10 py-2 bg-background-light dark:bg-background-dark border border-transparent focus:border-primary/30 rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             />
@@ -224,7 +226,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               <div className="absolute top-full left-0 right-0 mt-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden z-50">
                 {isSearching ? (
                   <div className="p-4 text-center text-text-muted-light text-sm">
-                    Searching...
+                    {t('header.searching')}
                   </div>
                 ) : searchResults.length > 0 ? (
                   <ul>
@@ -259,7 +261,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                   </ul>
                 ) : (
                   <div className="p-4 text-center text-text-muted-light text-sm">
-                    No results found
+                    {t('header.noResults')}
                   </div>
                 )}
               </div>
@@ -291,13 +293,13 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
                 <div className="px-4 py-3 border-b border-border-light dark:border-border-dark flex justify-between items-center">
                   <h3 className="font-semibold text-text-light dark:text-text-dark">
-                    Notifications
+                    {t('header.notifications')}
                   </h3>
                   <button
                     onClick={handleMarkAllRead}
                     className="text-xs text-primary font-medium cursor-pointer hover:underline"
                   >
-                    Mark all read
+                    {t('header.markAllRead')}
                   </button>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
@@ -332,7 +334,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     ))
                   ) : (
                     <div className="px-4 py-8 text-center text-text-muted-light text-sm">
-                      No notifications
+                      {t('header.noNotifications')}
                     </div>
                   )}
                 </div>
@@ -341,7 +343,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     onClick={handleViewAllNotifications}
                     className="text-sm text-primary hover:underline"
                   >
-                    View All Notifications
+                    {t('header.viewAllNotifications')}
                   </button>
                 </div>
               </div>
@@ -356,10 +358,10 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 navigate("/");
               }}
               className="hidden sm:flex items-center gap-1.5 group"
-              title={isAdminView ? "Switch to Employee View" : "Switch to Admin View"}
+              title={isAdminView ? t('header.switchToEmployee') : t('header.switchToAdmin')}
             >
               <span className="text-[11px] font-medium text-text-muted-light dark:text-text-muted-dark">
-                {isAdminView ? "Admin" : "Employee"}
+                {isAdminView ? t('header.admin') : t('header.employee')}
               </span>
               <div className={`relative w-8 h-[18px] rounded-full transition-colors duration-200 ${isAdminView ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}>
                 <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform duration-200 ${isAdminView ? 'translate-x-[15px]' : 'translate-x-[2px]'}`} />
@@ -403,7 +405,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark flex items-center gap-2"
                 >
-                  <UserIcon size={16} /> Profile
+                  <UserIcon size={16} /> {t('header.profile')}
                 </button>
                 <div className="h-px bg-border-light dark:bg-border-dark my-1"></div>
                 <button
@@ -413,7 +415,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-background-light dark:hover:bg-background-dark flex items-center gap-2"
                 >
-                  <LogOut size={16} /> Sign Out
+                  <LogOut size={16} /> {t('header.signOut')}
                 </button>
               </div>
             )}
@@ -434,7 +436,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery && setShowResults(true)}
-              placeholder="Search employees..."
+              placeholder={t('header.searchPlaceholderMobile')}
               autoFocus
               autoComplete="off"
               className="w-full pl-10 pr-10 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
@@ -454,7 +456,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             {showResults && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden z-50">
                 {isSearching ? (
-                  <div className="p-4 text-center text-text-muted-light text-sm">Searching...</div>
+                  <div className="p-4 text-center text-text-muted-light text-sm">{t('header.searching')}</div>
                 ) : searchResults.length > 0 ? (
                   <ul>
                     {searchResults.map((result) => (
@@ -477,7 +479,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     ))}
                   </ul>
                 ) : (
-                  <div className="p-4 text-center text-text-muted-light text-sm">No results found</div>
+                  <div className="p-4 text-center text-text-muted-light text-sm">{t('header.noResults')}</div>
                 )}
               </div>
             )}

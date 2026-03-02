@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, KeyRound, ArrowLeft, Shield, RefreshCw, Key, Fingerprint } from "lucide-react";
 import { BASE_URL } from "../lib/api";
 
@@ -46,6 +47,7 @@ const ResetPassword: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation('auth');
 
   const passwordStrength = useMemo(() => getPasswordStrength(newPassword), [newPassword]);
 
@@ -55,10 +57,10 @@ const ResetPassword: React.FC = () => {
 
     const errors: typeof fieldErrors = {};
     if (!newPassword) {
-      errors.password = "Please enter a new password";
+      errors.password = t('resetPassword.newPasswordRequired');
     }
     if (!confirmPassword) {
-      errors.confirmPassword = "Please confirm your password";
+      errors.confirmPassword = t('resetPassword.confirmRequired');
     }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -67,17 +69,17 @@ const ResetPassword: React.FC = () => {
     setFieldErrors({});
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t('resetPassword.passwordsMismatch'));
       return;
     }
 
     if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t('resetPassword.passwordTooShort'));
       return;
     }
 
     if (passwordStrength.score < 3) {
-      setError("Password is too weak. Add uppercase, lowercase, numbers, and special characters.");
+      setError(t('resetPassword.passwordTooWeak'));
       return;
     }
 
@@ -98,25 +100,25 @@ const ResetPassword: React.FC = () => {
           navigate("/login", {
             state: {
               registrationSuccess: true,
-              message: "Password reset successful! Please login with your new password.",
+              message: t('resetPassword.resetSuccess'),
             },
           });
         }, 2000);
       } else {
-        setError(data.error || "Failed to reset password");
+        setError(data.error || t('resetPassword.resetFailed'));
       }
     } catch {
-      setError("Unable to connect to server. Please try again later.");
+      setError(t('resetPassword.networkError'));
     } finally {
       setLoading(false);
     }
   };
 
   const features = [
-    { icon: Shield, title: "Secure Reset", desc: "End-to-end encrypted process" },
-    { icon: Key, title: "Strong Passwords", desc: "Enforced complexity rules" },
-    { icon: RefreshCw, title: "One-Time Link", desc: "Token expires after use" },
-    { icon: Fingerprint, title: "Verified Identity", desc: "Email-verified access" },
+    { icon: Shield, title: t('resetPassword.feature1'), desc: t('resetPassword.feature1Desc') },
+    { icon: Key, title: t('resetPassword.feature2'), desc: t('resetPassword.feature2Desc') },
+    { icon: RefreshCw, title: t('resetPassword.feature3'), desc: t('resetPassword.feature3Desc') },
+    { icon: Fingerprint, title: t('resetPassword.feature4'), desc: t('resetPassword.feature4Desc') },
   ];
 
   // No token provided
@@ -128,15 +130,15 @@ const ResetPassword: React.FC = () => {
             <div className="inline-flex items-center justify-center h-14 w-14 bg-gradient-to-br from-accent-red to-accent-orange text-white rounded-xl shadow-lg shadow-accent-red/30 mb-4">
               <AlertCircle size={26} />
             </div>
-            <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">Invalid Reset Link</h2>
+            <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">{t('resetPassword.invalidLink')}</h2>
             <p className="text-text-muted-light dark:text-text-muted-dark mb-6">
-              This password reset link is invalid or missing a token. Please request a new one.
+              {t('resetPassword.invalidLinkDesc')}
             </p>
             <Link
               to="/forgot-password"
               className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark hover:from-primary-hover hover:to-primary text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-primary/30 hover:shadow-xl transition-all duration-300"
             >
-              Request New Link
+              {t('resetPassword.requestNewLink')}
             </Link>
             <div className="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
               <Link
@@ -144,7 +146,7 @@ const ResetPassword: React.FC = () => {
                 className="inline-flex items-center gap-2 text-sm text-primary font-semibold hover:text-primary-hover transition-colors"
               >
                 <ArrowLeft size={16} />
-                Back to Sign In
+                {t('resetPassword.backToSignIn')}
               </Link>
             </div>
           </div>
@@ -183,7 +185,7 @@ const ResetPassword: React.FC = () => {
               />
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">HARI</h1>
-                <p className="text-white/70 text-sm">HR Intelligence by AIYA</p>
+                <p className="text-white/70 text-sm">{t('login.tagline')}</p>
               </div>
             </div>
           </div>
@@ -191,11 +193,11 @@ const ResetPassword: React.FC = () => {
           {/* Main Message */}
           <div className="flex-1 flex flex-col justify-center max-w-lg">
             <h2 className="text-4xl xl:text-5xl font-bold leading-tight mb-6">
-              Set Your New
-              <span className="block text-white/90">Password</span>
+              {t('resetPassword.heroTitle1')}
+              <span className="block text-white/90">{t('resetPassword.heroTitle2')}</span>
             </h2>
             <p className="text-white/80 text-lg leading-relaxed mb-10">
-              Choose a strong password to keep your account secure. We'll guide you through the requirements.
+              {t('resetPassword.heroDesc')}
             </p>
 
             {/* Features Grid */}
@@ -215,7 +217,7 @@ const ResetPassword: React.FC = () => {
 
           {/* Footer */}
           <div className="text-white/50 text-sm">
-            &copy; 2026 AIYA Technology. All rights reserved.
+            {t('login.copyright')}
           </div>
         </div>
       </div>
@@ -232,7 +234,7 @@ const ResetPassword: React.FC = () => {
             />
             <div>
               <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">HARI</h1>
-              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">HR Intelligence by AIYA</p>
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('login.tagline')}</p>
             </div>
           </div>
 
@@ -243,9 +245,9 @@ const ResetPassword: React.FC = () => {
                 <div className="inline-flex items-center justify-center h-14 w-14 bg-gradient-to-br from-accent-green to-accent-teal text-white rounded-xl shadow-lg shadow-accent-green/30 mb-4">
                   <CheckCircle size={26} />
                 </div>
-                <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">Password Reset!</h2>
+                <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">{t('resetPassword.successTitle')}</h2>
                 <p className="text-text-muted-light dark:text-text-muted-dark">
-                  Your password has been changed successfully. Redirecting to login...
+                  {t('resetPassword.successDesc')}
                 </p>
               </div>
             ) : (
@@ -254,9 +256,9 @@ const ResetPassword: React.FC = () => {
                   <div className="inline-flex items-center justify-center h-14 w-14 bg-gradient-to-br from-accent-teal to-accent-green text-white rounded-xl shadow-lg shadow-accent-teal/30 mb-4">
                     <KeyRound size={26} />
                   </div>
-                  <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Reset Password</h2>
+                  <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">{t('resetPassword.title')}</h2>
                   <p className="text-text-muted-light dark:text-text-muted-dark mt-2">
-                    Enter your new password below
+                    {t('resetPassword.subtitle')}
                   </p>
                 </div>
 
@@ -270,7 +272,7 @@ const ResetPassword: React.FC = () => {
                 <form onSubmit={handleSubmit} noValidate className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                      New Password
+                      {t('resetPassword.newPasswordLabel')}
                     </label>
                     <div className="relative group">
                       <Lock
@@ -282,7 +284,7 @@ const ResetPassword: React.FC = () => {
                         value={newPassword}
                         onChange={(e) => { setNewPassword(e.target.value); setFieldErrors((prev) => ({ ...prev, password: undefined })); }}
                         className={`w-full pl-12 pr-14 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${fieldErrors.password ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-accent-teal"}`}
-                        placeholder="Enter new password"
+                        placeholder={t('resetPassword.newPasswordPlaceholder')}
                       />
                       <button
                         type="button"
@@ -300,9 +302,9 @@ const ResetPassword: React.FC = () => {
                     {newPassword.length > 0 && (
                       <div className="mt-3">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-text-muted-light dark:text-text-muted-dark">Password strength</span>
+                          <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('register.passwordStrength')}</span>
                           <span className={`text-xs font-medium ${passwordStrength.color}`}>
-                            {passwordStrength.label}
+                            {passwordStrength.label === 'Weak' ? t('register.weak') : passwordStrength.label === 'Medium' ? t('register.medium') : t('register.strong')}
                           </span>
                         </div>
                         <div className="h-2 bg-border-light dark:bg-border-dark rounded-full overflow-hidden">
@@ -313,19 +315,19 @@ const ResetPassword: React.FC = () => {
                         </div>
                         <div className="mt-2 grid grid-cols-2 gap-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                           <span className={newPassword.length >= 8 ? "text-accent-green" : ""}>
-                            {newPassword.length >= 8 ? "\u2713" : "\u25CB"} 8+ characters
+                            {newPassword.length >= 8 ? "\u2713" : "\u25CB"} {t('register.rule8chars')}
                           </span>
                           <span className={/[A-Z]/.test(newPassword) ? "text-accent-green" : ""}>
-                            {/[A-Z]/.test(newPassword) ? "\u2713" : "\u25CB"} Uppercase
+                            {/[A-Z]/.test(newPassword) ? "\u2713" : "\u25CB"} {t('register.ruleUppercase')}
                           </span>
                           <span className={/[a-z]/.test(newPassword) ? "text-accent-green" : ""}>
-                            {/[a-z]/.test(newPassword) ? "\u2713" : "\u25CB"} Lowercase
+                            {/[a-z]/.test(newPassword) ? "\u2713" : "\u25CB"} {t('register.ruleLowercase')}
                           </span>
                           <span className={/[0-9]/.test(newPassword) ? "text-accent-green" : ""}>
-                            {/[0-9]/.test(newPassword) ? "\u2713" : "\u25CB"} Number
+                            {/[0-9]/.test(newPassword) ? "\u2713" : "\u25CB"} {t('register.ruleNumber')}
                           </span>
                           <span className={/[@$!%*?&#^()_+\-=]/.test(newPassword) ? "text-accent-green" : ""}>
-                            {/[@$!%*?&#^()_+\-=]/.test(newPassword) ? "\u2713" : "\u25CB"} Special char
+                            {/[@$!%*?&#^()_+\-=]/.test(newPassword) ? "\u2713" : "\u25CB"} {t('register.ruleSpecial')}
                           </span>
                         </div>
                       </div>
@@ -334,7 +336,7 @@ const ResetPassword: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                      Confirm Password
+                      {t('resetPassword.confirmPasswordLabel')}
                     </label>
                     <div className="relative group">
                       <Lock
@@ -354,7 +356,7 @@ const ResetPassword: React.FC = () => {
                             ? "border-accent-green bg-accent-green/5"
                             : "border-border-light dark:border-border-dark"
                         }`}
-                        placeholder="Confirm new password"
+                        placeholder={t('resetPassword.confirmPlaceholder')}
                       />
                       <button
                         type="button"
@@ -368,10 +370,10 @@ const ResetPassword: React.FC = () => {
                       <p className="mt-1.5 text-sm text-accent-red">{fieldErrors.confirmPassword}</p>
                     )}
                     {!fieldErrors.confirmPassword && confirmPassword && newPassword !== confirmPassword && (
-                      <p className="text-xs text-accent-red mt-1">Passwords do not match</p>
+                      <p className="text-xs text-accent-red mt-1">{t('resetPassword.passwordsMismatch')}</p>
                     )}
                     {!fieldErrors.confirmPassword && confirmPassword && newPassword === confirmPassword && (
-                      <p className="text-xs text-accent-green mt-1">Passwords match</p>
+                      <p className="text-xs text-accent-green mt-1">{t('resetPassword.passwordsMatch')}</p>
                     )}
                   </div>
 
@@ -390,9 +392,9 @@ const ResetPassword: React.FC = () => {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        Resetting...
+                        {t('resetPassword.resetting')}
                       </span>
-                    ) : "Reset Password"}
+                    ) : t('resetPassword.resetButton')}
                   </button>
                 </form>
               </>
@@ -404,14 +406,14 @@ const ResetPassword: React.FC = () => {
                 className="inline-flex items-center gap-2 text-sm text-primary font-semibold hover:text-primary-hover transition-colors"
               >
                 <ArrowLeft size={16} />
-                Back to Sign In
+                {t('resetPassword.backToSignIn')}
               </Link>
             </div>
           </div>
 
           {/* Additional Info */}
           <p className="text-center text-xs text-text-muted-light dark:text-text-muted-dark mt-6">
-            Secured with 256-bit SSL encryption
+            {t('login.sslEncryption')}
           </p>
         </div>
       </div>

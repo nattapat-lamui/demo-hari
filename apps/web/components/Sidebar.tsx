@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -21,6 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLeaveRequests } from '../hooks/queries';
 
 export const Sidebar: React.FC = () => {
+  const { t } = useTranslation('common');
   const { user, logout, isAdminView } = useAuth();
   const { data: leaveRequests = [] } = useLeaveRequests();
   const hasPendingLeaves = isAdminView && leaveRequests.some(
@@ -29,28 +31,28 @@ export const Sidebar: React.FC = () => {
 
   // Define nav items based on role
   const navItems = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/', allowed: true },
+    { icon: <LayoutDashboard size={20} />, label: t('nav.dashboard'), path: '/', allowed: true },
 
     // Admin Attendance — right below Dashboard for admins
-    { icon: <Clock size={20} />, label: 'Attendance', path: '/admin-attendance', allowed: isAdminView },
-    { icon: <Calendar size={20} />, label: 'Leave Requests', path: '/leave-requests', allowed: isAdminView },
+    { icon: <Clock size={20} />, label: t('nav.attendance'), path: '/admin-attendance', allowed: isAdminView },
+    { icon: <Calendar size={20} />, label: t('nav.leaveRequests'), path: '/leave-requests', allowed: isAdminView },
 
     // Employee Focused Tools
-    { icon: <Clock size={20} />, label: 'Attendance', path: '/attendance', allowed: !isAdminView },
-    { icon: <Calendar size={20} />, label: 'Time Off', path: '/time-off', allowed: !isAdminView },
-    { icon: <DollarSign size={20} />, label: 'Expenses', path: '/expenses', allowed: false }, // Hidden - not yet implemented
-    { icon: <MessageSquare size={20} />, label: 'Surveys', path: '/surveys', allowed: true },
+    { icon: <Clock size={20} />, label: t('nav.attendance'), path: '/attendance', allowed: !isAdminView },
+    { icon: <Calendar size={20} />, label: t('nav.timeOff'), path: '/time-off', allowed: !isAdminView },
+    { icon: <DollarSign size={20} />, label: t('nav.expenses'), path: '/expenses', allowed: false }, // Hidden - not yet implemented
+    { icon: <MessageSquare size={20} />, label: t('nav.surveys'), path: '/surveys', allowed: true },
 
-    { icon: <Smile size={20} />, label: 'Well-being', path: '/wellbeing', allowed: true },
-    { icon: <Users size={20} />, label: 'Employees', path: '/employees', allowed: true },
-    { icon: <GitGraph size={20} />, label: 'Org Chart', path: '/org-chart', allowed: true },
-    { icon: <ClipboardList size={20} />, label: 'Onboarding', path: '/onboarding', allowed: true },
+    { icon: <Smile size={20} />, label: t('nav.wellbeing'), path: '/wellbeing', allowed: true },
+    { icon: <Users size={20} />, label: t('nav.employees'), path: '/employees', allowed: true },
+    { icon: <GitGraph size={20} />, label: t('nav.orgChart'), path: '/org-chart', allowed: true },
+    { icon: <ClipboardList size={20} />, label: t('nav.onboarding'), path: '/onboarding', allowed: true },
 
     // Admin Specific
-    { icon: <ShieldCheck size={20} />, label: 'Compliance', path: '/compliance', allowed: isAdminView },
-    { icon: <BarChart2 size={20} />, label: 'Analytics', path: '/analytics', allowed: isAdminView },
+    { icon: <ShieldCheck size={20} />, label: t('nav.compliance'), path: '/compliance', allowed: isAdminView },
+    { icon: <BarChart2 size={20} />, label: t('nav.analytics'), path: '/analytics', allowed: isAdminView },
 
-    { icon: <FileText size={20} />, label: 'Documents', path: '/documents', allowed: true },
+    { icon: <FileText size={20} />, label: t('nav.documents'), path: '/documents', allowed: true },
   ];
 
   return (
@@ -66,13 +68,13 @@ export const Sidebar: React.FC = () => {
           </div>
           <div className="flex flex-col">
             <h1 className="text-white text-base font-bold leading-tight group-hover:text-gray-200 transition-colors">HARI</h1>
-            <p className="text-gray-400 text-xs font-medium">by AIYA • {isAdminView ? 'Admin' : 'Employee'}</p>
+            <p className="text-gray-400 text-xs font-medium">{t('sidebar.byAiya')} • {isAdminView ? t('sidebar.admin') : t('sidebar.employee')}</p>
           </div>
         </Link>
       </div>
 
       <nav className="flex flex-col gap-1 flex-grow p-4 overflow-y-auto">
-        <p className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-2">Menu</p>
+        <p className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-2">{t('nav.menu')}</p>
         {navItems.filter(item => item.allowed).map((item) => (
           <NavLink
             key={item.path}
@@ -105,7 +107,7 @@ export const Sidebar: React.FC = () => {
             }
           >
             <Settings size={18} />
-            <span className="text-sm font-medium">Settings</span>
+            <span className="text-sm font-medium">{t('nav.settings')}</span>
           </NavLink>
           <NavLink
             to="/help"
@@ -117,14 +119,14 @@ export const Sidebar: React.FC = () => {
             }
           >
             <HelpCircle size={18} />
-            <span className="text-sm font-medium">Help & Support</span>
+            <span className="text-sm font-medium">{t('nav.helpSupport')}</span>
           </NavLink>
           <button
             onClick={logout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors mt-2 text-left"
           >
             <LogOut size={18} />
-            <span className="text-sm font-medium">Sign Out</span>
+            <span className="text-sm font-medium">{t('nav.signOut')}</span>
           </button>
         </div>
       </div>

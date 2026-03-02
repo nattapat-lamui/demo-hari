@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Users,
@@ -34,8 +35,10 @@ import {
   useClockOut,
 } from '../hooks/queries';
 import { queryKeys } from '../lib/queryKeys';
+import { translateLeaveType } from '../lib/leaveTypeConfig';
 
 export const EmployeeDashboard: React.FC = () => {
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user } = useAuth();
   const { requests } = useLeave();
   const navigate = useNavigate();
@@ -112,16 +115,16 @@ export const EmployeeDashboard: React.FC = () => {
 
       if (isClockedIn) {
         await clockOutMutation.mutateAsync();
-        showToast('Checked out successfully!', 'success');
+        showToast(t('dashboard:employee.checkedOut'), 'success');
       } else {
         await clockInMutation.mutateAsync();
-        showToast('Checked in successfully!', 'success');
+        showToast(t('dashboard:employee.checkedIn'), 'success');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';
 
       if (message.includes('Already clocked in') || message.includes('already checked in')) {
-        showToast('You have already checked in today', 'info');
+        showToast(t('dashboard:employee.alreadyCheckedIn'), 'info');
         queryClient.invalidateQueries({ queryKey: queryKeys.attendance.today() });
       } else {
         showToast(message, 'error');
@@ -136,11 +139,11 @@ export const EmployeeDashboard: React.FC = () => {
     setIsSavingNote(true);
     try {
       await addNoteMutation.mutateAsync({ content: quickNote.trim() });
-      showToast("Note saved successfully!", "success");
+      showToast(t('dashboard:employee.noteSaved'), "success");
       setQuickNote('');
     } catch (error) {
       console.error('Error saving note:', error);
-      showToast("Failed to save note", "error");
+      showToast(t('dashboard:employee.noteSaveFailed'), "error");
     } finally {
       setIsSavingNote(false);
     }
@@ -150,10 +153,10 @@ export const EmployeeDashboard: React.FC = () => {
     setDeletingNoteId(noteId);
     try {
       await deleteNoteMutation.mutateAsync(noteId);
-      showToast("Note deleted", "success");
+      showToast(t('dashboard:employee.noteDeleted'), "success");
     } catch (error) {
       console.error('Error deleting note:', error);
-      showToast("Failed to delete note", "error");
+      showToast(t('dashboard:employee.noteDeleteFailed'), "error");
     } finally {
       setDeletingNoteId(null);
     }
@@ -164,7 +167,7 @@ export const EmployeeDashboard: React.FC = () => {
       await togglePinMutation.mutateAsync(noteId);
     } catch (error) {
       console.error('Error toggling pin:', error);
-      showToast("Failed to pin note", "error");
+      showToast(t('dashboard:employee.notePinFailed'), "error");
     }
   };
 
@@ -183,8 +186,8 @@ export const EmployeeDashboard: React.FC = () => {
         {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">Good Morning, {user?.name?.split(' ')[0]}</h1>
-          <p className="text-sm sm:text-base text-text-muted-light dark:text-text-muted-dark mt-1">You have {myRequests.filter(r => r.status === 'Pending').length} pending leave requests.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">{t('dashboard:employee.greeting', { name: user?.name?.split(' ')[0] })}</h1>
+          <p className="text-sm sm:text-base text-text-muted-light dark:text-text-muted-dark mt-1">{t('dashboard:employee.pendingRequests', { count: myRequests.filter(r => r.status === 'Pending').length })}</p>
         </div>
         <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
           {/* Attendance Status Badge */}
@@ -206,10 +209,10 @@ export const EmployeeDashboard: React.FC = () => {
                 }`}></div>
                 <span>
                   {attendanceStatus.clockOut
-                    ? (attendanceStatus.autoCheckout ? 'Auto Checkout' : 'Completed')
+                    ? (attendanceStatus.autoCheckout ? t('dashboard:employee.autoCheckout') : t('dashboard:employee.completed'))
                     : attendanceStatus.status === 'Late'
-                    ? 'Working (Late)'
-                    : 'Working'}
+                    ? t('dashboard:employee.workingLate')
+                    : t('dashboard:employee.working')}
                 </span>
               </div>
             </div>
@@ -229,12 +232,12 @@ export const EmployeeDashboard: React.FC = () => {
           >
             <Clock size={18} />
             {isClockingIn
-              ? 'Loading...'
+              ? t('common:buttons.loading')
               : attendanceStatus?.clockIn && !attendanceStatus?.clockOut
-              ? 'Check Out'
+              ? t('dashboard:employee.checkOut')
               : attendanceStatus?.clockOut
-              ? 'Done for today'
-              : 'Check In'}
+              ? t('dashboard:employee.doneForToday')
+              : t('dashboard:employee.checkIn')}
           </button>
         </div>
       </div>
@@ -248,7 +251,7 @@ export const EmployeeDashboard: React.FC = () => {
           <div className="p-2 bg-accent-teal/10 text-accent-teal rounded-lg group-hover:bg-accent-teal group-hover:text-white transition-colors">
             <Palmtree size={20} />
           </div>
-          <span className="font-medium text-text-light dark:text-text-dark">Time Off</span>
+          <span className="font-medium text-text-light dark:text-text-dark">{t('dashboard:employee.timeOff')}</span>
         </button>
         {/* Expenses - Hidden until implemented */}
         {/* <button
@@ -267,7 +270,7 @@ export const EmployeeDashboard: React.FC = () => {
           <div className="p-2 bg-accent-orange/10 text-accent-orange rounded-lg group-hover:bg-accent-orange group-hover:text-white transition-colors">
             <MessageSquare size={20} />
           </div>
-          <span className="font-medium text-text-light dark:text-text-dark">Surveys</span>
+          <span className="font-medium text-text-light dark:text-text-dark">{t('dashboard:employee.surveys')}</span>
         </button>
       </div>
 
@@ -275,8 +278,8 @@ export const EmployeeDashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate('/time-off')}>
           <div>
-            <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium mb-1">Leave Balance</p>
-            <h3 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark">{employeeStats.leaveBalance} <span className="text-xs sm:text-sm font-normal text-text-muted-light">Days</span></h3>
+            <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium mb-1">{t('dashboard:employee.leaveBalance')}</p>
+            <h3 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark">{employeeStats.leaveBalance} <span className="text-xs sm:text-sm font-normal text-text-muted-light">{t('dashboard:employee.daysUnit')}</span></h3>
           </div>
           <div className="p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-lg">
             <Plane size={20} className="sm:w-6 sm:h-6" />
@@ -285,8 +288,8 @@ export const EmployeeDashboard: React.FC = () => {
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between relative opacity-60">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium">Next Payday</p>
-              <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">WIP</span>
+              <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium">{t('dashboard:employee.nextPayday')}</p>
+              <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">{t('dashboard:employee.wip')}</span>
             </div>
             <h3 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark">{employeeStats.nextPayday || '—'}</h3>
           </div>
@@ -296,7 +299,7 @@ export const EmployeeDashboard: React.FC = () => {
         </div>
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate('/surveys')}>
           <div>
-            <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium mb-1">Pending Surveys</p>
+            <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium mb-1">{t('dashboard:employee.pendingSurveys')}</p>
             <h3 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark">{employeeStats.pendingSurveys}</h3>
           </div>
           <div className="p-2 sm:p-3 bg-orange-50 dark:bg-orange-900/20 text-orange-500 rounded-lg">
@@ -317,8 +320,8 @@ export const EmployeeDashboard: React.FC = () => {
         {/* My Tasks */}
         <div className="lg:col-span-2 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">My Recent Requests</h2>
-            <button onClick={() => navigate('/time-off')} className="text-xs text-primary font-medium hover:underline">View All</button>
+            <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">{t('dashboard:employee.myRecentRequests')}</h2>
+            <button onClick={() => navigate('/time-off')} className="text-xs text-primary font-medium hover:underline">{t('common:buttons.viewAll')}</button>
           </div>
           <div className="p-4 space-y-3">
             {myRequests.length > 0 ? (
@@ -329,7 +332,7 @@ export const EmployeeDashboard: React.FC = () => {
                       <Plane size={18} />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-text-light dark:text-text-dark">{req.type}</p>
+                      <p className="text-sm font-medium text-text-light dark:text-text-dark">{translateLeaveType(req.type)}</p>
                       <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{req.dates}</p>
                     </div>
                   </div>
@@ -342,7 +345,7 @@ export const EmployeeDashboard: React.FC = () => {
                 </div>
               ))
             ) : (
-              <div className="text-center py-4 text-text-muted-light">No requests made yet.</div>
+              <div className="text-center py-4 text-text-muted-light">{t('dashboard:employee.noRequestsYet')}</div>
             )}
           </div>
         </div>
@@ -350,12 +353,12 @@ export const EmployeeDashboard: React.FC = () => {
         {/* My Team */}
         <div className="lg:col-span-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col shadow-sm">
           <div className="flex justify-between items-center p-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">My Team</h2>
+            <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">{t('dashboard:employee.myTeam')}</h2>
             {teamHierarchy?.stats && (
               <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                 {teamHierarchy.stats.totalDirectReports > 0
-                  ? `${teamHierarchy.stats.totalDirectReports} reports`
-                  : `${teamHierarchy.stats.peersCount} peers`}
+                  ? t('dashboard:employee.reports', { count: teamHierarchy.stats.totalDirectReports })
+                  : t('dashboard:employee.peers', { count: teamHierarchy.stats.peersCount })}
               </span>
             )}
           </div>
@@ -374,7 +377,7 @@ export const EmployeeDashboard: React.FC = () => {
                   <p className="text-sm font-medium text-text-light dark:text-text-dark">{teamHierarchy.manager.name}</p>
                   <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{teamHierarchy.manager.role}</p>
                 </div>
-                <span className="ml-auto text-[10px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded font-medium">Manager</span>
+                <span className="ml-auto text-[10px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded font-medium">{t('dashboard:employee.manager')}</span>
               </div>
             )}
 
@@ -390,7 +393,7 @@ export const EmployeeDashboard: React.FC = () => {
               </div>
             ))}
             {myTeam.length === 0 && !teamHierarchy?.manager && (
-              <p className="text-sm text-text-muted-light dark:text-text-muted-dark text-center py-2">No team members found</p>
+              <p className="text-sm text-text-muted-light dark:text-text-muted-dark text-center py-2">{t('dashboard:employee.noTeamMembers')}</p>
             )}
           </div>
         </div>
@@ -405,9 +408,9 @@ export const EmployeeDashboard: React.FC = () => {
               <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-lg">
                 <Megaphone size={16} />
               </div>
-              <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Announcements</h2>
+              <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">{t('dashboard:employee.announcements')}</h2>
             </div>
-            <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">View All</button>
+            <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">{t('common:buttons.viewAll')}</button>
           </div>
           <div className="p-4 space-y-3 flex-grow">
             {announcementsData.length > 0 ? (
@@ -441,7 +444,7 @@ export const EmployeeDashboard: React.FC = () => {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-text-muted-light dark:text-text-muted-dark">
                 <Megaphone size={28} className="mb-2 opacity-20" />
-                <p className="text-sm">No announcements yet</p>
+                <p className="text-sm">{t('dashboard:employee.noAnnouncements')}</p>
               </div>
             )}
           </div>
@@ -454,10 +457,10 @@ export const EmployeeDashboard: React.FC = () => {
               <div className="p-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-500 rounded-lg">
                 <StickyNote size={16} />
               </div>
-              <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Personal Notes</h2>
+              <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">{t('dashboard:employee.personalNotes')}</h2>
             </div>
             {notesData.length > 0 && (
-              <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{notesData.length} saved</span>
+              <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('dashboard:admin.saved', { count: notesData.length })}</span>
             )}
           </div>
           <div className="p-4 flex-grow flex flex-col gap-3">
@@ -469,18 +472,18 @@ export const EmployeeDashboard: React.FC = () => {
                 name="employeeNote"
                 value={quickNote}
                 onChange={(e) => setQuickNote(e.target.value)}
-                placeholder="Write a note..."
+                placeholder={t('dashboard:employee.writeNote')}
                 className="w-full h-20 px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm text-text-light dark:text-text-dark placeholder:text-text-muted-light transition-colors"
               />
               <div className="flex items-center justify-between mt-1.5">
-                <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark">{quickNote.length} chars</span>
+                <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark">{t('dashboard:admin.chars', { count: quickNote.length })}</span>
                 <button
                   onClick={handleSaveNote}
                   disabled={isSavingNote || !quickNote.trim()}
                   className={`flex items-center gap-1.5 text-xs bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary-hover transition-colors font-medium ${isSavingNote || !quickNote.trim() ? 'opacity-40 cursor-not-allowed' : 'shadow-sm'}`}
                 >
                   <Send size={12} />
-                  {isSavingNote ? 'Saving...' : 'Save Note'}
+                  {isSavingNote ? t('common:buttons.saving') : t('dashboard:employee.saveNote')}
                 </button>
               </div>
             </div>
@@ -488,7 +491,7 @@ export const EmployeeDashboard: React.FC = () => {
             {/* Recent notes list */}
             {notesData.length > 0 && (
               <div className="flex-grow">
-                <p className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-2 uppercase tracking-wide">Recent</p>
+                <p className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-2 uppercase tracking-wide">{t('dashboard:admin.recent')}</p>
                 <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
                   {notesData.slice(0, 5).map(note => (
                     <div
@@ -525,7 +528,7 @@ export const EmployeeDashboard: React.FC = () => {
                               ? 'text-amber-500 opacity-100'
                               : 'text-text-muted-light hover:text-amber-500 opacity-0 group-hover:opacity-100'
                           }`}
-                          title={note.pinned ? 'Unpin note' : 'Pin note'}
+                          title={note.pinned ? t('dashboard:admin.unpinNote') : t('dashboard:admin.pinNote')}
                         >
                           <Pin size={12} className={note.pinned ? 'fill-amber-500' : ''} />
                         </button>
@@ -533,7 +536,7 @@ export const EmployeeDashboard: React.FC = () => {
                           onClick={(e) => { e.stopPropagation(); handleDeleteNote(note.id); }}
                           disabled={deletingNoteId === note.id}
                           className="flex-shrink-0 opacity-0 group-hover:opacity-100 p-1 text-text-muted-light hover:text-red-500 transition-all rounded"
-                          title="Delete note"
+                          title={t('dashboard:admin.deleteNote')}
                         >
                           <Trash2 size={12} />
                         </button>
@@ -546,7 +549,7 @@ export const EmployeeDashboard: React.FC = () => {
             {notesData.length === 0 && (
               <div className="flex flex-col items-center justify-center py-4 text-text-muted-light dark:text-text-muted-dark">
                 <StickyNote size={24} className="mb-1.5 opacity-20" />
-                <p className="text-xs">No notes yet. Start writing!</p>
+                <p className="text-xs">{t('dashboard:employee.noNotes')}</p>
               </div>
             )}
           </div>

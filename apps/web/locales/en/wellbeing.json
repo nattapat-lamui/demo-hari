@@ -1,0 +1,55 @@
+{
+  "title": "Employee Well-being",
+  "subtitle": "Fostering a positive and supportive workplace culture.",
+  "newAnnouncement": "New Announcement",
+  "sentiment": {
+    "title": "Employee Sentiment",
+    "live": "Live",
+    "noData": "No Survey Data Yet",
+    "noDataDesc": "Sentiment scores will appear here once employees start completing surveys.",
+    "responseRate": "Response Rate",
+    "respondents": "Respondents",
+    "categoryBreakdown": "Category Breakdown"
+  },
+  "announcements": {
+    "title": "Announcements & Policies",
+    "viewAll": "View all"
+  },
+  "calendar": {
+    "teamCalendar": "Team Calendar",
+    "addEvent": "Add New Event",
+    "upcomingEvents": "Upcoming Events",
+    "noUpcoming": "No upcoming events"
+  },
+  "announcementModal": {
+    "title": "Post New Announcement",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g. Office Closure Notice",
+    "type": "Type",
+    "typeAnnouncement": "Announcement",
+    "typePolicy": "Policy Update",
+    "typeEvent": "Event",
+    "eventDate": "Event Date (Optional)",
+    "eventDatePlaceholder": "e.g. Aug 15",
+    "content": "Content",
+    "contentPlaceholder": "Details about the announcement...",
+    "cancel": "Cancel",
+    "post": "Post"
+  },
+  "eventModal": {
+    "title": "Add New Event",
+    "eventTitle": "Event Title",
+    "titlePlaceholder": "e.g. Team Meeting",
+    "eventType": "Event Type",
+    "date": "Date",
+    "cancel": "Cancel",
+    "create": "Create Event"
+  },
+  "eventTypes": {
+    "meeting": "Meeting",
+    "holiday": "Holiday",
+    "training": "Training",
+    "teamBuilding": "Team Building",
+    "other": "Other"
+  }
+}

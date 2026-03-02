@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { RejectReasonDialog } from './RejectReasonDialog';
 
@@ -28,6 +29,7 @@ export const LeaveActionBar: React.FC<LeaveActionBarProps> = ({
   className = '',
   disabled = false,
 }) => {
+  const { t } = useTranslation(['leave']);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
@@ -66,7 +68,7 @@ export const LeaveActionBar: React.FC<LeaveActionBarProps> = ({
         <button
           onClick={handleRejectClick}
           disabled={disabled || isApproving}
-          aria-label="Reject leave request"
+          aria-label={t('leave:actionBar.rejectRequest')}
           className={`
             group
             ${compact ? 'px-3 py-1.5 text-xs' : 'px-5 py-2.5 text-sm'}
@@ -87,14 +89,14 @@ export const LeaveActionBar: React.FC<LeaveActionBarProps> = ({
           <XCircle
             className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} transition-transform duration-200 group-hover:scale-110`}
           />
-          Reject
+          {t('leave:actionBar.reject')}
         </button>
 
         {/* Approve Button - Primary (Right) */}
         <button
           onClick={handleApprove}
           disabled={disabled || isApproving}
-          aria-label="Approve leave request"
+          aria-label={t('leave:actionBar.approveRequest')}
           className={`
             group
             ${compact ? 'px-3 py-1.5 text-xs' : 'px-5 py-2.5 text-sm'}
@@ -115,14 +117,14 @@ export const LeaveActionBar: React.FC<LeaveActionBarProps> = ({
           {isApproving ? (
             <>
               <Loader2 className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} animate-spin`} />
-              {compact ? 'Approving...' : 'Approving...'}
+              {t('leave:actionBar.approving')}
             </>
           ) : (
             <>
               <CheckCircle2
                 className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} transition-transform duration-200 group-hover:scale-110`}
               />
-              Approve
+              {t('leave:actionBar.approve')}
             </>
           )}
         </button>

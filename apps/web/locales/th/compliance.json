@@ -1,0 +1,35 @@
+{
+  "title": "การปฏิบัติตามกฎและรายงาน",
+  "subtitle": "ติดตามการปฏิบัติตามกฎระเบียบและสร้างรายงานที่กำหนดเอง",
+  "exportData": "ส่งออกข้อมูล",
+  "exportSuccess": "ส่งออกข้อมูลสำเร็จ!",
+  "checklist": {
+    "title": "รายการตรวจสอบการปฏิบัติตามกฎ",
+    "subtitle": "ติดตามข้อกำหนดด้านกฎระเบียบที่สำคัญ"
+  },
+  "auditLog": {
+    "title": "บันทึกการตรวจสอบ HR",
+    "subtitle": "การเปลี่ยนแปลงและการอนุมัติล่าสุดในระบบ"
+  },
+  "reportBuilder": {
+    "title": "สร้างรายงานแบบกำหนดเอง",
+    "subtitle": "สร้างรายงานโดยเลือกจุดข้อมูล",
+    "reportName": "ชื่อรายงาน",
+    "reportPlaceholder": "เช่น วิเคราะห์จำนวนพนักงาน ไตรมาส 3",
+    "dataPoints": "จุดข้อมูล",
+    "dateRange": "ช่วงวันที่",
+    "generateReport": "สร้างรายงาน",
+    "reportGenerated": "สร้างรายงาน \"{{name}}\" สำเร็จ!",
+    "nameRequired": "กรุณากรอกชื่อรายงาน",
+    "dataPointEmployeeCount": "จำนวนพนักงาน",
+    "dataPointDepartment": "แยกตามแผนก",
+    "dataPointLeave": "การใช้วันลา",
+    "dataPointAttendance": "สรุปการลงเวลา",
+    "dataPointTurnover": "อัตราลาออก",
+    "dataPointCompliance": "คะแนนการปฏิบัติตามกฎ",
+    "rangeLast30": "30 วันที่ผ่านมา",
+    "rangeLast90": "90 วันที่ผ่านมา",
+    "rangeThisYear": "ปีนี้",
+    "rangeCustom": "กำหนดเอง"
+  }
+}

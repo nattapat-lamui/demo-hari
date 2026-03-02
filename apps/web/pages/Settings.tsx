@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dropdown } from '../components/Dropdown';
 import {
   User,
@@ -25,6 +26,7 @@ import { LeaveTypesTab } from '../components/settings/LeaveTypesTab';
 import { PHONE_COUNTRY_CODES, parsePhoneNumber } from '../lib/phoneUtils';
 
 export const Settings: React.FC = () => {
+  const { t, i18n } = useTranslation('settings');
   const { user, updateUser, isAdminView } = useAuth();
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,7 +47,6 @@ export const Settings: React.FC = () => {
   const [isSavingNotif, setIsSavingNotif] = useState(false);
 
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
-  const [language, setLanguage] = useState<'en' | 'th'>('en');
 
   // Profile state
   const [profile, setProfile] = useState({
@@ -119,26 +120,20 @@ export const Settings: React.FC = () => {
   // Handle language change
   const handleLanguageChange = (value: string) => {
     const newLanguage = value as 'en' | 'th';
-    setLanguage(newLanguage);
-    localStorage.setItem('language', newLanguage);
+    i18n.changeLanguage(newLanguage);
     const languageNames = { en: 'English', th: 'ไทย' };
-    showToast(`Language changed to ${languageNames[newLanguage]}`, 'success');
+    showToast(t('appearance.languageChanged', { language: languageNames[newLanguage] }), 'success');
   };
 
-  // Load theme and language from localStorage on mount
+  // Load theme from localStorage on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system' | null;
-    const savedLanguage = localStorage.getItem('language') as 'en' | 'th' | null;
 
     if (savedTheme) {
       setTheme(savedTheme);
       applyTheme(savedTheme);
     } else {
       applyTheme('system'); // Default to system
-    }
-
-    if (savedLanguage) {
-      setLanguage(savedLanguage);
     }
   }, []);
 
@@ -204,7 +199,7 @@ export const Settings: React.FC = () => {
       updateUser({ emailNotifications: newValue });
     } catch {
       setEmailNotifications(!newValue); // revert on error
-      showToast('Failed to save notification preference', 'error');
+      showToast(t('notifications.saveFailed'), 'error');
     } finally {
       setIsSavingNotif(false);
     }
@@ -213,7 +208,7 @@ export const Settings: React.FC = () => {
   // Handle Save Changes (Profile)
   const handleSaveChanges = async () => {
     if (!user?.employeeId) {
-      showToast('Unable to save: User profile not found.', 'error');
+      showToast(t('general.noUser'), 'error');
       return;
     }
 
@@ -250,12 +245,12 @@ export const Settings: React.FC = () => {
       }
       updateUser(contextUpdate as any);
 
-      showToast('Profile saved successfully!', 'success');
+      showToast(t('general.profileSaved'), 'success');
 
       // Invalidate React Query caches so employee lists stay in sync
       qc.invalidateQueries({ queryKey: queryKeys.employees.all });
     } catch (error: any) {
-      let errorMessage = 'Failed to save profile. Please try again.';
+      let errorMessage = t('general.saveFailed');
       if (error.message) {
         errorMessage = error.message;
       }
@@ -276,14 +271,14 @@ export const Settings: React.FC = () => {
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      showToast('Image size must be less than 5MB.', 'error');
+      showToast(t('general.avatarTooLarge'), 'error');
       return;
     }
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!allowedTypes.includes(file.type)) {
-      showToast('Please upload a JPG, PNG, or GIF image.', 'error');
+      showToast(t('general.avatarInvalidType'), 'error');
       return;
     }
 
@@ -317,10 +312,10 @@ export const Settings: React.FC = () => {
         : data.avatarUrl;
       setAvatarPreview(fullAvatarUrl);
 
-      showToast('Avatar uploaded! Click "Save Changes" to apply.', 'success');
+      showToast(t('general.avatarUploaded'), 'success');
     } catch (error) {
       console.error('Avatar upload error:', error);
-      showToast('Failed to upload avatar. Please try again.', 'error');
+      showToast(t('general.avatarFailed'), 'error');
       // Revert to original avatar on error
       setAvatarPreview(user?.avatar || `https://ui-avatars.com/api/?name=${user?.name}`);
     }
@@ -331,17 +326,17 @@ export const Settings: React.FC = () => {
     const errors: { [key: string]: string } = {};
 
     if (!passwords.current) {
-      errors.current = 'Current password is required';
+      errors.current = t('security.currentRequired');
     }
     if (!passwords.new) {
-      errors.new = 'New password is required';
+      errors.new = t('security.newRequired');
     } else if (passwords.new.length < 6) {
-      errors.new = 'Password must be at least 6 characters';
+      errors.new = t('security.minLength');
     }
     if (!passwords.confirm) {
-      errors.confirm = 'Please confirm your new password';
+      errors.confirm = t('security.confirmRequired');
     } else if (passwords.new !== passwords.confirm) {
-      errors.confirm = 'Passwords do not match';
+      errors.confirm = t('security.mismatch');
     }
 
     setPasswordErrors(errors);
@@ -350,7 +345,7 @@ export const Settings: React.FC = () => {
 
   const handleChangePassword = async () => {
     if (!validatePasswords()) {
-      showToast('Please fix the errors in the form.', 'warning');
+      showToast(t('security.fixErrors'), 'warning');
       return;
     }
 
@@ -360,15 +355,15 @@ export const Settings: React.FC = () => {
         currentPassword: passwords.current,
         newPassword: passwords.new,
       });
-      showToast('Password changed successfully!', 'success');
+      showToast(t('security.passwordChanged'), 'success');
       setPasswords({ current: '', new: '', confirm: '' });
       setPasswordErrors({});
       setShowPasswords({ current: false, new: false, confirm: false });
     } catch (error: any) {
-      let errorMessage = 'Failed to change password. Please try again.';
+      let errorMessage = t('security.changeFailed');
       if (error.message) {
         if (error.message.includes('Incorrect current password')) {
-          errorMessage = 'The current password you entered is incorrect.';
+          errorMessage = t('security.incorrectCurrent');
         } else {
           errorMessage = error.message;
         }
@@ -390,10 +385,10 @@ export const Settings: React.FC = () => {
       /[@$!%*?&]/.test(pwd),
     ];
     const score = checks.filter(Boolean).length;
-    if (score <= 2) return { score, label: 'Weak', color: 'bg-red-500', textColor: 'text-red-500' };
-    if (score <= 3) return { score, label: 'Fair', color: 'bg-yellow-500', textColor: 'text-yellow-600' };
-    if (score === 4) return { score, label: 'Good', color: 'bg-blue-500', textColor: 'text-blue-600' };
-    return { score, label: 'Strong', color: 'bg-green-500', textColor: 'text-green-600' };
+    if (score <= 2) return { score, label: t('security.strength.weak'), color: 'bg-red-500', textColor: 'text-red-500' };
+    if (score <= 3) return { score, label: t('security.strength.fair'), color: 'bg-yellow-500', textColor: 'text-yellow-600' };
+    if (score === 4) return { score, label: t('security.strength.good'), color: 'bg-blue-500', textColor: 'text-blue-600' };
+    return { score, label: t('security.strength.strong'), color: 'bg-green-500', textColor: 'text-green-600' };
   };
   const strength = getPasswordStrength(passwords.new);
 
@@ -402,10 +397,10 @@ export const Settings: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">
-            Settings
+            {t('title')}
           </h1>
           <p className="text-sm sm:text-base text-text-muted-light dark:text-text-muted-dark">
-            Manage your account preferences and application settings.
+            {t('subtitle')}
           </p>
         </div>
       </div>
@@ -423,7 +418,7 @@ export const Settings: React.FC = () => {
               }`}
             >
               <User size={18} />
-              General
+              {t('tabs.general')}
             </button>
             <button
               onClick={() => setActiveTab('notifications')}
@@ -434,7 +429,7 @@ export const Settings: React.FC = () => {
               }`}
             >
               <Bell size={18} />
-              Notifications
+              {t('tabs.notifications')}
             </button>
             <button
               onClick={() => setActiveTab('appearance')}
@@ -445,7 +440,7 @@ export const Settings: React.FC = () => {
               }`}
             >
               <Eye size={18} />
-              Appearance
+              {t('tabs.appearance')}
             </button>
             <button
               onClick={() => setActiveTab('security')}
@@ -456,7 +451,7 @@ export const Settings: React.FC = () => {
               }`}
             >
               <Lock size={18} />
-              Security
+              {t('tabs.security')}
             </button>
             {isAdminView && (
               <button
@@ -468,7 +463,7 @@ export const Settings: React.FC = () => {
                 }`}
               >
                 <Tag size={18} />
-                Leave Types
+                {t('tabs.leaveTypes')}
               </button>
             )}
           </div>
@@ -481,10 +476,10 @@ export const Settings: React.FC = () => {
             <div className="p-6 space-y-6 animate-fade-in">
               <div className="border-b border-border-light dark:border-border-dark pb-4">
                 <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
-                  Profile Information
+                  {t('general.title')}
                 </h2>
                 <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                  Update your public profile details.
+                  {t('general.subtitle')}
                 </p>
               </div>
 
@@ -514,10 +509,10 @@ export const Settings: React.FC = () => {
                     onClick={handleAvatarClick}
                     className="px-4 py-2 bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    Change Avatar
+                    {t('general.changeAvatar')}
                   </button>
                   <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
-                    JPG, GIF or PNG. Max size 5MB
+                    {t('general.avatarHint')}
                   </p>
                 </div>
               </div>
@@ -525,7 +520,7 @@ export const Settings: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="firstName" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    First Name
+                    {t('general.firstName')}
                   </label>
                   <input
                     id="firstName"
@@ -538,7 +533,7 @@ export const Settings: React.FC = () => {
                 </div>
                 <div>
                   <label htmlFor="lastName" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    Last Name
+                    {t('general.lastName')}
                   </label>
                   <input
                     id="lastName"
@@ -551,7 +546,7 @@ export const Settings: React.FC = () => {
                 </div>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    Email Address
+                    {t('general.email')}
                   </label>
                   <input
                     id="email"
@@ -564,7 +559,7 @@ export const Settings: React.FC = () => {
                 </div>
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    Phone Number
+                    {t('general.phone')}
                   </label>
                   <div className="flex gap-2">
                     <Dropdown
@@ -594,7 +589,7 @@ export const Settings: React.FC = () => {
 
               <div>
                 <label htmlFor="bio" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Bio
+                  {t('general.bio')}
                 </label>
                 <textarea
                   id="bio"
@@ -602,7 +597,7 @@ export const Settings: React.FC = () => {
                   rows={4}
                   value={profile.bio}
                   onChange={(e) => setProfile((prev) => ({ ...prev, bio: e.target.value }))}
-                  placeholder="Tell us about yourself, your role, and experience..."
+                  placeholder={t('general.bioPlaceholder')}
                   className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark resize-none"
                 />
               </div>
@@ -615,7 +610,7 @@ export const Settings: React.FC = () => {
                   className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save size={18} />
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  {isSaving ? t('general.saving') : t('general.saveChanges')}
                 </button>
               </div>
             </div>
@@ -626,10 +621,10 @@ export const Settings: React.FC = () => {
             <div className="p-6 space-y-6 animate-fade-in">
               <div className="border-b border-border-light dark:border-border-dark pb-4">
                 <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
-                  Notifications
+                  {t('notifications.title')}
                 </h2>
                 <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                  Choose how you want to be notified.
+                  {t('notifications.subtitle')}
                 </p>
               </div>
 
@@ -637,10 +632,10 @@ export const Settings: React.FC = () => {
                 <div className="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark/50 rounded-lg">
                   <div>
                     <h3 className="font-medium text-text-light dark:text-text-dark">
-                      Email Notifications
+                      {t('notifications.emailNotifications')}
                     </h3>
                     <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                      Receive alerts for leave approvals and important HR updates via email.
+                      {t('notifications.emailDesc')}
                     </p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -663,16 +658,16 @@ export const Settings: React.FC = () => {
             <div className="p-6 space-y-6 animate-fade-in">
               <div className="border-b border-border-light dark:border-border-dark pb-4">
                 <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
-                  Appearance
+                  {t('appearance.title')}
                 </h2>
                 <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                  Customize the look and feel of the application.
+                  {t('appearance.subtitle')}
                 </p>
               </div>
 
               <div>
                 <h3 className="font-medium text-text-light dark:text-text-dark mb-4">
-                  Theme Preference
+                  {t('appearance.themePreference')}
                 </h3>
                 <div className="grid grid-cols-3 gap-4">
                   <button
@@ -680,31 +675,31 @@ export const Settings: React.FC = () => {
                     className={`p-4 border rounded-xl flex flex-col items-center gap-3 transition-all ${theme === 'light' ? 'border-primary bg-primary/5 text-primary' : 'border-border-light dark:border-border-dark hover:border-primary/50'}`}
                   >
                     <Sun size={24} />
-                    <span className="text-sm font-medium">Light</span>
+                    <span className="text-sm font-medium">{t('appearance.light')}</span>
                   </button>
                   <button
                     onClick={() => handleThemeChange('dark')}
                     className={`p-4 border rounded-xl flex flex-col items-center gap-3 transition-all ${theme === 'dark' ? 'border-primary bg-primary/5 text-primary' : 'border-border-light dark:border-border-dark hover:border-primary/50'}`}
                   >
                     <Moon size={24} />
-                    <span className="text-sm font-medium">Dark</span>
+                    <span className="text-sm font-medium">{t('appearance.dark')}</span>
                   </button>
                   <button
                     onClick={() => handleThemeChange('system')}
                     className={`p-4 border rounded-xl flex flex-col items-center gap-3 transition-all ${theme === 'system' ? 'border-primary bg-primary/5 text-primary' : 'border-border-light dark:border-border-dark hover:border-primary/50'}`}
                   >
                     <Monitor size={24} />
-                    <span className="text-sm font-medium">System</span>
+                    <span className="text-sm font-medium">{t('appearance.system')}</span>
                   </button>
                 </div>
               </div>
 
               <div>
-                <label htmlFor="language" className="font-medium text-text-light dark:text-text-dark mb-4 block">Language</label>
+                <label htmlFor="language" className="font-medium text-text-light dark:text-text-dark mb-4 block">{t('appearance.language')}</label>
                 <Dropdown
                   id="language"
                   name="language"
-                  value={language}
+                  value={i18n.language}
                   onChange={handleLanguageChange}
                   options={[
                     { value: 'en', label: 'English' },
@@ -719,9 +714,9 @@ export const Settings: React.FC = () => {
           {activeTab === 'security' && (
             <div className="p-6 space-y-6 animate-fade-in">
               <div className="border-b border-border-light dark:border-border-dark pb-4">
-                <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Security</h2>
+                <h2 className="text-xl font-bold text-text-light dark:text-text-dark">{t('security.title')}</h2>
                 <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                  Protect your account and data.
+                  {t('security.subtitle')}
                 </p>
               </div>
 
@@ -734,19 +729,19 @@ export const Settings: React.FC = () => {
                 autoComplete="off"
                 className="space-y-5"
               >
-                <h3 className="font-semibold text-text-light dark:text-text-dark">Change Password</h3>
+                <h3 className="font-semibold text-text-light dark:text-text-dark">{t('security.changePassword')}</h3>
 
                 {/* Current Password */}
                 <div>
                   <label htmlFor="currentPassword" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    Current Password
+                    {t('security.currentPassword')}
                   </label>
                   <div className="relative">
                     <input
                       id="currentPassword"
                       name="currentPassword"
                       type={showPasswords.current ? 'text' : 'password'}
-                      placeholder="Enter your current password"
+                      placeholder={t('security.currentPlaceholder')}
                       value={passwords.current}
                       onChange={(e) => {
                         setPasswords((prev) => ({ ...prev, current: e.target.value }));
@@ -776,14 +771,14 @@ export const Settings: React.FC = () => {
                 {/* New Password */}
                 <div>
                   <label htmlFor="newPassword" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    New Password
+                    {t('security.newPassword')}
                   </label>
                   <div className="relative">
                     <input
                       id="newPassword"
                       name="newPassword"
                       type={showPasswords.new ? 'text' : 'password'}
-                      placeholder="Enter a new password"
+                      placeholder={t('security.newPlaceholder')}
                       value={passwords.new}
                       onChange={(e) => {
                         setPasswords((prev) => ({ ...prev, new: e.target.value }));
@@ -821,11 +816,11 @@ export const Settings: React.FC = () => {
                       </div>
                       <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5">
                         {[
-                          { label: '8+ characters', ok: passwords.new.length >= 8 },
-                          { label: 'Uppercase letter', ok: /[A-Z]/.test(passwords.new) },
-                          { label: 'Lowercase letter', ok: /[a-z]/.test(passwords.new) },
-                          { label: 'Number', ok: /[0-9]/.test(passwords.new) },
-                          { label: 'Special character', ok: /[@$!%*?&]/.test(passwords.new) },
+                          { label: t('security.rules.chars8'), ok: passwords.new.length >= 8 },
+                          { label: t('security.rules.uppercase'), ok: /[A-Z]/.test(passwords.new) },
+                          { label: t('security.rules.lowercase'), ok: /[a-z]/.test(passwords.new) },
+                          { label: t('security.rules.number'), ok: /[0-9]/.test(passwords.new) },
+                          { label: t('security.rules.special'), ok: /[@$!%*?&]/.test(passwords.new) },
                         ].map(({ label, ok }) => (
                           <li key={label} className={`flex items-center gap-1 text-xs ${ok ? 'text-green-600 dark:text-green-400' : 'text-text-muted-light dark:text-text-muted-dark'}`}>
                             {ok ? <Check size={11} /> : <X size={11} />} {label}
@@ -839,14 +834,14 @@ export const Settings: React.FC = () => {
                 {/* Confirm Password */}
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                    Confirm New Password
+                    {t('security.confirmPassword')}
                   </label>
                   <div className="relative">
                     <input
                       id="confirmPassword"
                       name="confirmPassword"
                       type={showPasswords.confirm ? 'text' : 'password'}
-                      placeholder="Re-enter your new password"
+                      placeholder={t('security.confirmPlaceholder')}
                       value={passwords.confirm}
                       onChange={(e) => {
                         setPasswords((prev) => ({ ...prev, confirm: e.target.value }));
@@ -873,7 +868,7 @@ export const Settings: React.FC = () => {
                   )}
                   {passwords.confirm && passwords.confirm === passwords.new && !passwordErrors.confirm && (
                     <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
-                      <Check size={12} /> Passwords match
+                      <Check size={12} /> {t('security.passwordsMatch')}
                     </p>
                   )}
                 </div>
@@ -885,7 +880,7 @@ export const Settings: React.FC = () => {
                     className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Lock size={16} />
-                    {isChangingPassword ? 'Updating...' : 'Update Password'}
+                    {isChangingPassword ? t('security.updating') : t('security.updatePassword')}
                   </button>
                 </div>
               </form>

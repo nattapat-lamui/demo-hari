@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Palmtree, DollarSign, MessageSquare, Clock } from 'lucide-react';
 
 interface QuickActionsProps {
@@ -14,6 +15,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   onViewLeaveRequests,
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation(['dashboard']);
 
   if (isAdmin) {
     return (
@@ -23,28 +25,28 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           className="flex items-center justify-center gap-3 p-4 bg-primary text-white rounded-xl shadow-sm hover:bg-primary/90 transition-all"
         >
           <Clock size={20} />
-          <span className="font-medium">Add Employee</span>
+          <span className="font-medium">{t('dashboard:quickActions.addEmployee')}</span>
         </button>
         <button
           onClick={onViewLeaveRequests}
           className="flex items-center justify-center gap-3 p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm hover:border-primary/50 transition-all"
         >
           <Palmtree size={20} className="text-accent-teal" />
-          <span className="font-medium text-text-light dark:text-text-dark">Leave Requests</span>
+          <span className="font-medium text-text-light dark:text-text-dark">{t('dashboard:quickActions.leaveRequests')}</span>
         </button>
         <button
           onClick={() => navigate('/employees')}
           className="flex items-center justify-center gap-3 p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm hover:border-primary/50 transition-all"
         >
           <DollarSign size={20} className="text-accent-green" />
-          <span className="font-medium text-text-light dark:text-text-dark">View Employees</span>
+          <span className="font-medium text-text-light dark:text-text-dark">{t('dashboard:quickActions.viewEmployees')}</span>
         </button>
         <button
           onClick={() => navigate('/analytics')}
           className="flex items-center justify-center gap-3 p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm hover:border-primary/50 transition-all"
         >
           <MessageSquare size={20} className="text-accent-orange" />
-          <span className="font-medium text-text-light dark:text-text-dark">Analytics</span>
+          <span className="font-medium text-text-light dark:text-text-dark">{t('dashboard:quickActions.analytics')}</span>
         </button>
       </div>
     );
@@ -60,7 +62,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         <div className="p-2 bg-accent-teal/10 text-accent-teal rounded-lg group-hover:bg-accent-teal group-hover:text-white transition-colors">
           <Palmtree size={20} />
         </div>
-        <span className="font-medium text-text-light dark:text-text-dark">Time Off</span>
+        <span className="font-medium text-text-light dark:text-text-dark">{t('dashboard:quickActions.timeOff')}</span>
       </button>
       {/* Expenses - Hidden until implemented */}
       {/* <button
@@ -79,7 +81,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         <div className="p-2 bg-accent-orange/10 text-accent-orange rounded-lg group-hover:bg-accent-orange group-hover:text-white transition-colors">
           <MessageSquare size={20} />
         </div>
-        <span className="font-medium text-text-light dark:text-text-dark">Surveys</span>
+        <span className="font-medium text-text-light dark:text-text-dark">{t('dashboard:quickActions.surveys')}</span>
       </button>
     </div>
   );

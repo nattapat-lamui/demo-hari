@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import { KeyRound, Mail, ArrowLeft, CheckCircle, Shield, Lock, RefreshCw, Key } from "lucide-react";
 import { BASE_URL } from "../lib/api";
 
@@ -9,16 +10,17 @@ const ForgotPassword: React.FC = () => {
   const [fieldError, setFieldError] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const { t } = useTranslation('auth');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (!email.trim()) {
-      setFieldError("Please enter your email address");
+      setFieldError(t('forgotPassword.emailRequired'));
       return;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setFieldError("Please enter a valid email address");
+      setFieldError(t('forgotPassword.emailInvalid'));
       return;
     }
     setFieldError("");
@@ -37,20 +39,20 @@ const ForgotPassword: React.FC = () => {
       if (response.ok) {
         setSubmitted(true);
       } else {
-        setError(data.error || "Something went wrong. Please try again.");
+        setError(data.error || t('forgotPassword.genericError'));
       }
     } catch {
-      setError("Unable to connect to server. Please try again later.");
+      setError(t('forgotPassword.networkError'));
     } finally {
       setLoading(false);
     }
   };
 
   const features = [
-    { icon: Shield, title: "Secure Reset", desc: "Encrypted token-based process" },
-    { icon: Lock, title: "Time-Limited", desc: "Links expire after 30 minutes" },
-    { icon: RefreshCw, title: "One-Time Use", desc: "Each link works only once" },
-    { icon: Key, title: "Strong Passwords", desc: "Enforced complexity requirements" },
+    { icon: Shield, title: t('forgotPassword.feature1'), desc: t('forgotPassword.feature1Desc') },
+    { icon: Lock, title: t('forgotPassword.feature2'), desc: t('forgotPassword.feature2Desc') },
+    { icon: RefreshCw, title: t('forgotPassword.feature3'), desc: t('forgotPassword.feature3Desc') },
+    { icon: Key, title: t('forgotPassword.feature4'), desc: t('forgotPassword.feature4Desc') },
   ];
 
   return (
@@ -83,7 +85,7 @@ const ForgotPassword: React.FC = () => {
               />
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">HARI</h1>
-                <p className="text-white/70 text-sm">HR Intelligence by AIYA</p>
+                <p className="text-white/70 text-sm">{t('login.tagline')}</p>
               </div>
             </div>
           </div>
@@ -91,11 +93,11 @@ const ForgotPassword: React.FC = () => {
           {/* Main Message */}
           <div className="flex-1 flex flex-col justify-center max-w-lg">
             <h2 className="text-4xl xl:text-5xl font-bold leading-tight mb-6">
-              Secure Password
-              <span className="block text-white/90">Recovery</span>
+              {t('forgotPassword.heroTitle1')}
+              <span className="block text-white/90">{t('forgotPassword.heroTitle2')}</span>
             </h2>
             <p className="text-white/80 text-lg leading-relaxed mb-10">
-              Don't worry, it happens to the best of us. We'll help you get back into your account securely.
+              {t('forgotPassword.heroDesc')}
             </p>
 
             {/* Features Grid */}
@@ -115,7 +117,7 @@ const ForgotPassword: React.FC = () => {
 
           {/* Footer */}
           <div className="text-white/50 text-sm">
-            &copy; 2026 AIYA Technology. All rights reserved.
+            {t('login.copyright')}
           </div>
         </div>
       </div>
@@ -132,7 +134,7 @@ const ForgotPassword: React.FC = () => {
             />
             <div>
               <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">HARI</h1>
-              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">HR Intelligence by AIYA</p>
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('login.tagline')}</p>
             </div>
           </div>
 
@@ -144,9 +146,9 @@ const ForgotPassword: React.FC = () => {
                   <div className="inline-flex items-center justify-center h-14 w-14 bg-gradient-to-br from-primary to-accent-teal text-white rounded-xl shadow-lg shadow-primary/30 mb-4">
                     <KeyRound size={26} />
                   </div>
-                  <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Forgot Password?</h2>
+                  <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">{t('forgotPassword.title')}</h2>
                   <p className="text-text-muted-light dark:text-text-muted-dark mt-2">
-                    Enter your email and we'll send you a reset link
+                    {t('forgotPassword.subtitle')}
                   </p>
                 </div>
 
@@ -159,7 +161,7 @@ const ForgotPassword: React.FC = () => {
                 <form onSubmit={handleSubmit} noValidate className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                      Email Address
+                      {t('forgotPassword.emailLabel')}
                     </label>
                     <div className="relative group">
                       <Mail
@@ -171,7 +173,7 @@ const ForgotPassword: React.FC = () => {
                         value={email}
                         onChange={(e) => { setEmail(e.target.value); setFieldError(""); }}
                         className={`w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:border-transparent outline-none transition-all text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark ${fieldError ? "border-accent-red focus:ring-accent-red/30" : "border-border-light dark:border-border-dark focus:ring-primary"}`}
-                        placeholder="name@company.com"
+                        placeholder={t('forgotPassword.emailPlaceholder')}
                       />
                     </div>
                     {fieldError && (
@@ -192,9 +194,9 @@ const ForgotPassword: React.FC = () => {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        Sending...
+                        {t('forgotPassword.sending')}
                       </span>
-                    ) : "Send Reset Link"}
+                    ) : t('forgotPassword.sendResetLink')}
                   </button>
                 </form>
               </>
@@ -203,13 +205,12 @@ const ForgotPassword: React.FC = () => {
                 <div className="inline-flex items-center justify-center h-14 w-14 bg-gradient-to-br from-accent-green to-accent-teal text-white rounded-xl shadow-lg shadow-accent-green/30 mb-4">
                   <CheckCircle size={26} />
                 </div>
-                <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">Check Your Email</h2>
+                <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">{t('forgotPassword.checkEmail')}</h2>
                 <p className="text-text-muted-light dark:text-text-muted-dark mb-6">
-                  If an account exists for <strong className="text-text-light dark:text-text-dark">{email}</strong>,
-                  you'll receive a password reset link shortly.
+                  {t('forgotPassword.checkEmailDesc', { email })}
                 </p>
                 <div className="bg-primary/5 dark:bg-primary/10 p-4 rounded-xl text-sm text-text-muted-light dark:text-text-muted-dark border border-primary/10 mb-6">
-                  The link will expire in 30 minutes. Don't forget to check your spam folder.
+                  {t('forgotPassword.linkExpiry')}
                 </div>
               </div>
             )}
@@ -220,14 +221,14 @@ const ForgotPassword: React.FC = () => {
                 className="inline-flex items-center gap-2 text-sm text-primary font-semibold hover:text-primary-hover transition-colors"
               >
                 <ArrowLeft size={16} />
-                Back to Sign In
+                {t('forgotPassword.backToSignIn')}
               </Link>
             </div>
           </div>
 
           {/* Additional Info */}
           <p className="text-center text-xs text-text-muted-light dark:text-text-muted-dark mt-6">
-            Secured with 256-bit SSL encryption
+            {t('login.sslEncryption')}
           </p>
         </div>
       </div>

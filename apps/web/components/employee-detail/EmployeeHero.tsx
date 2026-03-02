@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, MoreHorizontal, Palette } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { EmployeeHeroProps } from './EmployeeDetailTypes';
 
 const BANNER_PRESETS = [
@@ -34,6 +35,7 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
     onTransfer,
     onTerminate,
 }) => {
+    const { t } = useTranslation(['employees', 'common']);
     const { canEditBasicInfo, isAdmin } = permissions;
     const [actionsOpen, setActionsOpen] = useState(false);
     const [paletteOpen, setPaletteOpen] = useState(false);
@@ -80,12 +82,12 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
                             className="flex items-center gap-1.5 px-2.5 py-1.5 bg-black/30 hover:bg-black/50 text-white rounded-lg text-xs font-medium opacity-0 group-hover/banner:opacity-100 transition-opacity backdrop-blur-sm"
                         >
                             <Palette size={14} />
-                            Banner color
+                            {t('employees:hero.bannerColor')}
                         </button>
 
                         {paletteOpen && (
                             <div className="absolute right-0 top-9 z-30 bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark p-3 w-52">
-                                <p className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark mb-2">Choose a banner color</p>
+                                <p className="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark mb-2">{t('employees:hero.chooseBannerColor')}</p>
                                 <div className="grid grid-cols-5 gap-1.5">
                                     {BANNER_PRESETS.map((preset) => {
                                         const isActive = employee.bannerColor === `${preset.from},${preset.to}`;
@@ -173,7 +175,7 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
                                 onClick={onEditProfileClick}
                                 className="px-4 py-2 bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                             >
-                                Edit Profile
+                                {t('employees:hero.editProfile')}
                             </button>
                         )}
                         {isAdmin && (
@@ -182,7 +184,7 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
                                     onClick={() => setActionsOpen(!actionsOpen)}
                                     className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
                                 >
-                                    Actions <MoreHorizontal size={16} />
+                                    {t('employees:hero.actions')} <MoreHorizontal size={16} />
                                 </button>
                                 {actionsOpen && (
                                     <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-card-dark rounded-lg shadow-lg border border-border-light dark:border-border-dark z-20">
@@ -190,19 +192,19 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
                                             onClick={() => { setActionsOpen(false); onPromote(); }}
                                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-text-light dark:text-text-dark rounded-t-lg"
                                         >
-                                            Promote
+                                            {t('employees:hero.promote')}
                                         </button>
                                         <button
                                             onClick={() => { setActionsOpen(false); onTransfer(); }}
                                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-text-light dark:text-text-dark"
                                         >
-                                            Transfer
+                                            {t('employees:hero.transfer')}
                                         </button>
                                         <button
                                             onClick={() => { setActionsOpen(false); onTerminate(); }}
                                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 rounded-b-lg"
                                         >
-                                            Terminate
+                                            {t('employees:hero.terminate')}
                                         </button>
                                     </div>
                                 )}
