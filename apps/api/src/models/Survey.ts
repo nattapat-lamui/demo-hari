@@ -4,6 +4,18 @@ export const SURVEY_CATEGORIES = [
   'Growth',
   'Work-Life Balance',
   'Management',
+  'Communication',
+  'Teamwork',
+  'Problem Solving',
+  'Time Management',
+  'Adaptability',
+  'Technical Skills',
+  'Innovation & Learning',
+  'Quality & Responsibility',
+  'Blueprint',
+  'Action',
+  'Nurturing',
+  'Knowledge',
 ] as const;
 
 export type SurveyCategory = (typeof SURVEY_CATEGORIES)[number];

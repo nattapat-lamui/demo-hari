@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Plus, X, Check, Trash2, Lock, Unlock,
-  MessageSquare, CheckCircle2, BarChart3, ClipboardList, ArrowRight,
+  MessageSquare, CheckCircle2, BarChart3, ClipboardList, ArrowRight, FileText, Users,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Dropdown } from '../components/Dropdown';
@@ -20,9 +20,75 @@ import type { SurveyCategory } from '../types';
 
 const SURVEY_CATEGORIES: SurveyCategory[] = [
   'Workload', 'Team', 'Growth', 'Work-Life Balance', 'Management',
+  'Communication', 'Teamwork', 'Problem Solving', 'Time Management',
+  'Adaptability', 'Technical Skills', 'Innovation & Learning', 'Quality & Responsibility',
+  'Blueprint', 'Action', 'Nurturing', 'Knowledge',
 ];
 
-const categoryOptions = SURVEY_CATEGORIES.map((c) => ({ value: c, label: c }));
+// ---------------------------------------------------------------------------
+// IT Performance Evaluation Template
+// ---------------------------------------------------------------------------
+
+type TFunc = (key: string) => string;
+
+function getPerformanceEvalTemplate(t: TFunc): { title: string; questions: QuestionDraft[] } {
+  const categories: { category: SurveyCategory; keys: string[] }[] = [
+    { category: 'Communication', keys: ['communication_1', 'communication_2', 'communication_3'] },
+    { category: 'Teamwork', keys: ['teamwork_1', 'teamwork_2', 'teamwork_3'] },
+    { category: 'Problem Solving', keys: ['problemSolving_1', 'problemSolving_2', 'problemSolving_3'] },
+    { category: 'Time Management', keys: ['timeManagement_1', 'timeManagement_2', 'timeManagement_3'] },
+    { category: 'Adaptability', keys: ['adaptability_1', 'adaptability_2', 'adaptability_3'] },
+    { category: 'Technical Skills', keys: ['technicalSkills_1', 'technicalSkills_2', 'technicalSkills_3'] },
+    { category: 'Innovation & Learning', keys: ['innovationLearning_1', 'innovationLearning_2', 'innovationLearning_3'] },
+    { category: 'Quality & Responsibility', keys: ['qualityResponsibility_1', 'qualityResponsibility_2', 'qualityResponsibility_3'] },
+  ];
+
+  const questions: QuestionDraft[] = categories.flatMap(({ category, keys }) =>
+    keys.map((key) => ({
+      questionText: t(`surveys.template.${key}`),
+      category,
+    }))
+  );
+
+  return { title: t('surveys.template.title'), questions };
+}
+
+// ---------------------------------------------------------------------------
+// B.A.N.K. Personality Model Template
+// ---------------------------------------------------------------------------
+
+function getBankModelTemplate(t: TFunc): { title: string; questions: QuestionDraft[] } {
+  // 20 questions interleaved across categories to reduce bias (matches reference code order)
+  const questionOrder: { category: SurveyCategory; key: string }[] = [
+    { category: 'Nurturing', key: 'nurturing_1' },
+    { category: 'Action', key: 'action_1' },
+    { category: 'Blueprint', key: 'blueprint_1' },
+    { category: 'Knowledge', key: 'knowledge_1' },
+    { category: 'Blueprint', key: 'blueprint_2' },
+    { category: 'Knowledge', key: 'knowledge_2' },
+    { category: 'Nurturing', key: 'nurturing_2' },
+    { category: 'Action', key: 'action_2' },
+    { category: 'Nurturing', key: 'nurturing_3' },
+    { category: 'Blueprint', key: 'blueprint_3' },
+    { category: 'Knowledge', key: 'knowledge_3' },
+    { category: 'Action', key: 'action_3' },
+    { category: 'Action', key: 'action_4' },
+    { category: 'Knowledge', key: 'knowledge_4' },
+    { category: 'Nurturing', key: 'nurturing_4' },
+    { category: 'Blueprint', key: 'blueprint_4' },
+    { category: 'Action', key: 'action_5' },
+    { category: 'Knowledge', key: 'knowledge_5' },
+    { category: 'Blueprint', key: 'blueprint_5' },
+    { category: 'Nurturing', key: 'nurturing_5' },
+  ];
+
+  const questions: QuestionDraft[] = questionOrder.map(({ category, key }) => ({
+    questionText: t(`surveys.bankTemplate.${key}`),
+    category,
+  }));
+
+  return { title: t('surveys.bankTemplate.title'), questions };
+}
 
 // ---------------------------------------------------------------------------
 // Create Survey Modal (Admin)
@@ -44,6 +110,12 @@ const CreateSurveyModal: React.FC<{
   const [questions, setQuestions] = useState<QuestionDraft[]>([
     { questionText: '', category: 'Workload' },
   ]);
+  const [templateApplied, setTemplateApplied] = useState(false);
+
+  const categoryOptions = SURVEY_CATEGORIES.map((c) => ({
+    value: c,
+    label: t(`surveys.categories.${c}`),
+  }));
 
   const addQuestion = () => {
     setQuestions((prev) => [...prev, { questionText: '', category: 'Workload' }]);
@@ -76,6 +148,7 @@ const CreateSurveyModal: React.FC<{
       });
       setTitle('');
       setQuestions([{ questionText: '', category: 'Workload' }]);
+      setTemplateApplied(false);
       onCreated();
       onClose();
     } catch {
@@ -108,6 +181,58 @@ const CreateSurveyModal: React.FC<{
               className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
             />
           </div>
+
+          {/* Template Cards */}
+          <div>
+            <p className="text-sm font-medium text-text-light dark:text-text-dark mb-2">{t('surveys.templateSection.title')}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* IT Performance Evaluation */}
+              <button
+                type="button"
+                onClick={() => {
+                  const tpl = getPerformanceEvalTemplate(t);
+                  setTitle(tpl.title);
+                  setQuestions(tpl.questions);
+                  setTemplateApplied(true);
+                }}
+                className="flex flex-col items-start gap-2 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-colors text-left"
+              >
+                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <FileText size={18} className="text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-primary">{t('surveys.templateSection.itEvalTitle')}</p>
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('surveys.templateSection.itEvalDesc')}</p>
+                  <p className="text-[10px] text-text-muted-light/70 dark:text-text-muted-dark/70 mt-1">{t('surveys.templateSection.itEvalMeta')}</p>
+                </div>
+              </button>
+
+              {/* B.A.N.K. Model */}
+              <button
+                type="button"
+                onClick={() => {
+                  const tpl = getBankModelTemplate(t);
+                  setTitle(tpl.title);
+                  setQuestions(tpl.questions);
+                  setTemplateApplied(true);
+                }}
+                className="flex flex-col items-start gap-2 p-4 rounded-lg border-2 border-dashed border-violet-400/30 bg-violet-50/50 dark:bg-violet-900/10 hover:bg-violet-100/50 dark:hover:bg-violet-900/20 hover:border-violet-400/50 transition-colors text-left"
+              >
+                <div className="w-9 h-9 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                  <Users size={18} className="text-violet-600 dark:text-violet-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">{t('surveys.templateSection.bankTitle')}</p>
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('surveys.templateSection.bankDesc')}</p>
+                  <p className="text-[10px] text-text-muted-light/70 dark:text-text-muted-dark/70 mt-1">{t('surveys.templateSection.bankMeta')}</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {templateApplied && (
+            <p className="text-xs text-green-600 dark:text-green-400 -mt-2">{t('surveys.template.templateApplied')}</p>
+          )}
 
           <div>
             <div className="flex items-center justify-between mb-2">

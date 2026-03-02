@@ -572,10 +572,17 @@ export interface AdminAttendanceUpsertData {
 // Survey & Sentiment Types
 // ============================================================================
 
-export type SurveyCategory = 'Workload' | 'Team' | 'Growth' | 'Work-Life Balance' | 'Management';
+export type SurveyCategory =
+  | 'Workload' | 'Team' | 'Growth' | 'Work-Life Balance' | 'Management'
+  | 'Communication' | 'Teamwork' | 'Problem Solving' | 'Time Management'
+  | 'Adaptability' | 'Technical Skills' | 'Innovation & Learning' | 'Quality & Responsibility'
+  | 'Blueprint' | 'Action' | 'Nurturing' | 'Knowledge';
 
 export const SURVEY_CATEGORIES: SurveyCategory[] = [
   'Workload', 'Team', 'Growth', 'Work-Life Balance', 'Management',
+  'Communication', 'Teamwork', 'Problem Solving', 'Time Management',
+  'Adaptability', 'Technical Skills', 'Innovation & Learning', 'Quality & Responsibility',
+  'Blueprint', 'Action', 'Nurturing', 'Knowledge',
 ];
 
 export interface SurveyQuestion {
