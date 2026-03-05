@@ -325,7 +325,8 @@ export const AdminLeaveRequests: React.FC = () => {
             width="w-auto"
           />
         </FilterToolbar>
-        <div className="overflow-x-auto">
+        {/* Desktop Table */}
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-border-light dark:border-border-dark">
               <tr>
@@ -460,6 +461,118 @@ export const AdminLeaveRequests: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden">
+          {paginatedRequests.length === 0 ? (
+            <div className="px-4 py-12 text-center text-text-muted-light dark:text-text-muted-dark">
+              {t('leave:admin.noRequests')}
+            </div>
+          ) : (
+            <div className="space-y-3 p-4">
+              {paginatedRequests.map((request) => {
+                const emp = employeeMap.get(request.employeeId);
+                const days = request.days ?? 1;
+
+                return (
+                  <div
+                    key={request.id}
+                    onClick={() => setDetailRequest(request)}
+                    className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 cursor-pointer active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
+                  >
+                    {/* Header: avatar + name + status */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          src={emp?.avatar || null}
+                          name={emp?.name || request.employeeName}
+                          size="lg"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-text-light dark:text-text-dark">
+                            {emp?.name || request.employeeName}
+                          </p>
+                          <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {emp?.department || ''}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          LEAVE_TYPE_COLORS[request.type] ||
+                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                        }`}
+                      >
+                        {translateLeaveType(request.type)}
+                      </span>
+                    </div>
+
+                    {/* Content */}
+                    <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                      <div>
+                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('leave:admin.dates')}</p>
+                        <p className="text-text-light dark:text-text-dark">{request.dates}</p>
+                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                          {days} {days === 1 ? t('common:time.day') : t('common:time.days')}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('leave:admin.reason')}</p>
+                        <p className="text-text-light dark:text-text-dark truncate">
+                          {request.reason || t('leave:admin.noReason')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      {request.status === 'Cancel Requested' ? (
+                        <>
+                          <button
+                            onClick={() => handleCancelDecision(request, 'approve_cancel')}
+                            className="flex-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-200 dark:hover:bg-green-900/50 rounded-lg transition-colors text-center"
+                          >
+                            {t('leave:admin.approveCancel')}
+                          </button>
+                          <button
+                            onClick={() => handleCancelDecision(request, 'reject_cancel')}
+                            className="flex-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-200 dark:hover:bg-red-900/50 rounded-lg transition-colors text-center"
+                          >
+                            {t('leave:admin.rejectCancel')}
+                          </button>
+                        </>
+                      ) : request.status === 'Pending' ? (
+                        <LeaveActionBar
+                          employeeName={emp?.name || request.employeeName}
+                          onApprove={() => handleApprove(request.id)}
+                          onReject={(reason) => handleReject(request.id, reason)}
+                          compact={true}
+                        />
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${
+                            request.status === 'Approved'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-200'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-200'
+                          }`}
+                        >
+                          {request.status === 'Approved' ? (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          ) : (
+                            <XCircle className="w-3.5 h-3.5" />
+                          )}
+                          {t(`common:status.${request.status.toLowerCase()}`, {
+                            defaultValue: request.status,
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Pagination */}

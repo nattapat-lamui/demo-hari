@@ -162,7 +162,7 @@ const Register: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background-light dark:bg-background-dark">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative overflow-hidden bg-gradient-to-br from-accent-teal via-primary to-primary-dark">
         {/* Animated Background Elements */}
@@ -228,21 +228,41 @@ const Register: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Panel - Register Form */}
-      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-background-light dark:bg-background-dark">
-        <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <img 
-              src="/logo/AIYA_Logo.png" 
-              alt="AIYA Logo" 
-              className="h-12 w-12 rounded-xl shadow-md object-contain"
-            />
-            <div>
-              <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">HARI</h1>
-              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('login.tagline')}</p>
-            </div>
+      {/* Mobile Gradient Header */}
+      <div className="lg:hidden relative overflow-hidden bg-gradient-to-br from-accent-teal via-primary to-primary-dark">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+          <div className="absolute bottom-0 -left-10 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+        </div>
+
+        <div className="relative z-10 px-6 pt-10 pb-24">
+          {/* Top Navigation */}
+          <div className="flex items-center justify-end mb-8">
+            <Link to="/login" className="text-white/80 text-sm flex items-center gap-2">
+              {t('register.alreadyHaveAccount')}
+              <span className="border border-white/30 rounded-lg px-3 py-1.5 text-white font-medium hover:bg-white/10 transition-colors">
+                {t('register.signIn')}
+              </span>
+            </Link>
           </div>
+
+          {/* Brand */}
+          <div className="flex flex-col items-center text-center">
+            <img
+              src="/logo/AIYA_Logo.png"
+              alt="AIYA Logo"
+              className="h-24 w-24 rounded-2xl shadow-lg shadow-black/20 object-contain bg-white p-3 mb-4"
+            />
+            <h1 className="text-3xl font-bold text-white tracking-tight">HARI</h1>
+            <p className="text-white/70 text-sm mt-1">{t('login.tagline')}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Register Form */}
+      <div className="w-full lg:w-1/2 xl:w-2/5 lg:flex lg:items-center lg:justify-center lg:p-12">
+        <div className="w-full max-w-md px-4 -mt-16 relative z-10 mb-8 lg:px-0 lg:mt-0 lg:mb-0">
 
           {/* Register Card */}
           <div className="bg-card-light dark:bg-card-dark rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/20 p-8 border border-border-light dark:border-border-dark">

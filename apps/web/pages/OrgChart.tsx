@@ -346,6 +346,82 @@ export const OrgChart: React.FC = () => {
     };
   }, []);
 
+  // Touch pan/zoom handlers
+  const touchStartRef = useRef<{ x: number; y: number; dist: number; zoom: number } | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const getTouchDistance = (touches: TouchList) => {
+      if (touches.length < 2) return 0;
+      const dx = touches[0]!.clientX - touches[1]!.clientX;
+      const dy = touches[0]!.clientY - touches[1]!.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('button') || target.closest('input') || target.closest('select') || target.closest('a')) return;
+
+      if (e.touches.length === 1) {
+        touchStartRef.current = {
+          x: e.touches[0]!.clientX - panPositionRef.current.x,
+          y: e.touches[0]!.clientY - panPositionRef.current.y,
+          dist: 0,
+          zoom: zoomRef.current,
+        };
+        if (contentRef.current) contentRef.current.style.transition = 'none';
+      } else if (e.touches.length === 2) {
+        e.preventDefault();
+        touchStartRef.current = {
+          x: e.touches[0]!.clientX - panPositionRef.current.x,
+          y: e.touches[0]!.clientY - panPositionRef.current.y,
+          dist: getTouchDistance(e.touches),
+          zoom: zoomRef.current,
+        };
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+      e.preventDefault();
+
+      if (e.touches.length === 1) {
+        panPositionRef.current = {
+          x: e.touches[0]!.clientX - touchStartRef.current.x,
+          y: e.touches[0]!.clientY - touchStartRef.current.y,
+        };
+        applyTransform();
+      } else if (e.touches.length === 2 && touchStartRef.current.dist > 0) {
+        const newDist = getTouchDistance(e.touches);
+        const scale = newDist / touchStartRef.current.dist;
+        zoomRef.current = Math.min(1.5, Math.max(0.3, touchStartRef.current.zoom * scale));
+        applyTransform();
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+      if (e.touches.length === 0) {
+        touchStartRef.current = null;
+        if (contentRef.current) contentRef.current.style.transition = 'transform 0.2s ease-out';
+        setPanPosition(panPositionRef.current);
+        setZoom(zoomRef.current);
+      }
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [applyTransform]);
+
   // Toggle Collapse
   const toggleCollapse = (id: string) => {
     const next = new Set(collapsedNodes);
@@ -579,7 +655,7 @@ export const OrgChart: React.FC = () => {
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, node.id)}
             onDragEnd={handleDragEnd}
-            className={`flex flex-col items-center bg-card-light dark:bg-card-dark border transition-all duration-200 rounded-xl p-4 w-52 ${
+            className={`flex flex-col items-center bg-card-light dark:bg-card-dark border transition-all duration-200 rounded-xl p-3 md:p-4 w-40 md:w-52 ${
               isHighlighted
                 ? 'ring-4 ring-primary border-primary scale-105 shadow-lg shadow-primary/20'
                 : isDragging
@@ -694,7 +770,7 @@ export const OrgChart: React.FC = () => {
             {/* Children row */}
             <div className="flex">
               {node.children!.map((child, index) => (
-                <div key={child.id} className="flex flex-col items-center px-4 relative">
+                <div key={child.id} className="flex flex-col items-center px-2 md:px-4 relative">
                   {/* Horizontal connector segment: first=right half, last=left half, middle=full */}
                   {childCount > 1 && (
                     <div
@@ -742,7 +818,7 @@ export const OrgChart: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap w-full md:w-auto">
           {/* Back to full view button (when in subtree view) */}
           {isSubTreeView && (
             <button
@@ -765,11 +841,11 @@ export const OrgChart: React.FC = () => {
               ...departments.map((dept) => ({ value: dept, label: dept }))
             ]}
             placeholder={t('common:departments.allDepartments')}
-            width="w-44"
+            width="w-full sm:w-44"
           />
 
           {/* Search Bar */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light"
               size={16}
@@ -779,11 +855,11 @@ export const OrgChart: React.FC = () => {
               placeholder={t('orgChart.findEmployee')}
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-56"
+              className="pl-9 pr-4 py-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-56"
             />
           </div>
 
-          <div className="flex items-center gap-4 bg-card-light dark:bg-card-dark p-2 rounded-lg border border-border-light dark:border-border-dark shadow-sm">
+          <div className="hidden sm:flex items-center gap-4 bg-card-light dark:bg-card-dark p-2 rounded-lg border border-border-light dark:border-border-dark shadow-sm">
             <div className="flex items-center gap-2">
               <ZoomOut size={16} className="text-text-muted-light" />
               <input
@@ -811,7 +887,7 @@ export const OrgChart: React.FC = () => {
 
       <div
         ref={containerRef}
-        className="flex-grow bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-8 overflow-hidden relative bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#2d3748_1px,transparent_1px)] [background-size:20px_20px] select-none cursor-grab"
+        className="flex-grow bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4 md:p-8 overflow-hidden relative bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#2d3748_1px,transparent_1px)] [background-size:20px_20px] select-none cursor-grab touch-none"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -837,7 +913,7 @@ export const OrgChart: React.FC = () => {
             transition: 'transform 0.2s ease-out',
           }}
         >
-          <div className="flex gap-16">
+          <div className="flex gap-6 md:gap-16">
             {tree.map((root) => (
               <TreeNode key={root.id} node={root} isRoot />
             ))}

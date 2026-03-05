@@ -130,8 +130,8 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
         </button>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Desktop Table */}
+      <div className="overflow-x-auto hidden md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border-light dark:border-border-dark">
@@ -197,6 +197,62 @@ export const LeaveTypesTab: React.FC<{ showToast: (msg: string, type: 'success' 
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden">
+        {configs.length === 0 ? (
+          <div className="py-8 text-center text-text-muted-light dark:text-text-muted-dark">
+            {t('leaveTypes.noTypes')}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {configs.map((cfg, idx) => {
+              const palette = (cfg.color ? COLOR_PALETTE[cfg.color] : undefined) ?? COLOR_PALETTE.gray!;
+              return (
+                <div
+                  key={cfg.type}
+                  className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${palette.badge}`}>
+                      {cfg.type}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openEdit(idx)}
+                        className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteIndex(idx)}
+                        className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-text-light dark:text-text-dark">
+                      {cfg.total === -1 ? (
+                        <span className="text-text-muted-light dark:text-text-muted-dark italic">{t('leaveTypes.unlimited')}</span>
+                      ) : (
+                        <>{cfg.total} {t('leaveTypes.days')}</>
+                      )}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`w-4 h-4 rounded-full ${palette.dot}`} />
+                      <span className="text-text-muted-light dark:text-text-muted-dark capitalize text-xs">
+                        {cfg.color || 'gray'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Modal */}

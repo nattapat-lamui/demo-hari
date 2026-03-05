@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Breadcrumbs } from './Breadcrumbs';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { SessionTimeoutWarning } from './SessionTimeoutWarning';
 import { useSessionTimeout } from '../hooks/useSessionTimeout';
 import { useSocketQuerySync } from '../hooks/useSocketQuerySync';
@@ -11,6 +11,12 @@ import { useSocketQuerySync } from '../hooks/useSocketQuerySync';
 export const Layout: React.FC = () => {
   useSocketQuerySync();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  // Auto-close mobile drawer on navigation
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
 
   // Session timeout management (30 min timeout, warning at 25 min)
   const { showWarning, timeLeft, extendSession, logout } = useSessionTimeout({

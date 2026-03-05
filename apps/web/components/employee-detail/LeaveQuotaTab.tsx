@@ -106,7 +106,7 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
                     <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">{t('employees:leaveQuota.title')}</h3>
                     <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
@@ -116,14 +116,15 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
                 <button
                     onClick={handleSave}
                     disabled={!dirty || isSaving}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium w-full sm:w-auto justify-center"
                 >
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     {t('employees:leaveQuota.saveChanges')}
                 </button>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table */}
+            <div className="overflow-x-auto hidden md:block">
                 <table className="w-full">
                     <thead>
                         <tr className="border-b border-border-light dark:border-border-dark">
@@ -195,6 +196,69 @@ export const LeaveQuotaTab: React.FC<LeaveQuotaTabProps> = ({ employeeId, showTo
                         })}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+                {quotas.map((q: EffectiveLeaveQuota) => {
+                    const currentVal = editValues[q.type] ?? q.total;
+                    const isEdited = currentVal !== q.defaultTotal;
+                    const isCurrentlyOverride = q.isOverride;
+
+                    return (
+                        <div
+                            key={q.type}
+                            className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4"
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="font-medium text-text-light dark:text-text-dark">{translateLeaveType(q.type)}</span>
+                                {isEdited || isCurrentlyOverride ? (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                        {t('employees:leaveQuota.custom')}
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                        {t('employees:leaveQuota.default')}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{t('employees:leaveQuota.default')}</p>
+                                    <p className="text-text-light dark:text-text-dark">
+                                        {q.defaultTotal === -1 ? t('employees:leaveQuota.unlimited') : `${q.defaultTotal} ${t('employees:leaveQuota.days')}`}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{t('employees:leaveQuota.currentQuota')}</p>
+                                    {q.defaultTotal === -1 ? (
+                                        <p className="text-text-muted-light dark:text-text-muted-dark">{t('employees:leaveQuota.unlimited')}</p>
+                                    ) : (
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            value={currentVal}
+                                            onChange={e => handleChange(q.type, e.target.value)}
+                                            className="w-20 text-center px-2 py-1 border border-border-light dark:border-border-dark rounded-md bg-bg-light dark:bg-bg-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-primary"
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                            {isCurrentlyOverride && q.defaultTotal !== -1 && (
+                                <div className="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+                                    <button
+                                        onClick={() => handleReset(q.type)}
+                                        disabled={isSaving}
+                                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-text-muted-light dark:text-text-muted-dark hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+                                    >
+                                        <RotateCcw className="w-3 h-3" />
+                                        {t('employees:leaveQuota.reset')}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

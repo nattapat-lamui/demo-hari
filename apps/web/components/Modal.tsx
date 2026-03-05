@@ -33,9 +33,9 @@ export const Modal: React.FC<ModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={`bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-full ${widthClass} overflow-hidden animate-in zoom-in-95 duration-200`}>
+      <div className={`bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-full ${widthClass} overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]`}>
         {title && (
-          <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+          <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 shrink-0">
             <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
               {title}
             </h3>
@@ -47,7 +47,9 @@ export const Modal: React.FC<ModalProps> = ({
             </button>
           </div>
         )}
-        {children}
+        <div className="overflow-y-auto flex-1">
+          {children}
+        </div>
       </div>
     </div>,
     document.body
