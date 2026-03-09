@@ -6,7 +6,8 @@
   "exportFailed": "Failed to export compliance data.",
   "checklist": {
     "title": "Compliance Checklist",
-    "subtitle": "Track key regulatory requirements."
+    "subtitle": "Track key regulatory requirements.",
+    "types": "types"
   },
   "checks": {
     "emergencyContacts": "All employees have emergency contacts",

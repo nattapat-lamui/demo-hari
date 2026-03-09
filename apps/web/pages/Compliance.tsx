@@ -226,7 +226,9 @@ export const Compliance: React.FC = () => {
                             />
                           </div>
                           <span className="text-xs text-text-muted-light dark:text-text-muted-dark whitespace-nowrap">
-                            {item.detail}
+                            {item.detail.endsWith(' types')
+                              ? item.detail.replace(' types', ` ${t('checklist.types')}`)
+                              : item.detail}
                           </span>
                         </div>
                       </div>
@@ -236,7 +238,9 @@ export const Compliance: React.FC = () => {
                       item.status === 'In Progress' ? 'text-accent-orange bg-accent-orange/10' :
                       'text-accent-red bg-accent-red/10'
                     }`}>
-                      {item.status}
+                      {item.status === 'Complete' ? t('common:status.completed') :
+                       item.status === 'In Progress' ? t('common:status.inProgress') :
+                       t('common:status.overdue')}
                     </span>
                   </div>
                 ))
