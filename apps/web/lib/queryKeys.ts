@@ -112,4 +112,9 @@ export const queryKeys = {
     all: ['systemConfig'] as const,
     leaveQuotas: () => [...queryKeys.systemConfig.all, 'leaveQuotas'] as const,
   },
+  compliance: {
+    all: ['compliance'] as const,
+    checks: () => [...queryKeys.compliance.all, 'checks'] as const,
+    auditLogs: (filters: Record<string, unknown>) => [...queryKeys.compliance.all, 'auditLogs', filters] as const,
+  },
 } as const;

@@ -93,6 +93,7 @@
     "present": "Present",
     "checkedOut": "Checked Out",
     "notIn": "Not In",
+    "always": "always included",
     "completed": "Completed",
     "inProgress": "In Progress",
     "overdue": "Overdue",

@@ -3,13 +3,27 @@
   "subtitle": "Monitor regulatory adherence and generate custom reports.",
   "exportData": "Export Data",
   "exportSuccess": "Data exported successfully!",
+  "exportFailed": "Failed to export compliance data.",
   "checklist": {
     "title": "Compliance Checklist",
     "subtitle": "Track key regulatory requirements."
   },
+  "checks": {
+    "emergencyContacts": "All employees have emergency contacts",
+    "leavePolicies": "Leave policies configured",
+    "onboardingComplete": "All active employees completed onboarding",
+    "performanceReviews": "Annual performance reviews up to date",
+    "attendanceTracking": "Attendance tracking active (last 7 days)",
+    "documentCompliance": "Employee documents on file"
+  },
   "auditLog": {
     "title": "HR Audit Log",
-    "subtitle": "Recent changes and approvals across the module."
+    "subtitle": "Recent changes and approvals across the module.",
+    "filterAll": "All Resources",
+    "noLogs": "No audit log entries found.",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{current}} of {{total}}"
   },
   "reportBuilder": {
     "title": "Custom Report Builder",
@@ -19,17 +33,19 @@
     "dataPoints": "Data Points",
     "dateRange": "Date Range",
     "generateReport": "Generate Report",
-    "reportGenerated": "Report \"{{name}}\" generated successfully!",
+    "generating": "Generating...",
+    "reportGenerated": "Report \"{{name}}\" downloaded successfully!",
     "nameRequired": "Please enter a report name.",
-    "dataPointEmployeeCount": "Employee Count",
-    "dataPointDepartment": "Department Breakdown",
-    "dataPointLeave": "Leave Usage",
-    "dataPointAttendance": "Attendance Summary",
-    "dataPointTurnover": "Turnover Rate",
-    "dataPointCompliance": "Compliance Score",
+    "downloadFailed": "Failed to generate report.",
+    "selectAtLeast": "Please select at least one data point.",
+    "employeeName": "Employee Name",
+    "department": "Department",
+    "salary": "Salary",
+    "startDate": "Start Date",
+    "performanceRating": "Performance Rating",
+    "leaveBalance": "Leave Days Used",
     "rangeLast30": "Last 30 Days",
     "rangeLast90": "Last 90 Days",
-    "rangeThisYear": "This Year",
-    "rangeCustom": "Custom Range"
+    "rangeThisYear": "This Year"
   }
 }

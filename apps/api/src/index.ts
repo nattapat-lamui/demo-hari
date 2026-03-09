@@ -35,6 +35,7 @@ import announcementsRoutes from "./routes/announcementsRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import adminAttendanceRoutes from "./routes/adminAttendanceRoutes";
 import surveyRoutes from "./routes/surveyRoutes";
+import complianceRoutes from "./routes/complianceRoutes";
 import { runMigration } from "./scripts/init-db";
 import { initAttendanceScheduler } from "./services/AttendanceScheduler";
 
@@ -158,6 +159,7 @@ app.use("/api/announcements", announcementsRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/admin/attendance", adminAttendanceRoutes);
 app.use("/api/surveys", surveyRoutes);
+app.use("/api/compliance", complianceRoutes);
 
 // Backward compatibility for leave balances endpoint
 // Old: GET /api/leave-balances/:employeeId

@@ -1140,3 +1140,53 @@ export const useUpdateLeaveTypeConfig = () => {
     },
   });
 };
+
+// ---------------------------------------------------------------------------
+// Compliance Queries
+// ---------------------------------------------------------------------------
+
+export interface ComplianceCheck {
+  id: string;
+  titleKey: string;
+  status: 'Complete' | 'In Progress' | 'Overdue';
+  detail: string;
+  percentage: number;
+}
+
+export const useComplianceChecks = () => {
+  return useQuery({
+    queryKey: queryKeys.compliance.checks(),
+    queryFn: () => api.get<ComplianceCheck[]>('/compliance/checks'),
+  });
+};
+
+export interface PersistentAuditLog {
+  id: string;
+  userId: string | null;
+  userEmail: string | null;
+  action: string;
+  resource: string;
+  method: string;
+  path: string;
+  ip: string;
+  statusCode: number;
+  success: boolean;
+  details: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export const useComplianceAuditLogs = (filters: { page?: number; limit?: number; resource?: string } = {}) => {
+  return useQuery({
+    queryKey: queryKeys.compliance.auditLogs(filters as Record<string, unknown>),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.page) params.append('page', filters.page.toString());
+      if (filters.limit) params.append('limit', (filters.limit || 15).toString());
+      if (filters.resource && filters.resource !== 'All') params.append('resource', filters.resource);
+      const qs = params.toString();
+      return api.get<PaginatedResponse<PersistentAuditLog>>(
+        qs ? `/compliance/audit-logs?${qs}` : '/compliance/audit-logs'
+      );
+    },
+  });
+};

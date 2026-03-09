@@ -3,13 +3,27 @@
   "subtitle": "ติดตามการปฏิบัติตามกฎระเบียบและสร้างรายงานที่กำหนดเอง",
   "exportData": "ส่งออกข้อมูล",
   "exportSuccess": "ส่งออกข้อมูลสำเร็จ!",
+  "exportFailed": "ส่งออกข้อมูลล้มเหลว",
   "checklist": {
     "title": "รายการตรวจสอบการปฏิบัติตามกฎ",
     "subtitle": "ติดตามข้อกำหนดด้านกฎระเบียบที่สำคัญ"
   },
+  "checks": {
+    "emergencyContacts": "พนักงานทุกคนมีผู้ติดต่อฉุกเฉิน",
+    "leavePolicies": "กำหนดนโยบายการลาแล้ว",
+    "onboardingComplete": "พนักงานที่ใช้งานทุกคนผ่านการปฐมนิเทศ",
+    "performanceReviews": "การประเมินผลงานประจำปีเป็นปัจจุบัน",
+    "attendanceTracking": "การลงเวลาทำงานใช้งานอยู่ (7 วันที่ผ่านมา)",
+    "documentCompliance": "เอกสารพนักงานอยู่ในระบบ"
+  },
   "auditLog": {
     "title": "บันทึกการตรวจสอบ HR",
-    "subtitle": "การเปลี่ยนแปลงและการอนุมัติล่าสุดในระบบ"
+    "subtitle": "การเปลี่ยนแปลงและการอนุมัติล่าสุดในระบบ",
+    "filterAll": "ทรัพยากรทั้งหมด",
+    "noLogs": "ไม่พบรายการบันทึกการตรวจสอบ",
+    "previous": "ก่อนหน้า",
+    "next": "ถัดไป",
+    "page": "หน้า {{current}} จาก {{total}}"
   },
   "reportBuilder": {
     "title": "สร้างรายงานแบบกำหนดเอง",
@@ -19,17 +33,19 @@
     "dataPoints": "จุดข้อมูล",
     "dateRange": "ช่วงวันที่",
     "generateReport": "สร้างรายงาน",
-    "reportGenerated": "สร้างรายงาน \"{{name}}\" สำเร็จ!",
+    "generating": "กำลังสร้าง...",
+    "reportGenerated": "ดาวน์โหลดรายงาน \"{{name}}\" สำเร็จ!",
     "nameRequired": "กรุณากรอกชื่อรายงาน",
-    "dataPointEmployeeCount": "จำนวนพนักงาน",
-    "dataPointDepartment": "แยกตามแผนก",
-    "dataPointLeave": "การใช้วันลา",
-    "dataPointAttendance": "สรุปการลงเวลา",
-    "dataPointTurnover": "อัตราลาออก",
-    "dataPointCompliance": "คะแนนการปฏิบัติตามกฎ",
+    "downloadFailed": "สร้างรายงานล้มเหลว",
+    "selectAtLeast": "กรุณาเลือกจุดข้อมูลอย่างน้อย 1 รายการ",
+    "employeeName": "ชื่อพนักงาน",
+    "department": "แผนก",
+    "salary": "เงินเดือน",
+    "startDate": "วันที่เริ่มงาน",
+    "performanceRating": "คะแนนประเมินผลงาน",
+    "leaveBalance": "วันลาที่ใช้ไป",
     "rangeLast30": "30 วันที่ผ่านมา",
     "rangeLast90": "90 วันที่ผ่านมา",
-    "rangeThisYear": "ปีนี้",
-    "rangeCustom": "กำหนดเอง"
+    "rangeThisYear": "ปีนี้"
   }
 }

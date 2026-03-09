@@ -141,7 +141,9 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
       count = 7;
     }
 
-    const dates = generateDateRange(start, count);
+    const allDates = generateDateRange(start, count);
+    // Filter out weekends (Sat/Sun) – only show working days
+    const dates = allDates.filter((d) => !isWeekend(d));
     const first = dates[0]!;
     const last = dates[dates.length - 1]!;
 
@@ -264,10 +266,13 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
       const clampedStart = leaveStart < firstDateKey ? firstDateKey : leaveStart;
       const clampedEnd = leaveEnd > lastDateKey ? lastDateKey : leaveEnd;
 
-      // Find column indices
-      const startIdx = visibleDates.findIndex((d) => toDateKey(d) === clampedStart);
-      const endIdx = visibleDates.findIndex((d) => toDateKey(d) === clampedEnd);
-      if (startIdx === -1 || endIdx === -1) continue;
+      // Find column indices (snap to nearest weekday since weekends are filtered out)
+      let startIdx = visibleDates.findIndex((d) => toDateKey(d) >= clampedStart);
+      let endIdx = -1;
+      for (let ei = visibleDates.length - 1; ei >= 0; ei--) {
+        if (toDateKey(visibleDates[ei]!) <= clampedEnd) { endIdx = ei; break; }
+      }
+      if (startIdx === -1 || endIdx === -1 || startIdx > endIdx) continue;
 
       // CSS Grid: col 1 = name, col 2+ = dates (1-based)
       const colStart = startIdx + 2;
@@ -372,13 +377,10 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
           {visibleDates.map((date, i) => {
             const key = toDateKey(date);
             const isToday = key === todayKey;
-            const weekend = isWeekend(date);
             return (
               <div
                 key={key}
-                className={`text-center py-1.5 text-[10px] leading-tight border-b border-border-light dark:border-border-dark select-none ${
-                  weekend ? 'bg-gray-50 dark:bg-gray-800/40' : ''
-                } ${isToday ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
+                className={`text-center py-1.5 text-[10px] leading-tight border-b border-border-light dark:border-border-dark select-none ${isToday ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
                 style={{ gridRow: 1, gridColumn: i + 2 }}
               >
                 <div className={`font-medium ${isToday ? 'text-primary' : 'text-text-muted-light dark:text-text-muted-dark'}`}>
@@ -405,7 +407,6 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
               {visibleDates.map((date, i) => {
                 const key = toDateKey(date);
                 const isToday = key === todayKey;
-                const weekend = isWeekend(date);
                 const stats = attendancePerDay[i];
                 const present = stats?.present ?? 0;
                 const total = stats?.total ?? 0;
@@ -414,17 +415,15 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
                 let countColor = 'text-emerald-600 dark:text-emerald-400';
                 if (ratio < 0.75) countColor = 'text-amber-600 dark:text-amber-400';
                 if (ratio < 0.5) countColor = 'text-red-600 dark:text-red-400';
-                // Future dates or weekends with 0 present: gray
-                if (key > todayKey || (weekend && present === 0)) {
+                // Future dates: gray
+                if (key > todayKey) {
                   countColor = 'text-text-muted-light dark:text-text-muted-dark';
                 }
 
                 return (
                   <div
                     key={`summary-${key}`}
-                    className={`flex flex-col items-center justify-center border-b-2 border-border-light dark:border-border-dark ${
-                      weekend ? 'bg-gray-50 dark:bg-gray-800/40' : ''
-                    } ${isToday ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
+                    className={`flex flex-col items-center justify-center border-b-2 border-border-light dark:border-border-dark ${isToday ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
                     style={{ gridRow: summaryRowIdx, gridColumn: i + 2 }}
                     title={stats ? `${present}/${total} ${t('leave:calendar.checkedIn')}` : ''}
                   >
@@ -473,7 +472,6 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
                 {/* Day cells with attendance indicators */}
                 {visibleDates.map((date, i) => {
                   const dateKey = toDateKey(date);
-                  const weekend = isWeekend(date);
                   const isToday = dateKey === todayKey;
                   const isFuture = dateKey > todayKey;
                   const checkedIn = showAvailability && attendanceByDate.get(dateKey)?.has(person.employeeId);
@@ -481,13 +479,11 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
                   return (
                     <div
                       key={`${person.employeeId}-${dateKey}`}
-                      className={`flex items-center justify-center border-b border-border-light dark:border-border-dark ${
-                        weekend ? 'bg-gray-50 dark:bg-gray-800/40' : ''
-                      } ${isToday ? 'border-l-2 border-l-primary/40' : ''}
+                      className={`flex items-center justify-center border-b border-border-light dark:border-border-dark ${isToday ? 'border-l-2 border-l-primary/40' : ''}
                       ${showAvailability && checkedIn ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}
                       style={{ gridRow, gridColumn: i + 2 }}
                     >
-                      {showAvailability && !isFuture && !weekend && (
+                      {showAvailability && !isFuture && (
                         checkedIn ? (
                           <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
                         ) : (

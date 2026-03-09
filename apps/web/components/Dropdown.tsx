@@ -58,8 +58,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setMenuPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        top: rect.bottom + 4,
+        left: rect.left,
         width: rect.width
       });
     }
@@ -144,7 +144,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         <div
           ref={menuRef}
           style={{
-            position: 'absolute',
+            position: 'fixed',
             top: menuPosition.top,
             left: menuPosition.left,
             minWidth: menuPosition.width,
