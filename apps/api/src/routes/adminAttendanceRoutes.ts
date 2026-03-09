@@ -22,6 +22,29 @@ router.get('/snapshot', async (_req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/admin/attendance/calendar
+ * Get compact attendance data for a date range (used by dashboard calendar).
+ * Returns array of { employeeId, date } for records with clock_in.
+ * Query params: startDate (required), endDate (required)
+ */
+router.get('/calendar', async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+    const data = await AttendanceService.getAttendanceCalendarData(
+      startDate as string,
+      endDate as string
+    );
+    res.json(data);
+  } catch (error: unknown) {
+    console.error('Error getting calendar attendance data:', error);
+    res.status(500).json({ error: 'Failed to get calendar attendance data' });
+  }
+});
+
+/**
  * GET /api/admin/attendance/records
  * Get paginated attendance records with filters
  * Query params: search, department, status, startDate, endDate, page, limit

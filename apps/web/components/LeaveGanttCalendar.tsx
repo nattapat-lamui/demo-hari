@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { LeaveRequest } from '../types';
-import { useLeaveTypeConfig } from '../hooks/queries';
+import type { LeaveRequest, Employee } from '../types';
+import { useLeaveTypeConfig, useAdminAttendanceCalendar } from '../hooks/queries';
 import { buildLeaveColorMap, getShortLabel, translateLeaveType } from '../lib/leaveTypeConfig';
 
 // ---------------------------------------------------------------------------
@@ -11,6 +11,7 @@ import { buildLeaveColorMap, getShortLabel, translateLeaveType } from '../lib/le
 interface LeaveCalendarProps {
   userLeaves: LeaveRequest[];
   teamLeaves: LeaveRequest[];
+  allEmployees?: Employee[];
   isManager?: boolean;
   onLeaveClick?: (request: LeaveRequest) => void;
 }
@@ -33,8 +34,6 @@ interface PersonRow {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-// MONTH_NAMES and SHORT_DAY_NAMES are defined inside the component to access translations
-
 const DEFAULT_TYPE_COLOR = { bar: 'bg-gray-400', barDark: 'dark:bg-gray-500', text: 'text-white', legend: 'bg-gray-400 dark:bg-gray-500' };
 
 const TEAM_GRAY_COLOR = { bar: 'bg-gray-300', barDark: 'dark:bg-gray-600', text: 'text-gray-700 dark:text-gray-200', legend: 'bg-gray-300 dark:bg-gray-600' };
@@ -45,7 +44,7 @@ const TEAM_GRAY_COLOR = { bar: 'bg-gray-300', barDark: 'dark:bg-gray-600', text:
 function toLocalDateStr(raw: string): string {
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
   const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (isoMatch) return isoMatch[1];
+  if (isoMatch) return isoMatch[1]!;
   const d = new Date(raw);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -89,6 +88,7 @@ function isWeekend(date: Date): boolean {
 export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
   userLeaves,
   teamLeaves,
+  allEmployees,
   isManager = false,
   onLeaveClick,
 }) => {
@@ -119,6 +119,9 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [anchor, setAnchor] = useState(() => new Date());
 
+  // Whether we show the availability view (all employees) or legacy leave-only view
+  const showAvailability = !!allEmployees && allEmployees.length > 0;
+
   // Compute visible date range
   const { visibleDates, rangeLabel } = useMemo(() => {
     const today = new Date(anchor);
@@ -139,15 +142,15 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
     }
 
     const dates = generateDateRange(start, count);
-    const first = dates[0];
-    const last = dates[dates.length - 1];
+    const first = dates[0]!;
+    const last = dates[dates.length - 1]!;
 
     let label: string;
     if (viewMode === 'month') {
       label = `${MONTH_NAMES[first.getMonth()]} ${first.getFullYear()}`;
     } else {
-      const fm = MONTH_NAMES[first.getMonth()].slice(0, 3);
-      const lm = MONTH_NAMES[last.getMonth()].slice(0, 3);
+      const fm = MONTH_NAMES[first.getMonth()]!.slice(0, 3);
+      const lm = MONTH_NAMES[last.getMonth()]!.slice(0, 3);
       if (first.getMonth() === last.getMonth()) {
         label = `${fm} ${first.getDate()} – ${last.getDate()}, ${first.getFullYear()}`;
       } else {
@@ -159,8 +162,42 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
   }, [anchor, viewMode]);
 
   const todayKey = toDateKey(new Date());
-  const firstDateKey = toDateKey(visibleDates[0]);
-  const lastDateKey = toDateKey(visibleDates[visibleDates.length - 1]);
+  const firstDateKey = toDateKey(visibleDates[0]!);
+  const lastDateKey = toDateKey(visibleDates[visibleDates.length - 1]!);
+
+  // Fetch attendance records for the visible date range (only in availability mode)
+  const { data: attendanceCalendarData } = useAdminAttendanceCalendar(
+    firstDateKey,
+    lastDateKey,
+    showAvailability
+  );
+
+  // Build attendance map: date -> Set<employeeId> who checked in
+  const attendanceByDate = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    if (!attendanceCalendarData) return map;
+
+    for (const record of attendanceCalendarData) {
+      const dateKey = toLocalDateStr(record.date);
+      if (!map.has(dateKey)) map.set(dateKey, new Set());
+      map.get(dateKey)!.add(record.employeeId);
+    }
+    return map;
+  }, [attendanceCalendarData]);
+
+  // Compute attendance count per day (only in availability mode)
+  const attendancePerDay = useMemo(() => {
+    if (!showAvailability) return [];
+    const activeEmployees = allEmployees!.filter(e => e.status !== 'Terminated');
+    const total = activeEmployees.length;
+
+    return visibleDates.map((date) => {
+      const dateKey = toDateKey(date);
+      const checkedInSet = attendanceByDate.get(dateKey);
+      const present = checkedInSet ? checkedInSet.size : 0;
+      return { total, present };
+    });
+  }, [showAvailability, allEmployees, visibleDates, attendanceByDate]);
 
   // Navigation handlers
   const handlePrev = () => {
@@ -186,11 +223,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
     const allLeaves: { leave: LeaveRequest; isUser: boolean }[] = [];
 
     for (const leave of userLeaves) {
-      if (isManager) {
-        if (leave.status !== 'Approved' && leave.status !== 'Pending') continue;
-      } else {
-        if (leave.status !== 'Approved' && leave.status !== 'Pending') continue;
-      }
+      if (leave.status !== 'Approved' && leave.status !== 'Pending') continue;
       if (!leave.startDate || !leave.endDate) continue;
       allLeaves.push({ leave, isUser: true });
     }
@@ -207,6 +240,18 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
 
     // Group by employeeId
     const groupMap = new Map<string, PersonRow>();
+
+    // In availability mode, seed rows for ALL active employees
+    if (showAvailability) {
+      for (const emp of allEmployees!) {
+        if (emp.status === 'Terminated') continue;
+        groupMap.set(emp.id, {
+          employeeId: emp.id,
+          name: emp.name,
+          bars: [],
+        });
+      }
+    }
 
     for (const { leave, isUser } of allLeaves) {
       const leaveStart = toLocalDateStr(leave.startDate);
@@ -250,16 +295,21 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
     });
 
     return rows;
-  }, [userLeaves, teamLeaves, isManager, visibleDates, firstDateKey, lastDateKey]);
+  }, [userLeaves, teamLeaves, isManager, allEmployees, showAvailability, visibleDates, firstDateKey, lastDateKey]);
 
   const dayCount = visibleDates.length;
   const ROW_HEIGHT = 44;
+  // +1 for the attendance summary row when in availability mode
+  const summaryRowIdx = showAvailability ? 2 : -1; // row 2 = summary (after header)
+  const personRowOffset = showAvailability ? 3 : 2; // person rows start after summary
 
   return (
     <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-4 md:p-6 flex flex-col">
       {/* Header: title + view toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('leave:calendar.teamCalendar')}</h2>
+        <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
+          {showAvailability ? t('leave:calendar.teamAvailability') : t('leave:calendar.teamCalendar')}
+        </h2>
         <div className="flex items-center gap-1 bg-background-light dark:bg-background-dark rounded-lg p-0.5">
           {(['week', '2weeks', 'month'] as ViewMode[]).map((mode) => (
             <button
@@ -311,7 +361,7 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
           style={{
             display: 'grid',
             gridTemplateColumns: `120px repeat(${dayCount}, minmax(28px, 1fr))`,
-            gridTemplateRows: `auto ${personRows.length > 0 ? `repeat(${personRows.length}, ${ROW_HEIGHT}px)` : 'auto'}`,
+            gridTemplateRows: `auto ${showAvailability ? `${ROW_HEIGHT}px ` : ''}${personRows.length > 0 ? `repeat(${personRows.length}, ${ROW_HEIGHT}px)` : 'auto'}`,
           }}
         >
           {/* ---- Header row (gridRow 1): empty name cell + day columns ---- */}
@@ -341,19 +391,68 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
             );
           })}
 
+          {/* ---- Attendance summary row (gridRow 2) ---- */}
+          {showAvailability && (
+            <>
+              <div
+                className="sticky left-0 z-10 bg-card-light dark:bg-card-dark flex items-center pr-2 border-b-2 border-border-light dark:border-border-dark"
+                style={{ gridRow: summaryRowIdx, gridColumn: 1 }}
+              >
+                <span className="text-[10px] font-semibold text-primary uppercase tracking-wide truncate">
+                  {t('leave:calendar.checkedIn')}
+                </span>
+              </div>
+              {visibleDates.map((date, i) => {
+                const key = toDateKey(date);
+                const isToday = key === todayKey;
+                const weekend = isWeekend(date);
+                const stats = attendancePerDay[i];
+                const present = stats?.present ?? 0;
+                const total = stats?.total ?? 0;
+                const ratio = total > 0 ? present / total : 0;
+                // Color: green if most present, amber if some, red if few
+                let countColor = 'text-emerald-600 dark:text-emerald-400';
+                if (ratio < 0.75) countColor = 'text-amber-600 dark:text-amber-400';
+                if (ratio < 0.5) countColor = 'text-red-600 dark:text-red-400';
+                // Future dates or weekends with 0 present: gray
+                if (key > todayKey || (weekend && present === 0)) {
+                  countColor = 'text-text-muted-light dark:text-text-muted-dark';
+                }
+
+                return (
+                  <div
+                    key={`summary-${key}`}
+                    className={`flex flex-col items-center justify-center border-b-2 border-border-light dark:border-border-dark ${
+                      weekend ? 'bg-gray-50 dark:bg-gray-800/40' : ''
+                    } ${isToday ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
+                    style={{ gridRow: summaryRowIdx, gridColumn: i + 2 }}
+                    title={stats ? `${present}/${total} ${t('leave:calendar.checkedIn')}` : ''}
+                  >
+                    <span className={`text-xs font-bold ${countColor}`}>
+                      {key > todayKey ? '-' : present}
+                    </span>
+                    <span className="text-[8px] text-text-muted-light dark:text-text-muted-dark leading-none">
+                      /{total}
+                    </span>
+                  </div>
+                );
+              })}
+            </>
+          )}
+
           {/* ---- Empty state ---- */}
           {personRows.length === 0 && (
             <div
               className="text-center py-10 text-sm text-text-muted-light dark:text-text-muted-dark"
-              style={{ gridRow: 2, gridColumn: `1 / ${dayCount + 2}` }}
+              style={{ gridRow: personRowOffset, gridColumn: `1 / ${dayCount + 2}` }}
             >
-              {t('leave:calendar.noRequests')}
+              {showAvailability ? t('leave:calendar.allAvailable') : t('leave:calendar.noRequests')}
             </div>
           )}
 
           {/* ---- Person rows ---- */}
           {personRows.map((person, pIdx) => {
-            const gridRow = pIdx + 2; // row 1 = header
+            const gridRow = pIdx + personRowOffset;
             const rowIsUser = person.bars.some((b) => b.isUser);
 
             return (
@@ -364,34 +463,42 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
                   style={{ gridRow, gridColumn: 1 }}
                 >
                   <span
-                    className={`text-xs font-medium truncate ${
-                      rowIsUser
-                        ? 'text-text-light dark:text-text-dark'
-                        : 'text-text-muted-light dark:text-text-muted-dark'
-                    }`}
+                    className="text-xs font-medium truncate text-text-light dark:text-text-dark"
                     title={person.name}
                   >
                     {rowIsUser ? t('leave:calendar.you') : person.name}
                   </span>
                 </div>
 
-                {/* Day background cells — same gridRow as bars */}
+                {/* Day cells with attendance indicators */}
                 {visibleDates.map((date, i) => {
                   const dateKey = toDateKey(date);
                   const weekend = isWeekend(date);
                   const isToday = dateKey === todayKey;
+                  const isFuture = dateKey > todayKey;
+                  const checkedIn = showAvailability && attendanceByDate.get(dateKey)?.has(person.employeeId);
+
                   return (
                     <div
                       key={`${person.employeeId}-${dateKey}`}
-                      className={`border-b border-border-light dark:border-border-dark ${
+                      className={`flex items-center justify-center border-b border-border-light dark:border-border-dark ${
                         weekend ? 'bg-gray-50 dark:bg-gray-800/40' : ''
-                      } ${isToday ? 'border-l-2 border-l-primary/40' : ''}`}
+                      } ${isToday ? 'border-l-2 border-l-primary/40' : ''}
+                      ${showAvailability && checkedIn ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}
                       style={{ gridRow, gridColumn: i + 2 }}
-                    />
+                    >
+                      {showAvailability && !isFuture && !weekend && (
+                        checkedIn ? (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                        )
+                      )}
+                    </div>
                   );
                 })}
 
-                {/* Leave bars — same gridRow, higher z-index → overlaps bg cells */}
+                {/* Leave bars — same gridRow, higher z-index -> overlaps bg cells */}
                 {person.bars.map((bar) => {
                   const isPending = bar.request.status === 'Pending';
                   const isBarUser = bar.isUser;
@@ -445,6 +552,20 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 pt-3 border-t border-border-light dark:border-border-dark">
+        {/* Checked-in indicator (availability mode) */}
+        {showAvailability && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
+              <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('leave:calendar.checkedIn')}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+              <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('leave:calendar.notIn')}</span>
+            </div>
+          </>
+        )}
+
         {Object.entries(TYPE_COLORS).map(([type, colors]) => (
           <div key={type} className="flex items-center gap-1.5">
             <span className={`w-3 h-2 rounded-sm ${colors.legend}`} />

@@ -915,6 +915,17 @@ export const useAdminAttendanceSnapshot = () => {
   });
 };
 
+export const useAdminAttendanceCalendar = (startDate: string, endDate: string, enabled = true) => {
+  return useQuery({
+    queryKey: [...queryKeys.adminAttendance.all, 'calendar', startDate, endDate],
+    queryFn: () =>
+      api.get<{ employeeId: string; date: string }[]>(
+        `/admin/attendance/calendar?startDate=${startDate}&endDate=${endDate}`
+      ),
+    enabled: enabled && !!startDate && !!endDate,
+  });
+};
+
 export const useAdminAttendanceRecords = (filters: AdminAttendanceFilters) => {
   return useQuery({
     queryKey: queryKeys.adminAttendance.records(filters as Record<string, unknown>),

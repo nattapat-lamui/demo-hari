@@ -387,6 +387,7 @@ export const AdminDashboard: React.FC = () => {
       <LeaveGanttCalendar
         userLeaves={myRequests}
         teamLeaves={teamRequests}
+        allEmployees={allEmployees}
         isManager={true}
         onLeaveClick={setDetailRequest}
       />

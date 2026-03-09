@@ -154,16 +154,21 @@
   },
   "calendar": {
     "teamCalendar": "Team Calendar",
+    "teamAvailability": "Team Availability",
     "you": "You",
     "pendingLabel": "(Pending)",
     "onLeave": "On Leave",
+    "available": "available",
     "team": "Team",
     "teamOnLeave": "Team on Leave",
     "week": "Week",
     "twoWeeks": "2 Weeks",
     "month": "Month",
     "today": "Today",
-    "noRequests": "No leave requests in this period."
+    "checkedIn": "Checked In",
+    "notIn": "Not In",
+    "noRequests": "No leave requests in this period.",
+    "allAvailable": "All team members are available in this period."
   },
   "rejectDialog": {
     "title": "Reject Leave Request",

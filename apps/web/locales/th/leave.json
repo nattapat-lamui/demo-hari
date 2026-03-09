@@ -154,16 +154,21 @@
   },
   "calendar": {
     "teamCalendar": "ปฏิทินทีม",
+    "teamAvailability": "ตารางพร้อมทำงาน",
     "you": "คุณ",
     "pendingLabel": "(รอดำเนินการ)",
     "onLeave": "ลา",
+    "available": "พร้อมทำงาน",
     "team": "ทีม",
     "teamOnLeave": "ทีมที่ลา",
     "week": "สัปดาห์",
     "twoWeeks": "2 สัปดาห์",
     "month": "เดือน",
     "today": "วันนี้",
-    "noRequests": "ไม่มีคำขอลาในช่วงนี้"
+    "checkedIn": "เข้างานแล้ว",
+    "notIn": "ยังไม่เข้า",
+    "noRequests": "ไม่มีคำขอลาในช่วงนี้",
+    "allAvailable": "สมาชิกทุกคนพร้อมทำงานในช่วงนี้"
   },
   "rejectDialog": {
     "title": "ปฏิเสธคำขอลา",

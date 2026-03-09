@@ -552,6 +552,28 @@ export class AttendanceService {
       overtimeHours: row.overtime_hours != null ? parseFloat(row.overtime_hours as string) : null,
     };
   }
+  /**
+   * Get a compact attendance map for a date range (used by the calendar).
+   * Returns an array of { employeeId, date } for every record that has a clock_in.
+   */
+  async getAttendanceCalendarData(
+    startDate: string,
+    endDate: string
+  ): Promise<{ employeeId: string; date: string }[]> {
+    const result = await query(
+      `SELECT employee_id, date::text
+       FROM attendance_records
+       WHERE date >= $1 AND date <= $2
+         AND clock_in IS NOT NULL
+       ORDER BY date`,
+      [startDate, endDate]
+    );
+
+    return result.rows.map((row: Record<string, unknown>) => ({
+      employeeId: row.employee_id as string,
+      date: row.date as string,
+    }));
+  }
 }
 
 export default new AttendanceService();
