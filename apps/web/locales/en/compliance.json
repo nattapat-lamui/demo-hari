@@ -24,7 +24,35 @@
     "noLogs": "No audit log entries found.",
     "previous": "Previous",
     "next": "Next",
-    "page": "Page {{current}} of {{total}}"
+    "page": "Page {{current}} of {{total}}",
+    "system": "System",
+    "success": "Success",
+    "failed": "Failed",
+    "justNow": "Just now",
+    "minsAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "actions": {
+      "User Login": "Logged in",
+      "User Logout": "Logged out",
+      "Password Change": "Changed password",
+      "Database Seed": "Seeded database",
+      "Employee Created": "Added employee",
+      "Employee Updated": "Updated employee",
+      "Employee Deleted": "Deleted employee",
+      "Document Uploaded": "Uploaded document",
+      "Document Deleted": "Deleted document",
+      "Leave Request Created": "Submitted leave request",
+      "Leave Request Updated": "Updated leave request",
+      "Leave Request Deleted": "Deleted leave request"
+    },
+    "resources": {
+      "Employee": "Employee",
+      "Document": "Document",
+      "Leave Request": "Leave Request",
+      "Authentication": "Authentication",
+      "System": "System"
+    }
   },
   "reportBuilder": {
     "title": "Custom Report Builder",

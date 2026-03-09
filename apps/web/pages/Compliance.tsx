@@ -54,17 +54,17 @@ function getResourceColor(resource: string) {
   return 'bg-gray-100 dark:bg-gray-700 text-text-muted-light dark:text-text-muted-dark';
 }
 
-function formatTimeAgo(dateStr: string) {
+function formatTimeAgo(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string) {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffMins < 1) return t('auditLog.justNow');
+  if (diffMins < 60) return t('auditLog.minsAgo', { count: diffMins });
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffHours < 24) return t('auditLog.hoursAgo', { count: diffHours });
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 7) return t('auditLog.daysAgo', { count: diffDays });
   return date.toLocaleDateString();
 }
 
@@ -206,7 +206,10 @@ export const Compliance: React.FC = () => {
                   <div key={i} className="h-14 bg-background-light dark:bg-background-dark/50 rounded-lg animate-pulse" />
                 ))
               ) : (
-                checks.map((item) => (
+                [...checks].sort((a, b) => {
+                  const order: Record<string, number> = { 'Overdue': 0, 'In Progress': 1, 'Complete': 2 };
+                  return (order[a.status] ?? 1) - (order[b.status] ?? 1);
+                }).map((item) => (
                   <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-background-light dark:bg-background-dark/50">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {item.status === 'Complete' && <CheckCircle2 className="text-accent-green flex-shrink-0" size={20} />}
@@ -280,27 +283,20 @@ export const Compliance: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-text-light dark:text-text-dark text-sm leading-snug">
-                        <span className="font-semibold">{log.userEmail || 'System'}</span>
-                        {' '}
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                          log.action === 'Created' ? 'bg-accent-green/10 text-accent-green' :
-                          log.action === 'Updated' ? 'bg-primary/10 text-primary' :
-                          log.action === 'Deleted' ? 'bg-accent-red/10 text-accent-red' :
-                          'bg-gray-100 dark:bg-gray-700 text-text-muted-light dark:text-text-muted-dark'
-                        }`}>
-                          {log.action}
+                        <span className="font-semibold">{log.userEmail || t('auditLog.system')}</span>
+                        {' — '}
+                        <span className="text-text-muted-light dark:text-text-muted-dark">
+                          {t(`auditLog.actions.${log.action}`, { defaultValue: log.action })}
                         </span>
-                        {' '}
-                        <span className="text-text-muted-light dark:text-text-muted-dark">{log.resource}</span>
                       </p>
                       <p className="text-text-muted-light dark:text-text-muted-dark text-xs mt-0.5">
-                        {log.method} {log.path} · {formatTimeAgo(log.createdAt)}
+                        {t(`auditLog.resources.${log.resource}`, { defaultValue: log.resource })} · {formatTimeAgo(log.createdAt, t)}
                       </p>
                     </div>
-                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                       log.success ? 'text-accent-green bg-accent-green/10' : 'text-accent-red bg-accent-red/10'
                     }`}>
-                      {log.statusCode}
+                      {log.success ? t('auditLog.success') : t('auditLog.failed')}
                     </span>
                   </div>
                 ))

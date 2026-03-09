@@ -24,7 +24,35 @@
     "noLogs": "ไม่พบรายการบันทึกการตรวจสอบ",
     "previous": "ก่อนหน้า",
     "next": "ถัดไป",
-    "page": "หน้า {{current}} จาก {{total}}"
+    "page": "หน้า {{current}} จาก {{total}}",
+    "system": "ระบบ",
+    "success": "สำเร็จ",
+    "failed": "ล้มเหลว",
+    "justNow": "เมื่อสักครู่",
+    "minsAgo": "{{count}} นาทีที่แล้ว",
+    "hoursAgo": "{{count}} ชั่วโมงที่แล้ว",
+    "daysAgo": "{{count}} วันที่แล้ว",
+    "actions": {
+      "User Login": "เข้าสู่ระบบ",
+      "User Logout": "ออกจากระบบ",
+      "Password Change": "เปลี่ยนรหัสผ่าน",
+      "Database Seed": "สร้างข้อมูลตั้งต้น",
+      "Employee Created": "เพิ่มพนักงาน",
+      "Employee Updated": "แก้ไขข้อมูลพนักงาน",
+      "Employee Deleted": "ลบพนักงาน",
+      "Document Uploaded": "อัปโหลดเอกสาร",
+      "Document Deleted": "ลบเอกสาร",
+      "Leave Request Created": "ยื่นคำขอลา",
+      "Leave Request Updated": "แก้ไขคำขอลา",
+      "Leave Request Deleted": "ลบคำขอลา"
+    },
+    "resources": {
+      "Employee": "พนักงาน",
+      "Document": "เอกสาร",
+      "Leave Request": "คำขอลา",
+      "Authentication": "การยืนยันตัวตน",
+      "System": "ระบบ"
+    }
   },
   "reportBuilder": {
     "title": "สร้างรายงานแบบกำหนดเอง",
