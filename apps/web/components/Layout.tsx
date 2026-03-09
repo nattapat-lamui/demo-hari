@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Breadcrumbs } from './Breadcrumbs';
+import { BottomNav } from './BottomNav';
 import { Outlet, useLocation } from 'react-router-dom';
 import { SessionTimeoutWarning } from './SessionTimeoutWarning';
 import { useSessionTimeout } from '../hooks/useSessionTimeout';
@@ -48,11 +49,15 @@ export const Layout: React.FC = () => {
 
       <div className="flex flex-col flex-1 min-w-0">
         <Header onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        {/* pb-20 on mobile to account for BottomNav (h-14 + safe area) */}
+        <main className="flex-1 overflow-y-auto p-4 pb-20 md:p-6 md:pb-6 lg:p-8 lg:pb-8">
           <Breadcrumbs />
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav />
 
       {/* Session Timeout Warning Modal */}
       <SessionTimeoutWarning

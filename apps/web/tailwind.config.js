@@ -33,7 +33,21 @@ export default {
             },
             fontFamily: {
                 "sans": ["LINE Seed Sans TH", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"]
-            }
+            },
+            keyframes: {
+                "slide-up": {
+                    from: { transform: "translateY(100%)" },
+                    to: { transform: "translateY(0)" },
+                },
+                "fade-in": {
+                    from: { opacity: "0" },
+                    to: { opacity: "1" },
+                },
+            },
+            animation: {
+                "slide-up": "slide-up 0.3s ease-out",
+                "fade-in": "fade-in 0.2s ease-out",
+            },
         },
     },
     plugins: [],

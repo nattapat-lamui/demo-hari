@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { OrgNode, Department, DEPARTMENTS } from '../types';
+import { OrgNode, Department, DEPARTMENTS, JOB_TITLES } from '../types';
 import {
   Plus,
   Edit2,
@@ -953,11 +953,10 @@ export const OrgChart: React.FC = () => {
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                   {t('orgChart.roleJobTitle')}
                 </label>
-                <input
-                  type="text"
+                <Dropdown
                   value={inputRole}
-                  onChange={(e) => setInputRole(e.target.value)}
-                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
+                  onChange={(val) => setInputRole(val)}
+                  options={JOB_TITLES.map((title) => ({ value: title, label: title }))}
                   placeholder={t('orgChart.rolePlaceholder')}
                 />
               </div>

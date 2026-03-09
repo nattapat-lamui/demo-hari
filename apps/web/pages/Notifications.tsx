@@ -56,15 +56,15 @@ const Notifications: React.FC = () => {
     e.stopPropagation();
     try {
       await deleteNotification(id);
-      showToast('Notification deleted', 'success');
+      showToast(t('notifications.deleted'), 'success');
     } catch {
-      showToast('Failed to delete notification', 'error');
+      showToast(t('notifications.deleteFailed'), 'error');
     }
   };
 
   const handleMarkAllRead = async () => {
     await markAllAsRead();
-    showToast('All notifications marked as read', 'success');
+    showToast(t('notifications.allMarkedRead'), 'success');
   };
 
   if (isLoading && notifications.length === 0) {
@@ -101,7 +101,7 @@ const Notifications: React.FC = () => {
               : 'text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark'
           }`}
         >
-          All ({notifications.length})
+          {t('notifications.all')} ({notifications.length})
         </button>
         <button
           onClick={() => setActiveTab('unread')}
@@ -111,7 +111,7 @@ const Notifications: React.FC = () => {
               : 'text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark'
           }`}
         >
-          Unread ({unreadCount})
+          {t('notifications.unread')} ({unreadCount})
         </button>
       </div>
 
@@ -158,7 +158,7 @@ const Notifications: React.FC = () => {
                       <button
                         onClick={(e) => handleDelete(e, notif.id)}
                         className="p-1.5 rounded-lg text-text-muted-light dark:text-text-muted-dark hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
-                        title="Delete notification"
+                        title={t('notifications.deleteNotification')}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -179,7 +179,7 @@ const Notifications: React.FC = () => {
             {t('header.noNotifications')}
           </h3>
           <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-            {activeTab === 'unread' ? "You're all caught up!" : "You don't have any notifications yet."}
+            {activeTab === 'unread' ? t('notifications.allCaughtUp') : t('notifications.noNotificationsYet')}
           </p>
         </div>
       )}

@@ -318,10 +318,6 @@ export const Onboarding: React.FC = () => {
         }
     };
 
-    const handleSaveTemplate = () => {
-        showToast(t('templateSaved'), 'success');
-    };
-
     const getPriorityBadgeClass = (priority: string) => {
         switch (priority) {
             case 'High': return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-900';
@@ -441,12 +437,6 @@ export const Onboarding: React.FC = () => {
                             onChange={(val) => setSelectedEmployeeId(val === '__overview__' ? null : val)}
                             width="w-56"
                         />
-                        <button
-                            onClick={handleSaveTemplate}
-                            className="px-4 py-2 bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                        >
-                            {t('saveTemplate')}
-                        </button>
                         <button
                             onClick={() => setIsInviteModalOpen(true)}
                             className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
