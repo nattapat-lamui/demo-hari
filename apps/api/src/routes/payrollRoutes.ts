@@ -66,8 +66,99 @@ router.get(
 );
 
 /**
+ * GET /api/payroll/all
+ * Get all payroll records (admin only)
+ * NOTE: Must be defined BEFORE /:id to avoid route shadowing
+ */
+router.get('/all', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const payroll = await PayrollService.getAllPayroll(limit);
+    res.json(payroll);
+  } catch (error: unknown) {
+    console.error('Error getting all payroll:', error);
+    res.status(500).json({ error: 'Failed to get payroll records' });
+  }
+});
+
+/**
+ * GET /api/payroll/reports/summary
+ * Get payroll summary for a period (admin only)
+ * NOTE: Must be defined BEFORE /:id to avoid route shadowing
+ */
+router.get('/reports/summary', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+
+    const summary = await PayrollService.getPayrollSummary(
+      startDate as string,
+      endDate as string
+    );
+
+    res.json(summary);
+  } catch (error: unknown) {
+    console.error('Error getting payroll summary:', error);
+    res.status(500).json({ error: 'Failed to get payroll summary' });
+  }
+});
+
+/**
+ * POST /api/payroll/salary/:employeeId
+ * Update employee salary (admin only)
+ * NOTE: Must be defined BEFORE /:id to avoid route shadowing
+ */
+router.post('/salary/:employeeId', requireAdmin, apiLimiter, async (req: Request, res: Response) => {
+  try {
+    const { employeeId } = req.params;
+    const { newSalary, changeReason } = req.body;
+
+    if (!newSalary || !changeReason) {
+      return res.status(400).json({ error: 'newSalary and changeReason are required' });
+    }
+
+    const salaryHistory = await PayrollService.updateSalary(
+      employeeId,
+      newSalary,
+      changeReason,
+      req.user?.employeeId ?? undefined
+    );
+
+    res.status(201).json(salaryHistory);
+  } catch (error: unknown) {
+    console.error('Error updating salary:', error);
+    const message = error instanceof Error ? error.message : 'Failed to update salary';
+    res.status(400).json({ error: message });
+  }
+});
+
+/**
+ * GET /api/payroll/salary/:employeeId/history
+ * Get salary history for an employee (admin or self)
+ * NOTE: Must be defined BEFORE /:id to avoid route shadowing
+ */
+router.get(
+  '/salary/:employeeId/history',
+  requireOwnerOrAdmin((req) => req.params.employeeId),
+  async (req: Request, res: Response) => {
+    try {
+      const { employeeId } = req.params;
+      const history = await PayrollService.getSalaryHistory(employeeId);
+      res.json(history);
+    } catch (error: unknown) {
+      console.error('Error getting salary history:', error);
+      res.status(500).json({ error: 'Failed to get salary history' });
+    }
+  }
+);
+
+/**
  * GET /api/payroll/:id
  * Get a specific payroll record
+ * NOTE: Must be defined AFTER all literal path routes to avoid shadowing
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
@@ -112,76 +203,5 @@ router.patch('/:id/status', requireAdmin, apiLimiter, async (req: Request, res: 
     res.status(400).json({ error: message });
   }
 });
-
-/**
- * GET /api/payroll/summary
- * Get payroll summary for a period (admin only)
- */
-router.get('/reports/summary', requireAdmin, async (req: Request, res: Response) => {
-  try {
-    const { startDate, endDate } = req.query;
-
-    if (!startDate || !endDate) {
-      return res.status(400).json({ error: 'startDate and endDate are required' });
-    }
-
-    const summary = await PayrollService.getPayrollSummary(
-      startDate as string,
-      endDate as string
-    );
-
-    res.json(summary);
-  } catch (error: unknown) {
-    console.error('Error getting payroll summary:', error);
-    res.status(500).json({ error: 'Failed to get payroll summary' });
-  }
-});
-
-/**
- * POST /api/payroll/salary/:employeeId
- * Update employee salary (admin only)
- */
-router.post('/salary/:employeeId', requireAdmin, apiLimiter, async (req: Request, res: Response) => {
-  try {
-    const { employeeId } = req.params;
-    const { newSalary, changeReason } = req.body;
-
-    if (!newSalary || !changeReason) {
-      return res.status(400).json({ error: 'newSalary and changeReason are required' });
-    }
-
-    const salaryHistory = await PayrollService.updateSalary(
-      employeeId,
-      newSalary,
-      changeReason,
-      req.user?.employeeId ?? undefined
-    );
-
-    res.status(201).json(salaryHistory);
-  } catch (error: unknown) {
-    console.error('Error updating salary:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update salary';
-    res.status(400).json({ error: message });
-  }
-});
-
-/**
- * GET /api/payroll/salary/:employeeId/history
- * Get salary history for an employee (admin or self)
- */
-router.get(
-  '/salary/:employeeId/history',
-  requireOwnerOrAdmin((req) => req.params.employeeId),
-  async (req: Request, res: Response) => {
-    try {
-      const { employeeId } = req.params;
-      const history = await PayrollService.getSalaryHistory(employeeId);
-      res.json(history);
-    } catch (error: unknown) {
-      console.error('Error getting salary history:', error);
-      res.status(500).json({ error: 'Failed to get salary history' });
-    }
-  }
-);
 
 export default router;

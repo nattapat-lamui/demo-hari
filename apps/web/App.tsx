@@ -57,6 +57,9 @@ const TimeOff = lazy(() =>
 const Expenses = lazy(() =>
   import("./pages/Expenses").then((m) => ({ default: m.Expenses })),
 );
+const Payroll = lazy(() =>
+  import("./pages/Payroll").then((m) => ({ default: m.Payroll })),
+);
 const Surveys = lazy(() =>
   import("./pages/Surveys").then((m) => ({ default: m.Surveys })),
 );
@@ -133,6 +136,7 @@ const App: React.FC = () => {
                     <Route path="time-off/request/:id" element={<PageErrorBoundary><LeaveRequestForm /></PageErrorBoundary>} />
                     <Route path="leave-requests" element={<PageErrorBoundary><AdminLeaveRequests /></PageErrorBoundary>} />
                     <Route path="expenses" element={<PageErrorBoundary><Expenses /></PageErrorBoundary>} />
+                    <Route path="payroll" element={<PageErrorBoundary><Payroll /></PageErrorBoundary>} />
                     <Route path="surveys" element={<PageErrorBoundary><Surveys /></PageErrorBoundary>} />
                     <Route path="surveys/:id" element={<PageErrorBoundary><TakeSurvey /></PageErrorBoundary>} />
                     <Route path="wellbeing" element={<PageErrorBoundary><Wellbeing /></PageErrorBoundary>} />

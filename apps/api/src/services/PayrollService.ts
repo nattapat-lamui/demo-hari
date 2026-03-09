@@ -122,6 +122,26 @@ export class PayrollService {
   }
 
   /**
+   * Get all payroll records with employee names (admin)
+   */
+  async getAllPayroll(limit: number = 50): Promise<(PayrollRecord & { employeeName: string; department: string })[]> {
+    const result = await query(
+      `SELECT pr.*, e.name AS employee_name, e.department
+       FROM payroll_records pr
+       LEFT JOIN employees e ON pr.employee_id = e.id
+       ORDER BY pr.pay_period_start DESC
+       LIMIT $1`,
+      [limit]
+    );
+
+    return result.rows.map((row) => ({
+      ...this.mapRowToPayroll(row),
+      employeeName: (row.employee_name as string) || 'Unknown',
+      department: (row.department as string) || '',
+    }));
+  }
+
+  /**
    * Get payroll by ID
    */
   async getPayrollById(id: string): Promise<PayrollRecord | null> {

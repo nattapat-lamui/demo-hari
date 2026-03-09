@@ -17,6 +17,7 @@ import onboardingEN from '../locales/en/onboarding.json';
 import wellbeingEN from '../locales/en/wellbeing.json';
 import complianceEN from '../locales/en/compliance.json';
 import analyticsEN from '../locales/en/analytics.json';
+import payrollEN from '../locales/en/payroll.json';
 import helpEN from '../locales/en/help.json';
 
 // Thai namespaces
@@ -32,6 +33,7 @@ import onboardingTH from '../locales/th/onboarding.json';
 import wellbeingTH from '../locales/th/wellbeing.json';
 import complianceTH from '../locales/th/compliance.json';
 import analyticsTH from '../locales/th/analytics.json';
+import payrollTH from '../locales/th/payroll.json';
 import helpTH from '../locales/th/help.json';
 
 i18n
@@ -52,6 +54,7 @@ i18n
         wellbeing: wellbeingEN,
         compliance: complianceEN,
         analytics: analyticsEN,
+        payroll: payrollEN,
         help: helpEN,
       },
       th: {
@@ -67,6 +70,7 @@ i18n
         wellbeing: wellbeingTH,
         compliance: complianceTH,
         analytics: analyticsTH,
+        payroll: payrollTH,
         help: helpTH,
       },
     },
@@ -80,7 +84,7 @@ i18n
     ns: [
       'common', 'auth', 'dashboard', 'attendance', 'leave',
       'employees', 'documents', 'settings', 'onboarding',
-      'wellbeing', 'compliance', 'analytics', 'help',
+      'wellbeing', 'compliance', 'analytics', 'payroll', 'help',
     ],
     interpolation: {
       escapeValue: false,

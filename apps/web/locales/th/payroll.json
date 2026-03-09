@@ -1,0 +1,170 @@
+{
+  "title": "เงินเดือน",
+  "subtitle": "จัดการค่าตอบแทน สลิปเงินเดือน และบันทึกเงินเดือนของพนักงาน",
+
+  "admin": {
+    "dashboard": "แดชบอร์ดเงินเดือน",
+    "summary": {
+      "totalPayroll": "เงินเดือนรวม",
+      "totalTax": "ภาษีรวม",
+      "totalEmployees": "จำนวนพนักงานทั้งหมด",
+      "pendingCount": "รอดำเนินการ",
+      "processedCount": "ดำเนินการแล้ว",
+      "paidCount": "จ่ายแล้ว"
+    },
+    "table": {
+      "employee": "พนักงาน",
+      "department": "แผนก",
+      "position": "ตำแหน่ง",
+      "baseSalary": "เงินเดือนพื้นฐาน",
+      "netPay": "เงินสุทธิ",
+      "status": "สถานะ",
+      "payPeriod": "งวดการจ่าย",
+      "actions": "การดำเนินการ"
+    },
+    "actions": {
+      "createPayroll": "สร้างรายการเงินเดือน",
+      "processAll": "ดำเนินการทั้งหมด",
+      "exportReport": "ส่งออกรายงาน",
+      "viewPayslip": "ดูสลิปเงินเดือน",
+      "editPayroll": "แก้ไขเงินเดือน",
+      "deletePayroll": "ลบรายการเงินเดือน",
+      "markAsProcessed": "เปลี่ยนสถานะเป็นดำเนินการแล้ว",
+      "markAsPaid": "เปลี่ยนสถานะเป็นจ่ายแล้ว",
+      "revertToPending": "เปลี่ยนสถานะกลับเป็นรอดำเนินการ",
+      "confirmDelete": "คุณแน่ใจหรือไม่ว่าต้องการลบรายการเงินเดือนนี้?",
+      "confirmProcess": "คุณแน่ใจหรือไม่ว่าต้องการเปลี่ยนสถานะเป็นดำเนินการแล้ว?",
+      "confirmPaid": "คุณแน่ใจหรือไม่ว่าต้องการเปลี่ยนสถานะเป็นจ่ายแล้ว?"
+    },
+    "leaveRequests": {
+      "title": "คำขอลา",
+      "approve": "อนุมัติ",
+      "reject": "ปฏิเสธ"
+    }
+  },
+
+  "employee": {
+    "myPayslips": "สลิปเงินเดือนของฉัน",
+    "viewPayslip": "ดูสลิปเงินเดือน",
+    "downloadPayslip": "ดาวน์โหลดสลิปเงินเดือน",
+    "payslipFor": "สลิปเงินเดือนสำหรับ {{period}}",
+    "detail": {
+      "title": "รายละเอียดสลิปเงินเดือน",
+      "earnings": "รายได้",
+      "deductionsSection": "รายการหัก",
+      "baseSalary": "เงินเดือนพื้นฐาน",
+      "overtimePay": "ค่าล่วงเวลา",
+      "bonus": "โบนัส",
+      "totalEarnings": "รายได้รวม",
+      "totalDeductions": "รายการหักรวม",
+      "taxAmount": "ภาษี",
+      "netPay": "เงินสุทธิ",
+      "paymentMethod": "วิธีการชำระเงิน",
+      "paidOn": "จ่ายเมื่อ",
+      "payPeriod": "งวดการจ่าย"
+    }
+  },
+
+  "form": {
+    "createTitle": "สร้างรายการเงินเดือน",
+    "editTitle": "แก้ไขรายการเงินเดือน",
+    "selectEmployee": "เลือกพนักงาน",
+    "searchEmployee": "ค้นหาพนักงาน...",
+    "payPeriodStart": "วันเริ่มต้นงวด",
+    "payPeriodEnd": "วันสิ้นสุดงวด",
+    "baseSalary": "เงินเดือนพื้นฐาน",
+    "overtimeHours": "ชั่วโมงล่วงเวลา",
+    "overtimeRate": "อัตราค่าล่วงเวลา",
+    "bonus": "โบนัส",
+    "deductions": "รายการหัก",
+    "taxAmount": "จำนวนภาษี",
+    "netPay": "เงินสุทธิ",
+    "paymentMethod": "วิธีการชำระเงิน",
+    "notes": "หมายเหตุ",
+    "notesPlaceholder": "เพิ่มหมายเหตุเกี่ยวกับรายการเงินเดือนนี้...",
+    "cancel": "ยกเลิก",
+    "submit": "ส่ง",
+    "save": "บันทึกการเปลี่ยนแปลง",
+    "calculating": "กำลังคำนวณ...",
+    "autoCalculated": "คำนวณอัตโนมัติจากรายได้และรายการหัก"
+  },
+
+  "status": {
+    "pending": "รอดำเนินการ",
+    "processed": "ดำเนินการแล้ว",
+    "paid": "จ่ายแล้ว",
+    "all": "ทุกสถานะ"
+  },
+
+  "paymentMethod": {
+    "bankTransfer": "โอนผ่านธนาคาร",
+    "check": "เช็ค",
+    "cash": "เงินสด",
+    "select": "เลือกวิธีการชำระเงิน"
+  },
+
+  "salary": {
+    "management": "การจัดการเงินเดือน",
+    "currentSalary": "เงินเดือนปัจจุบัน",
+    "updateSalary": "ปรับเงินเดือน",
+    "newSalary": "เงินเดือนใหม่",
+    "effectiveDate": "วันที่มีผล",
+    "changeReason": "เหตุผลในการเปลี่ยนแปลง",
+    "selectReason": "เลือกเหตุผล",
+    "reasons": {
+      "promotion": "เลื่อนตำแหน่ง",
+      "annualIncrease": "ปรับขึ้นประจำปี",
+      "marketAdjustment": "ปรับตามตลาด"
+    },
+    "salaryHistory": "ประวัติเงินเดือน",
+    "previousSalary": "เงินเดือนเดิม",
+    "change": "การเปลี่ยนแปลง",
+    "noHistory": "ไม่มีประวัติเงินเดือน"
+  },
+
+  "summary": {
+    "title": "สรุปเงินเดือน",
+    "report": "รายงานเงินเดือน",
+    "totalGrossPay": "รายได้รวมก่อนหัก",
+    "totalDeductions": "รายการหักรวม",
+    "totalTax": "ภาษีรวม",
+    "totalNetPay": "เงินสุทธิรวม",
+    "byDepartment": "แยกตามแผนก",
+    "byStatus": "แยกตามสถานะ",
+    "generateReport": "สร้างรายงาน",
+    "downloadReport": "ดาวน์โหลดรายงาน"
+  },
+
+  "period": {
+    "monthly": "รายเดือน",
+    "biWeekly": "รายปักษ์",
+    "weekly": "รายสัปดาห์",
+    "selectPeriod": "เลือกงวดการจ่าย",
+    "from": "ตั้งแต่",
+    "to": "ถึง",
+    "currentPeriod": "งวดปัจจุบัน"
+  },
+
+  "empty": {
+    "noPayrollRecords": "ไม่พบรายการเงินเดือน",
+    "noPayslips": "ไม่มีสลิปเงินเดือน",
+    "noEmployeesFound": "ไม่พบพนักงาน",
+    "createFirst": "สร้างรายการเงินเดือนแรกเพื่อเริ่มต้นใช้งาน",
+    "noResultsForFilter": "ไม่พบผลลัพธ์ที่ตรงกับตัวกรองที่เลือก",
+    "noSalaryHistory": "ไม่มีประวัติเงินเดือนสำหรับพนักงานคนนี้"
+  },
+
+  "errors": {
+    "fetchFailed": "ไม่สามารถโหลดข้อมูลเงินเดือนได้ กรุณาลองอีกครั้ง",
+    "createFailed": "ไม่สามารถสร้างรายการเงินเดือนได้",
+    "updateFailed": "ไม่สามารถแก้ไขรายการเงินเดือนได้",
+    "deleteFailed": "ไม่สามารถลบรายการเงินเดือนได้",
+    "statusUpdateFailed": "ไม่สามารถเปลี่ยนสถานะเงินเดือนได้",
+    "salaryUpdateFailed": "ไม่สามารถปรับเงินเดือนได้",
+    "invalidDateRange": "วันสิ้นสุดงวดต้องอยู่หลังวันเริ่มต้นงวด",
+    "requiredField": "กรุณากรอกข้อมูลในช่องนี้",
+    "invalidAmount": "กรุณากรอกจำนวนเงินที่ถูกต้อง",
+    "exportFailed": "ไม่สามารถส่งออกรายงานเงินเดือนได้",
+    "payslipNotFound": "ไม่พบสลิปเงินเดือน"
+  }
+}

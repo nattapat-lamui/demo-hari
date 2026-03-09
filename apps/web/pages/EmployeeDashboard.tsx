@@ -285,12 +285,9 @@ export const EmployeeDashboard: React.FC = () => {
             <Plane size={20} className="sm:w-6 sm:h-6" />
           </div>
         </div>
-        <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between relative opacity-60">
+        <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-6 shadow-sm flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate('/payroll')}>
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium">{t('dashboard:employee.nextPayday')}</p>
-              <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">{t('dashboard:employee.wip')}</span>
-            </div>
+            <p className="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm font-medium mb-1">{t('dashboard:employee.nextPayday')}</p>
             <h3 className="text-2xl sm:text-3xl font-bold text-text-light dark:text-text-dark">{employeeStats.nextPayday || '—'}</h3>
           </div>
           <div className="p-2 sm:p-3 bg-green-50 dark:bg-green-900/20 text-green-500 rounded-lg">

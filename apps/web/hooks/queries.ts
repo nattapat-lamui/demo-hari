@@ -1154,6 +1154,128 @@ export interface ComplianceCheck {
 }
 
 // ---------------------------------------------------------------------------
+// Payroll
+// ---------------------------------------------------------------------------
+
+export interface PayrollRecord {
+  id: string;
+  employeeId: string;
+  payPeriodStart: string;
+  payPeriodEnd: string;
+  baseSalary: number;
+  overtimeHours: number;
+  overtimePay: number;
+  bonus: number;
+  deductions: number;
+  taxAmount: number;
+  netPay: number;
+  status: 'Pending' | 'Processed' | 'Paid';
+  paymentDate: string | null;
+  paymentMethod: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface SalaryHistoryRecord {
+  id: string;
+  employeeId: string;
+  effectiveDate: string;
+  baseSalary: number;
+  previousSalary: number | null;
+  changeReason: string | null;
+  approvedBy: string | null;
+  createdAt: string;
+}
+
+export interface PayrollSummary {
+  totalPayroll: number;
+  totalTax: number;
+  totalEmployees: number;
+  pendingCount: number;
+  processedCount: number;
+  paidCount: number;
+}
+
+export const useMyPayslips = () => {
+  return useQuery({
+    queryKey: queryKeys.payroll.myPayslips(),
+    queryFn: () => api.get<PayrollRecord[]>('/payroll/my-payslips'),
+  });
+};
+
+export const useAllPayroll = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: [...queryKeys.payroll.all, 'allRecords'] as const,
+    queryFn: () => api.get<(PayrollRecord & { employeeName: string; department: string })[]>('/payroll/all'),
+    enabled,
+  });
+};
+
+export const useEmployeePayroll = (employeeId: string) => {
+  return useQuery({
+    queryKey: queryKeys.payroll.employee(employeeId),
+    queryFn: () => api.get<PayrollRecord[]>(`/payroll/employee/${employeeId}`),
+    enabled: !!employeeId,
+  });
+};
+
+export const usePayrollSummary = (startDate: string, endDate: string) => {
+  return useQuery({
+    queryKey: queryKeys.payroll.summary({ startDate, endDate }),
+    queryFn: () => api.get<PayrollSummary>(`/payroll/reports/summary?startDate=${startDate}&endDate=${endDate}`),
+    enabled: !!startDate && !!endDate,
+  });
+};
+
+export const useSalaryHistory = (employeeId: string) => {
+  return useQuery({
+    queryKey: queryKeys.payroll.salaryHistory(employeeId),
+    queryFn: () => api.get<SalaryHistoryRecord[]>(`/payroll/salary/${employeeId}/history`),
+    enabled: !!employeeId,
+  });
+};
+
+export const useCreatePayroll = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      employeeId: string;
+      payPeriodStart: string;
+      payPeriodEnd: string;
+      baseSalary: number;
+      overtimeHours?: number;
+      bonus?: number;
+      deductions?: number;
+    }) => api.post<PayrollRecord>('/payroll', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.payroll.all });
+    },
+  });
+};
+
+export const useUpdatePayrollStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, paymentMethod }: { id: string; status: string; paymentMethod?: string }) =>
+      api.patch<PayrollRecord>(`/payroll/${id}/status`, { status, paymentMethod }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.payroll.all });
+    },
+  });
+};
+
+export const useUpdateSalary = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, newSalary, changeReason }: { employeeId: string; newSalary: number; changeReason: string }) =>
+      api.post<SalaryHistoryRecord>(`/payroll/salary/${employeeId}`, { newSalary, changeReason }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.payroll.salaryHistory(vars.employeeId) });
+    },
+  });
+};
+
+// ---------------------------------------------------------------------------
 // Analytics
 // ---------------------------------------------------------------------------
 export interface AnalyticsDashboard {

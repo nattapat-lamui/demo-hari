@@ -112,6 +112,14 @@ export const queryKeys = {
     all: ['systemConfig'] as const,
     leaveQuotas: () => [...queryKeys.systemConfig.all, 'leaveQuotas'] as const,
   },
+  payroll: {
+    all: ['payroll'] as const,
+    myPayslips: () => [...queryKeys.payroll.all, 'myPayslips'] as const,
+    employee: (id: string) => [...queryKeys.payroll.all, 'employee', id] as const,
+    detail: (id: string) => [...queryKeys.payroll.all, 'detail', id] as const,
+    summary: (params: Record<string, unknown>) => [...queryKeys.payroll.all, 'summary', params] as const,
+    salaryHistory: (id: string) => [...queryKeys.payroll.all, 'salaryHistory', id] as const,
+  },
   analytics: {
     all: ['analytics'] as const,
     dashboard: () => [...queryKeys.analytics.all, 'dashboard'] as const,
