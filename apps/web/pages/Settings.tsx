@@ -567,7 +567,7 @@ export const Settings: React.FC = () => {
                       name="countryCode"
                       value={countryCode}
                       onChange={(value) => setCountryCode(value)}
-                      className="w-28"
+                      width="w-28"
                       options={PHONE_COUNTRY_CODES}
                     />
                     <input

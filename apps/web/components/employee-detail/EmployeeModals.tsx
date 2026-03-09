@@ -289,7 +289,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                         value={phoneCode}
                                         onChange={(code) => handlePhoneChange(code, phoneNumber)}
                                         options={PHONE_COUNTRY_CODES}
-                                        className="w-28"
+                                        width="w-28"
                                     />
                                     <div className="relative flex-1">
                                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light" size={16} />

@@ -36,7 +36,6 @@ interface PersonRow {
 // ---------------------------------------------------------------------------
 const DEFAULT_TYPE_COLOR = { bar: 'bg-gray-400', barDark: 'dark:bg-gray-500', text: 'text-white', legend: 'bg-gray-400 dark:bg-gray-500' };
 
-const TEAM_GRAY_COLOR = { bar: 'bg-gray-300', barDark: 'dark:bg-gray-600', text: 'text-gray-700 dark:text-gray-200', legend: 'bg-gray-300 dark:bg-gray-600' };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -502,19 +501,12 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
                     ? !!onLeaveClick
                     : isManager && !!onLeaveClick;
 
-                  // Colors & label
-                  let colors: typeof DEFAULT_TYPE_COLOR;
-                  let label: string;
-                  if (!isManager && !isBarUser) {
-                    colors = TEAM_GRAY_COLOR;
-                    label = `${person.name} - ${t('leave:calendar.onLeave')}`;
-                  } else {
-                    colors = TYPE_COLORS[bar.request.type] || DEFAULT_TYPE_COLOR;
-                    const shortType = getShortLabel(bar.request.type);
-                    label = isManager
-                      ? `${person.name} - ${shortType}`
-                      : shortType;
-                  }
+                  // Colors & label — always show leave type color
+                  const colors = TYPE_COLORS[bar.request.type] || DEFAULT_TYPE_COLOR;
+                  const shortType = getShortLabel(bar.request.type);
+                  const label = isManager
+                    ? `${person.name} - ${shortType}`
+                    : isBarUser ? shortType : `${person.name} - ${shortType}`;
 
                   return (
                     <div
@@ -579,13 +571,6 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
           </div>
         )}
 
-        {/* Team on Leave (employee view) */}
-        {!isManager && (
-          <div className="flex items-center gap-1.5">
-            <span className={`w-3 h-2 rounded-sm ${TEAM_GRAY_COLOR.legend}`} />
-            <span className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('leave:calendar.teamOnLeave')}</span>
-          </div>
-        )}
       </div>
     </div>
   );
