@@ -290,11 +290,21 @@ export const OrgChart: React.FC = () => {
     return () => clearTimeout(timer);
   }, [tree, fitToView]);
 
+  const cancelDrag = useCallback(() => {
+    setDraggedNodeId(null);
+    setDragOverNodeId(null);
+  }, []);
+
   // Pan handlers — use refs + direct DOM writes to avoid re-renders during drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
     if (target.closest('[draggable="true"]') || target.closest('button') || target.closest('input') || target.closest('select') || target.closest('a')) return;
+    // Click on empty background cancels active drag
+    if (draggedNodeId) {
+      cancelDrag();
+      return;
+    }
     e.preventDefault();
     isPanningRef.current = true;
     startPanRef.current = {
@@ -303,7 +313,7 @@ export const OrgChart: React.FC = () => {
     };
     if (containerRef.current) containerRef.current.style.cursor = 'grabbing';
     if (contentRef.current) contentRef.current.style.transition = 'none';
-  }, []);
+  }, [draggedNodeId, cancelDrag]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanningRef.current) return;
@@ -578,7 +588,8 @@ export const OrgChart: React.FC = () => {
       }
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', nodeId);
-      setDraggedNodeId(nodeId);
+      // Defer state update so the browser establishes the drag before React re-renders
+      setTimeout(() => setDraggedNodeId(nodeId), 0);
     },
     [isAdmin, nodes]
   );
@@ -629,6 +640,16 @@ export const OrgChart: React.FC = () => {
     setDraggedNodeId(null);
     setDragOverNodeId(null);
   }, []);
+
+  // Escape key to cancel drag
+  useEffect(() => {
+    if (!draggedNodeId) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cancelDrag();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [draggedNodeId, cancelDrag]);
 
   // Recursive Tree Component with visual tree connectors
   const TreeNode: React.FC<{ node: OrgNode; isRoot?: boolean }> = ({ node, isRoot = false }) => {
@@ -901,7 +922,7 @@ export const OrgChart: React.FC = () => {
 
         {/* Drag banner */}
         {draggedNodeId && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg shadow-lg animate-fade-in">
             {t('orgChart.dragging')} <span className="font-bold">{nodes.find((n) => n.id === draggedNodeId)?.name}</span> {t('orgChart.dropToReassign')}
           </div>
         )}
