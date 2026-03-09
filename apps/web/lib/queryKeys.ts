@@ -112,6 +112,10 @@ export const queryKeys = {
     all: ['systemConfig'] as const,
     leaveQuotas: () => [...queryKeys.systemConfig.all, 'leaveQuotas'] as const,
   },
+  analytics: {
+    all: ['analytics'] as const,
+    dashboard: () => [...queryKeys.analytics.all, 'dashboard'] as const,
+  },
   compliance: {
     all: ['compliance'] as const,
     checks: () => [...queryKeys.compliance.all, 'checks'] as const,

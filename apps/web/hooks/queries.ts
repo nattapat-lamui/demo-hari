@@ -1153,6 +1153,26 @@ export interface ComplianceCheck {
   percentage: number;
 }
 
+// ---------------------------------------------------------------------------
+// Analytics
+// ---------------------------------------------------------------------------
+export interface AnalyticsDashboard {
+  headcount: { name: string; value: number }[];
+  departments: { name: string; value: number }[];
+  attendance: { day: string; onTime: number; late: number; absent: number }[];
+  leaveByType: { type: string; requests: number; days: number }[];
+  performance: { rating: number; label: string; count: number }[];
+  turnover: { name: string; hires: number; departures: number }[];
+}
+
+export const useAnalyticsDashboard = () => {
+  return useQuery({
+    queryKey: queryKeys.analytics.dashboard(),
+    queryFn: () => api.get<AnalyticsDashboard>('/analytics/dashboard'),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
 export const useComplianceChecks = () => {
   return useQuery({
     queryKey: queryKeys.compliance.checks(),

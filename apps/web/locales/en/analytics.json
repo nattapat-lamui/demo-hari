@@ -1,14 +1,39 @@
 {
   "title": "Deep Analytics",
+  "subtitle": "Comprehensive HR insights powered by real-time data.",
   "headcountGrowth": {
     "title": "Headcount Growth",
-    "subtitle": "Monthly employee count"
+    "subtitle": "New hires per month (last 6 months)",
+    "newHires": "New Hires"
   },
   "departmentDistribution": {
     "title": "Department Distribution",
-    "subtitle": "Employee count by department"
+    "subtitle": "Active employees by department",
+    "employees": "Employees"
+  },
+  "attendanceTrends": {
+    "title": "Attendance Trends",
+    "subtitle": "Daily attendance status (last 2 weeks)",
+    "onTime": "On-time",
+    "late": "Late",
+    "absent": "Absent"
+  },
+  "leaveUsage": {
+    "title": "Leave Usage by Type",
+    "subtitle": "Approved leave days this year",
+    "days": "Days",
+    "requests": "Requests"
   },
   "performanceDistribution": {
-    "title": "Performance Review Distribution"
+    "title": "Performance Ratings",
+    "subtitle": "Review score distribution (last 12 months)",
+    "reviews": "Reviews",
+    "noData": "No performance reviews found in the last 12 months."
+  },
+  "turnover": {
+    "title": "Turnover Overview",
+    "subtitle": "Hires vs departures (last 6 months)",
+    "hires": "Hires",
+    "departures": "Departures"
   }
 }

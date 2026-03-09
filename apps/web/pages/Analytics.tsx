@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart,
@@ -12,123 +12,219 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line
+  Area,
+  AreaChart,
 } from 'recharts';
-// Mocks removed
+import { useAnalyticsDashboard } from '../hooks/queries';
+
+const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#64748b', '#14b8a6', '#f97316', '#6366f1', '#84cc16'];
+
+// Skeleton placeholder for a chart card
+const ChartSkeleton: React.FC = () => (
+  <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+    <div className="h-5 w-48 bg-background-light dark:bg-background-dark/50 rounded animate-pulse mb-2" />
+    <div className="h-3 w-64 bg-background-light dark:bg-background-dark/50 rounded animate-pulse mb-6" />
+    <div className="h-[280px] bg-background-light dark:bg-background-dark/50 rounded-lg animate-pulse" />
+  </div>
+);
 
 export const Analytics: React.FC = () => {
   const { t } = useTranslation(['analytics', 'common']);
-  const COLORS = ['#3498db', '#1abc9c', '#f39c12', '#9b59b6', '#e74c3c'];
+  const { data, isLoading } = useAnalyticsDashboard();
 
-  const [headcountData, setHeadcountData] = useState<any[]>([]);
-  const [deptData, setDeptData] = useState<any[]>([]);
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <div className="h-8 w-56 bg-background-light dark:bg-background-dark/50 rounded animate-pulse mb-2" />
+          <div className="h-4 w-80 bg-background-light dark:bg-background-dark/50 rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => <ChartSkeleton key={i} />)}
+        </div>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [hcRes, empRes] = await Promise.all([
-          fetch('http://localhost:3000/api/headcount-stats'),
-          fetch('http://localhost:3000/api/employees')
-        ]);
-
-        if (hcRes.ok) setHeadcountData(await hcRes.json());
-
-        if (empRes.ok) {
-          const employees: any[] = await empRes.json();
-          // Aggregate Depts
-          const dist: Record<string, number> = {};
-          employees.forEach(e => {
-            const d = e.department || 'Unknown';
-            dist[d] = (dist[d] || 0) + 1;
-          });
-          const chartData = Object.keys(dist).map(key => ({ name: key, value: dist[key] }));
-          setDeptData(chartData);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchData();
-  }, []);
+  const tooltipStyle = {
+    backgroundColor: 'var(--color-card, #fff)',
+    borderRadius: '8px',
+    border: '1px solid var(--color-border, #e2e8f0)',
+    fontSize: '12px',
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">{t('title')}</h1>
+      <header>
+        <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">{t('title')}</h1>
+        <p className="text-text-muted-light dark:text-text-muted-dark text-base mt-1">{t('subtitle')}</p>
+      </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Headcount Growth Chart */}
+        {/* ── 1. Headcount Growth ─────────────────────────────────── */}
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
-          <h2 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">{t('headcountGrowth.title')}</h2>
-          <p className="text-sm text-text-muted-light mb-6">{t('headcountGrowth.subtitle')}</p>
-          <div className="h-[300px]">
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('headcountGrowth.title')}</h2>
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-5">{t('headcountGrowth.subtitle')}</p>
+          <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={headcountData}>
+              <BarChart data={data?.headcount || []}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#a0aec0' }} />
-                <YAxis orientation="left" stroke="#3498db" axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                  cursor={{ fill: 'transparent' }}
-                />
-                <Legend />
-                <Bar dataKey="value" name="Headcount" fill="#3498db" radius={[4, 4, 0, 0]} barSize={40} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(59,130,246,0.06)' }} />
+                <Bar dataKey="value" name={t('headcountGrowth.newHires')} fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={36} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Dept Distribution */}
+        {/* ── 2. Department Distribution ──────────────────────────── */}
         <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
-          <h2 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">{t('departmentDistribution.title')}</h2>
-          <p className="text-sm text-text-muted-light mb-6">{t('departmentDistribution.subtitle')}</p>
-          <div className="h-[300px]">
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('departmentDistribution.title')}</h2>
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-5">{t('departmentDistribution.subtitle')}</p>
+          <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={deptData}
+                  data={data?.departments || []}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  paddingAngle={5}
+                  innerRadius={55}
+                  outerRadius={95}
+                  paddingAngle={3}
                   dataKey="value"
                 >
-                  {deptData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {(data?.departments || []).map((_, index) => (
+                    <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend verticalAlign="middle" align="right" layout="vertical" />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend
+                  verticalAlign="middle"
+                  align="right"
+                  layout="vertical"
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(value: string) => (
+                    <span className="text-xs text-text-light dark:text-text-dark">{value}</span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-      </div>
-
-      {/* Performance Bell Curve (Simulated with LineChart) */}
-      <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">{t('performanceDistribution.title')}</h2>
-        <div className="h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={[
-              { x: 'Needs Imp.', y: 5 },
-              { x: 'Developing', y: 15 },
-              { x: 'Solid Perf.', y: 50 },
-              { x: 'Exceeds', y: 20 },
-              { x: 'Outstanding', y: 10 }
-            ]}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="x" axisLine={false} tickLine={false} tick={{ fill: '#a0aec0' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#a0aec0' }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="y" stroke="#1abc9c" strokeWidth={3} dot={{ r: 6, fill: '#1abc9c', strokeWidth: 2, stroke: '#fff' }} />
-            </LineChart>
-          </ResponsiveContainer>
+        {/* ── 3. Attendance Trends ────────────────────────────────── */}
+        <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('attendanceTrends.title')}</h2>
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-5">{t('attendanceTrends.subtitle')}</p>
+          <div className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data?.attendance || []}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend iconType="circle" iconSize={8} />
+                <Bar dataKey="onTime" name={t('attendanceTrends.onTime')} stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="late" name={t('attendanceTrends.late')} stackId="a" fill="#f59e0b" />
+                <Bar dataKey="absent" name={t('attendanceTrends.absent')} stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
+
+        {/* ── 4. Leave Usage by Type ─────────────────────────────── */}
+        <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('leaveUsage.title')}</h2>
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-5">{t('leaveUsage.subtitle')}</p>
+          <div className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data?.leaveByType || []} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
+                <YAxis
+                  dataKey="type"
+                  type="category"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#94a3b8', fontSize: 11 }}
+                  width={110}
+                />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend iconType="circle" iconSize={8} />
+                <Bar dataKey="days" name={t('leaveUsage.days')} fill="#8b5cf6" radius={[0, 6, 6, 0]} barSize={20} />
+                <Bar dataKey="requests" name={t('leaveUsage.requests')} fill="#c4b5fd" radius={[0, 6, 6, 0]} barSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* ── 5. Performance Distribution ─────────────────────────── */}
+        <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('performanceDistribution.title')}</h2>
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-5">{t('performanceDistribution.subtitle')}</p>
+          <div className="h-[280px]">
+            {data?.performance?.every((p) => p.count === 0) ? (
+              <div className="flex items-center justify-center h-full text-sm text-text-muted-light dark:text-text-muted-dark">
+                {t('performanceDistribution.noData')}
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data?.performance || []}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="count" name={t('performanceDistribution.reviews')} fill="#10b981" radius={[6, 6, 0, 0]} barSize={40}>
+                    {(data?.performance || []).map((entry, index) => (
+                      <Cell
+                        key={index}
+                        fill={
+                          entry.rating <= 1 ? '#ef4444' :
+                          entry.rating === 2 ? '#f59e0b' :
+                          entry.rating === 3 ? '#3b82f6' :
+                          entry.rating === 4 ? '#10b981' : '#059669'
+                        }
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* ── 6. Turnover Overview ────────────────────────────────── */}
+        <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('turnover.title')}</h2>
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-5">{t('turnover.subtitle')}</p>
+          <div className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data?.turnover || []}>
+                <defs>
+                  <linearGradient id="gradHires" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradDepartures" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend iconType="circle" iconSize={8} />
+                <Area type="monotone" dataKey="hires" name={t('turnover.hires')} stroke="#3b82f6" strokeWidth={2} fill="url(#gradHires)" dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} />
+                <Area type="monotone" dataKey="departures" name={t('turnover.departures')} stroke="#ef4444" strokeWidth={2} fill="url(#gradDepartures)" dot={{ r: 4, fill: '#ef4444', strokeWidth: 2, stroke: '#fff' }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
       </div>
     </div>
   );
