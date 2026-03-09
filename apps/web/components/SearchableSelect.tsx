@@ -41,7 +41,12 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined!);
 
   const selectedOption = options.find((o) => o.value === value);
-  const filteredOptions = options.filter((o) => !excludeValues.includes(o.value));
+  const filteredOptions = options.filter((o) => {
+    if (excludeValues.includes(o.value)) return false;
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return o.label.toLowerCase().includes(term) || (o.subtitle?.toLowerCase().includes(term) ?? false);
+  });
 
   // Debounced search
   const handleSearchChange = useCallback(
