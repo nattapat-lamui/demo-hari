@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, Calendar } from 'lucide-react';
 import type { LeaveRequest, Employee } from '../types';
 import { useLeaveTypeConfig, useAdminAttendanceCalendar } from '../hooks/queries';
 import { buildLeaveColorMap, getShortLabel, translateLeaveType } from '../lib/leaveTypeConfig';
+import { Avatar } from './Avatar';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -117,6 +118,8 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
 
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [anchor, setAnchor] = useState(() => new Date());
+  const [mobileSelectedDate, setMobileSelectedDate] = useState(() => toDateKey(new Date()));
+  const dateStripRef = useRef<HTMLDivElement>(null);
 
   // Whether we show the availability view (all employees) or legacy leave-only view
   const showAvailability = !!allEmployees && allEmployees.length > 0;
@@ -301,6 +304,86 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
     return rows;
   }, [userLeaves, teamLeaves, isManager, allEmployees, showAvailability, visibleDates, firstDateKey, lastDateKey]);
 
+  // ---- Mobile: horizontal date strip (3 days back, today, 4 days forward) ----
+  const mobileDates = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 8 }, (_, i) => addDays(today, i - 3));
+  }, []);
+
+  // Auto-scroll date strip to center "today" on mount
+  useEffect(() => {
+    if (dateStripRef.current) {
+      const todayEl = dateStripRef.current.querySelector('[data-today="true"]');
+      if (todayEl) {
+        todayEl.scrollIntoView({ inline: 'center', block: 'nearest' });
+      }
+    }
+  }, []);
+
+  // ---- Mobile: employee list for selected date ----
+  const mobileEmployeeList = useMemo(() => {
+    if (!showAvailability || !allEmployees) return [];
+
+    const activeEmployees = allEmployees.filter(e => e.status !== 'Terminated');
+    const checkedInSet = attendanceByDate.get(mobileSelectedDate);
+    const isFuture = mobileSelectedDate > todayKey;
+
+    // Build leave map for selected date
+    const allLeaves = [...userLeaves, ...teamLeaves];
+    const onLeaveMap = new Map<string, LeaveRequest>();
+    for (const leave of allLeaves) {
+      if (leave.status !== 'Approved' && leave.status !== 'Pending') continue;
+      if (!leave.startDate || !leave.endDate) continue;
+      const start = toLocalDateStr(leave.startDate);
+      const end = toLocalDateStr(leave.endDate);
+      if (mobileSelectedDate >= start && mobileSelectedDate <= end) {
+        onLeaveMap.set(leave.employeeId, leave);
+      }
+    }
+
+    type MobileEmployee = {
+      id: string;
+      name: string;
+      avatar?: string;
+      department?: string;
+      status: 'leave' | 'present' | 'absent' | 'pending' | 'future';
+      leaveType?: string;
+      leaveRequest?: LeaveRequest;
+    };
+
+    const list: MobileEmployee[] = activeEmployees.map((emp) => {
+      const leave = onLeaveMap.get(emp.id);
+      if (leave) {
+        return {
+          id: emp.id,
+          name: emp.name,
+          avatar: emp.avatar,
+          department: emp.department,
+          status: leave.status === 'Pending' ? 'pending' as const : 'leave' as const,
+          leaveType: leave.type,
+          leaveRequest: leave,
+        };
+      }
+      if (isFuture) {
+        return { id: emp.id, name: emp.name, avatar: emp.avatar, department: emp.department, status: 'future' as const };
+      }
+      const isIn = checkedInSet?.has(emp.id);
+      return {
+        id: emp.id,
+        name: emp.name,
+        avatar: emp.avatar,
+        department: emp.department,
+        status: isIn ? 'present' as const : 'absent' as const,
+      };
+    });
+
+    // Sort: leave/pending/absent first (exceptions), then present, then future
+    const order: Record<string, number> = { leave: 0, pending: 1, absent: 2, present: 3, future: 4 };
+    list.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+
+    return list;
+  }, [showAvailability, allEmployees, mobileSelectedDate, attendanceByDate, todayKey, userLeaves, teamLeaves]);
+
   const dayCount = visibleDates.length;
   const ROW_HEIGHT = 44;
   // +1 for the attendance summary row when in availability mode
@@ -309,12 +392,12 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
 
   return (
     <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-4 md:p-6 flex flex-col">
-      {/* Header: title + view toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      {/* Header: title + view toggle (desktop) */}
+      <div className="flex items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
           {showAvailability ? t('leave:calendar.teamAvailability') : t('leave:calendar.teamCalendar')}
         </h2>
-        <div className="flex items-center gap-1 bg-background-light dark:bg-background-dark rounded-lg p-0.5">
+        <div className="hidden md:flex items-center gap-1 bg-background-light dark:bg-background-dark rounded-lg p-0.5">
           {(['week', '2weeks', 'month'] as ViewMode[]).map((mode) => (
             <button
               key={mode}
@@ -331,8 +414,104 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="flex items-center justify-between mb-4">
+      {/* ================================================================ */}
+      {/* MOBILE VIEW — date strip + employee list                        */}
+      {/* ================================================================ */}
+      <div className="md:hidden">
+        {/* Horizontal Date Strip */}
+        <div
+          ref={dateStripRef}
+          className="flex gap-1.5 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {mobileDates.map((date) => {
+            const key = toDateKey(date);
+            const isToday = key === todayKey;
+            const isSelected = key === mobileSelectedDate;
+            const isWkend = isWeekend(date);
+            return (
+              <button
+                key={key}
+                data-today={isToday ? 'true' : undefined}
+                onClick={() => !isWkend && setMobileSelectedDate(key)}
+                className={`flex-shrink-0 flex flex-col items-center justify-center w-12 h-16 rounded-xl transition-all ${
+                  isWkend
+                    ? 'opacity-30 cursor-default'
+                    : isSelected
+                      ? 'bg-primary text-white shadow-md scale-105'
+                      : isToday
+                        ? 'bg-primary/10 text-primary border border-primary/30'
+                        : 'bg-background-light dark:bg-background-dark text-text-muted-light dark:text-text-muted-dark'
+                }`}
+              >
+                <span className="text-[10px] font-medium uppercase">
+                  {SHORT_DAY_NAMES[date.getDay()]}
+                </span>
+                <span className={`text-lg font-bold leading-tight ${isSelected ? '' : isToday ? 'text-primary' : 'text-text-light dark:text-text-dark'}`}>
+                  {date.getDate()}
+                </span>
+                {isToday && !isSelected && (
+                  <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Employee List */}
+        <div className="space-y-2 mt-2">
+          {mobileEmployeeList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-text-muted-light dark:text-text-muted-dark">
+              <Calendar size={32} className="mb-2 opacity-30" />
+              <p className="text-sm">{t('leave:calendar.noDataForDay')}</p>
+            </div>
+          ) : (
+            mobileEmployeeList.map((emp) => {
+              const statusConfig = {
+                leave: { icon: XCircle, color: 'text-accent-red', bg: 'bg-accent-red/10', label: emp.leaveType ? translateLeaveType(emp.leaveType) : t('leave:calendar.onLeave') },
+                pending: { icon: Clock, color: 'text-accent-orange', bg: 'bg-accent-orange/10', label: t('leave:calendar.pending') },
+                absent: { icon: XCircle, color: 'text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800', label: t('leave:calendar.notIn') },
+                present: { icon: CheckCircle2, color: 'text-accent-green', bg: 'bg-accent-green/10', label: t('leave:calendar.present') },
+                future: { icon: Clock, color: 'text-gray-300 dark:text-gray-600', bg: 'bg-gray-50 dark:bg-gray-800/50', label: '-' },
+              };
+              const cfg = statusConfig[emp.status];
+              const Icon = cfg.icon;
+              const canClick = (emp.status === 'leave' || emp.status === 'pending') && !!emp.leaveRequest && !!onLeaveClick;
+
+              return (
+                <div
+                  key={emp.id}
+                  onClick={canClick ? () => onLeaveClick!(emp.leaveRequest!) : undefined}
+                  className={`flex items-center gap-3 p-3 rounded-xl border border-border-light dark:border-border-dark transition-colors ${
+                    emp.status === 'leave' ? 'bg-accent-red/5 border-accent-red/20' :
+                    emp.status === 'pending' ? 'bg-accent-orange/5 border-accent-orange/20' :
+                    'bg-card-light dark:bg-card-dark'
+                  } ${canClick ? 'cursor-pointer active:bg-background-light dark:active:bg-background-dark' : ''}`}
+                >
+                  <Avatar src={emp.avatar} name={emp.name} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">{emp.name}</p>
+                    {emp.department && (
+                      <p className="text-xs text-text-muted-light dark:text-text-muted-dark truncate">{emp.department}</p>
+                    )}
+                  </div>
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg min-h-[36px] ${cfg.bg}`}>
+                    <Icon size={16} className={cfg.color} />
+                    <span className={`text-xs font-medium ${cfg.color}`}>{cfg.label}</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* ================================================================ */}
+      {/* DESKTOP VIEW — Navigation + Gantt chart                          */}
+      {/* ================================================================ */}
+
+      {/* Navigation (desktop only) */}
+      <div className="hidden md:flex items-center justify-between mb-4">
         <button
           onClick={handlePrev}
           className="p-1.5 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors"
@@ -358,8 +537,8 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
         </button>
       </div>
 
-      {/* Gantt chart */}
-      <div className="overflow-x-auto -mx-4 md:-mx-6 px-4 md:px-6">
+      {/* Gantt chart (desktop only) */}
+      <div className="hidden md:block overflow-x-auto -mx-6 px-6">
         <div
           className="min-w-[600px]"
           style={{
@@ -538,8 +717,8 @@ export const LeaveGanttCalendar: React.FC<LeaveCalendarProps> = ({
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 pt-3 border-t border-border-light dark:border-border-dark">
+      {/* Legend (desktop only) */}
+      <div className="hidden md:flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 pt-3 border-t border-border-light dark:border-border-dark">
         {/* Checked-in indicator (availability mode) */}
         {showAvailability && (
           <>

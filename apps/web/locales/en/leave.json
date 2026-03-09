@@ -168,7 +168,11 @@
     "checkedIn": "Checked In",
     "notIn": "Not In",
     "noRequests": "No leave requests in this period.",
-    "allAvailable": "All team members are available in this period."
+    "allAvailable": "All team members are available in this period.",
+    "present": "Present",
+    "absent": "Absent",
+    "pending": "Pending",
+    "noDataForDay": "No data for this day"
   },
   "rejectDialog": {
     "title": "Reject Leave Request",
