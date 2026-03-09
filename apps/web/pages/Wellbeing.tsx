@@ -370,26 +370,30 @@ export const Wellbeing: React.FC = () => {
                 {/* Category Breakdown */}
                 <div>
                   <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-3">{t('sentiment.categoryBreakdown')}</h3>
-                  <div className="space-y-3">
-                    {sentiment.categoryBreakdown.map((cat) => (
-                      <div key={cat.category}>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs font-medium text-text-light dark:text-text-dark">{cat.category}</span>
-                          <span className="text-xs font-semibold text-text-light dark:text-text-dark">{cat.score}%</span>
-                        </div>
-                        <div className="w-full h-2 bg-background-light dark:bg-background-dark rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              cat.score >= 80 ? 'bg-accent-green' :
-                              cat.score >= 60 ? 'bg-primary' :
-                              cat.score >= 40 ? 'bg-accent-orange' :
-                              'bg-accent-red'
-                            }`}
-                            style={{ width: `${cat.score}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    {[...sentiment.categoryBreakdown]
+                      .sort((a, b) => b.score - a.score)
+                      .map((cat) => {
+                        const color = cat.score >= 80 ? 'bg-accent-green' :
+                          cat.score >= 60 ? 'bg-primary' :
+                          cat.score >= 40 ? 'bg-accent-orange' : 'bg-accent-red';
+                        return (
+                          <div key={cat.category} className="flex items-center gap-2.5">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-[11px] text-text-muted-light dark:text-text-muted-dark truncate">{cat.category}</span>
+                                <span className="text-[11px] font-bold text-text-light dark:text-text-dark ml-1">{cat.score}%</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-background-light dark:bg-background-dark rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${color}`}
+                                  style={{ width: `${cat.score}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               </div>

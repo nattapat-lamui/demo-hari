@@ -515,7 +515,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <span className="text-xs bg-accent-orange/10 text-accent-orange px-2 py-1 rounded-full">{t('dashboard:admin.pending', { count: pendingRequests.length })}</span>
           </div>
-          <div className="p-4 flex-grow">
+          <div className="p-4 flex-1 flex flex-col">
             {pendingRequests.length > 0 ? (
               <>
                 {/* Desktop table */}
@@ -583,8 +583,8 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
-                <CheckCircle2 size={32} className="mx-auto mb-2 opacity-30" />
+              <div className="flex-1 flex flex-col items-center justify-center py-8 text-text-muted-light dark:text-text-muted-dark">
+                <CheckCircle2 size={32} className="mb-2 opacity-30" />
                 <p>{t('dashboard:admin.allCaughtUp')}</p>
               </div>
             )}
@@ -600,9 +600,9 @@ export const AdminDashboard: React.FC = () => {
                 <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">{t('dashboard:admin.recentActivity')}</h2>
               </div>
             </div>
-            <div className="p-4 space-y-4 max-h-[280px] overflow-y-auto flex-grow">
+            <div className="p-4 max-h-[280px] overflow-y-auto flex-1 flex flex-col">
               {auditLogsData.length > 0 ? (
-                <>
+                <div className="space-y-4">
                   {auditLogsData.slice(0, 4).map(log => (
                     <div key={log.id} className="flex gap-3 items-start text-sm">
                       <div className="mt-0.5 p-1.5 bg-background-light dark:bg-background-dark rounded-full border border-border-light dark:border-border-dark text-text-muted-light">
@@ -617,9 +617,9 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   ))}
                   <button onClick={() => navigate('/compliance')} className="w-full text-center text-xs text-primary mt-2 hover:underline">View Full Log</button>
-                </>
+                </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-text-muted-light dark:text-text-muted-dark">
+                <div className="flex-1 flex flex-col items-center justify-center text-text-muted-light dark:text-text-muted-dark">
                   <Activity size={32} className="mb-2 opacity-20" />
                   <p className="text-sm">{t('dashboard:admin.noRecentActivity')}</p>
                 </div>
