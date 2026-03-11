@@ -52,7 +52,9 @@
     "helpSupport": "ช่วยเหลือและสนับสนุน",
     "surveys": "แบบสำรวจ",
     "employeeDetails": "รายละเอียดพนักงาน",
-    "survey": "แบบสำรวจ"
+    "survey": "แบบสำรวจ",
+    "attendance": "การลงเวลา",
+    "payroll": "เงินเดือน"
   },
   "sidebar": {
     "byAiya": "by AIYA",

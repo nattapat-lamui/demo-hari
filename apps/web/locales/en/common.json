@@ -52,7 +52,9 @@
     "helpSupport": "Help & Support",
     "surveys": "Surveys",
     "employeeDetails": "Employee Details",
-    "survey": "Survey"
+    "survey": "Survey",
+    "attendance": "Attendance",
+    "payroll": "Payroll"
   },
   "sidebar": {
     "byAiya": "by AIYA",

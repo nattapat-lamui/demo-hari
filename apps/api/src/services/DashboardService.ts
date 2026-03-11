@@ -135,11 +135,8 @@ export class DashboardService {
       nextPaydayDate = new Date(currentYear, currentMonth + 1, actualPayday);
     }
 
-    // Format as "Feb 28" style
-    return nextPaydayDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    });
+    // Return ISO date string (YYYY-MM-DD) for frontend locale formatting
+    return nextPaydayDate.toISOString().split('T')[0];
   }
 
   /**
