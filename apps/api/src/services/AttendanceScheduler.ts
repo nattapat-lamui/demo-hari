@@ -9,38 +9,29 @@ import { getIO } from '../socket';
  */
 async function autoCheckout(): Promise<void> {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-  const checkoutTime = new Date(`${today}T23:59:00+07:00`);
 
   try {
-    // Get work schedule config for overtime calc
-    const configResult = await query(
-      `SELECT key, value FROM system_configs WHERE category = 'attendance'`
-    );
-    const configMap: Record<string, string> = {};
-    for (const row of configResult.rows) {
-      configMap[row.key] = row.value;
-    }
-    const standardHours = parseFloat(configMap['standard_hours'] || '8');
-    const workEnd = configMap['work_end'] || '18:00';
-
-    // Find open records for today
+    // Find ALL open records up to today (catches missed days too)
     const openRecords = await query(
-      `SELECT id, clock_in, break_duration, notes FROM attendance_records
-       WHERE date = $1 AND clock_in IS NOT NULL AND clock_out IS NULL`,
+      `SELECT id, date, clock_in, break_duration, notes FROM attendance_records
+       WHERE date <= $1 AND clock_in IS NOT NULL AND clock_out IS NULL`,
       [today]
     );
 
     if (openRecords.rows.length === 0) return;
 
-    const workEndTime = new Date(`${today}T${workEnd}:00+07:00`);
-
     for (const row of openRecords.rows) {
+      // Use the record's own date for checkout time (not today)
+      const recordDate = new Date(row.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+      const checkoutTime = new Date(`${recordDate}T23:59:00+07:00`);
+
       const clockIn = new Date(row.clock_in);
       const breakDuration = row.break_duration || 0;
       const totalMinutes = (checkoutTime.getTime() - clockIn.getTime()) / 1000 / 60 - breakDuration;
       const totalHours = Math.round(totalMinutes / 60 * 100) / 100;
-      const overtimeHours = Math.max(0, Math.round((totalHours - standardHours) * 100) / 100);
-      const earlyDeparture = checkoutTime < workEndTime;
+      // Auto-checkout: no overtime (OT only counts for manual checkout) and no early departure (23:59 is always after work_end)
+      const overtimeHours = 0;
+      const earlyDeparture = false;
       const existingNotes = row.notes ? `${row.notes} | ` : '';
       const notes = `${existingNotes}Auto-checkout: ไม่ได้เช็คเอาท์`;
 

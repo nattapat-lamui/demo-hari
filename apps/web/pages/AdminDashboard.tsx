@@ -9,7 +9,11 @@ import {
   CheckCircle2,
   Rocket,
   Calendar as CalendarIcon,
-  Utensils,
+  GraduationCap,
+  PartyPopper,
+  Flag,
+  Clock,
+  Building2,
   UserMinus,
   Briefcase,
   Activity,
@@ -451,9 +455,24 @@ export const AdminDashboard: React.FC = () => {
                     {event.avatar ? (
                       <Avatar src={event.avatar} name={event.title} size="lg" className="ring-2 ring-white dark:ring-background-dark" />
                     ) : (
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${event.type === 'Meeting' ? 'bg-accent-teal/10 text-accent-teal' : 'bg-primary/10 text-primary'
-                        }`}>
-                        {event.type === 'Meeting' ? <CalendarIcon size={18} /> : <Utensils size={18} />}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        event.type === 'Meeting' ? 'bg-accent-teal/10 text-accent-teal' :
+                        event.type === 'Birthday' ? 'bg-pink-100 text-pink-500 dark:bg-pink-500/10 dark:text-pink-400' :
+                        event.type === 'Social' ? 'bg-amber-100 text-amber-500 dark:bg-amber-500/10 dark:text-amber-400' :
+                        event.type === 'Training' ? 'bg-violet-100 text-violet-500 dark:bg-violet-500/10 dark:text-violet-400' :
+                        event.type === 'Holiday' ? 'bg-green-100 text-green-500 dark:bg-green-500/10 dark:text-green-400' :
+                        event.type === 'Deadline' ? 'bg-red-100 text-red-500 dark:bg-red-500/10 dark:text-red-400' :
+                        event.type === 'Company Event' ? 'bg-blue-100 text-blue-500 dark:bg-blue-500/10 dark:text-blue-400' :
+                        'bg-primary/10 text-primary'
+                      }`}>
+                        {event.type === 'Meeting' && <CalendarIcon size={18} />}
+                        {event.type === 'Birthday' && <Cake size={18} />}
+                        {event.type === 'Social' && <PartyPopper size={18} />}
+                        {event.type === 'Training' && <GraduationCap size={18} />}
+                        {event.type === 'Holiday' && <Flag size={18} />}
+                        {event.type === 'Deadline' && <Clock size={18} />}
+                        {event.type === 'Company Event' && <Building2 size={18} />}
+                        {!['Meeting', 'Birthday', 'Social', 'Training', 'Holiday', 'Deadline', 'Company Event'].includes(event.type) && <CalendarIcon size={18} />}
                       </div>
                     )}
                     <div>
