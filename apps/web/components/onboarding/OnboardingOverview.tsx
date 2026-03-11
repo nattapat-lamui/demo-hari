@@ -54,6 +54,15 @@ export const OnboardingOverview: React.FC<OnboardingOverviewProps> = ({
         );
     }
 
+    const translateOnboardingStatus = (status: string): string => {
+        const statusMap: Record<string, string> = {
+            'Not Started': t('common:status.notStarted'),
+            'In Progress': t('common:status.inProgress'),
+            'Completed': t('common:status.completed'),
+        };
+        return statusMap[status] || status;
+    };
+
     const statusBadge = (status: string) => {
         const styles = {
             'Not Started': 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
@@ -63,7 +72,7 @@ export const OnboardingOverview: React.FC<OnboardingOverviewProps> = ({
 
         return (
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles}`}>
-                {status}
+                {translateOnboardingStatus(status)}
             </span>
         );
     };

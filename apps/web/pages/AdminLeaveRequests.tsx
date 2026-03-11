@@ -193,12 +193,26 @@ export const AdminLeaveRequests: React.FC = () => {
     }
   };
 
+  const deptKeyMap: Record<string, string> = {
+    'Human Resources': 'common:departments.humanResources',
+    'Engineering': 'common:departments.engineering',
+    'Developer': 'common:departments.developer',
+    'Marketing': 'common:departments.marketing',
+    'Sales': 'common:departments.sales',
+    'Finance': 'common:departments.finance',
+    'Operations': 'common:departments.operations',
+    'Product': 'common:departments.product',
+    'Design': 'common:departments.design',
+    'Legal': 'common:departments.legal',
+    'Customer Support': 'common:departments.customerSupport',
+    'Tester': 'common:departments.tester',
+  };
   const departmentOptions = useMemo(
     () => [
-      { value: 'All', label: 'All Departments' },
-      ...DEPARTMENTS.map((d) => ({ value: d, label: d })),
+      { value: 'All', label: t('common:departments.allDepartments') },
+      ...DEPARTMENTS.map((d) => ({ value: d, label: t(deptKeyMap[d] || d) })),
     ],
-    []
+    [t]
   );
 
   if (isLoadingRequests || isLoadingEmployees) {
