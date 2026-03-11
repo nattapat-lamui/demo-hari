@@ -15,7 +15,20 @@ export class EmployeeService {
      * Get all employees (no pagination - for backward compatibility)
      */
     async getAllEmployees(): Promise<Employee[]> {
-        const result = await query('SELECT * FROM employees ORDER BY name ASC');
+        const result = await query(
+            `SELECT e.*,
+                CASE
+                    WHEN e.status = 'Active' AND EXISTS (
+                        SELECT 1 FROM leave_requests lr
+                        WHERE lr.employee_id = e.id
+                          AND lr.status = 'Approved'
+                          AND CURRENT_DATE BETWEEN lr.start_date AND lr.end_date
+                    ) THEN 'On Leave'
+                    ELSE e.status
+                END AS effective_status
+             FROM employees e
+             ORDER BY name ASC`
+        );
         return result.rows.map(this.mapRowToEmployee);
     }
 
@@ -36,16 +49,29 @@ export class EmployeeService {
         const values: unknown[] = [];
         let paramIndex = 1;
 
+        // Effective status computed via leave_requests
+        const effectiveStatusExpr = `
+            CASE
+                WHEN e.status = 'Active' AND EXISTS (
+                    SELECT 1 FROM leave_requests lr
+                    WHERE lr.employee_id = e.id
+                      AND lr.status = 'Approved'
+                      AND CURRENT_DATE BETWEEN lr.start_date AND lr.end_date
+                ) THEN 'On Leave'
+                ELSE e.status
+            END`;
+
         if (department) {
-            conditions.push(`department = $${paramIndex++}`);
+            conditions.push(`e.department = $${paramIndex++}`);
             values.push(department);
         }
         if (status) {
-            conditions.push(`status = $${paramIndex++}`);
+            // Filter by effective status (accounts for employees on approved leave today)
+            conditions.push(`(${effectiveStatusExpr}) = $${paramIndex++}`);
             values.push(status);
         }
         if (search) {
-            conditions.push(`(name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR role ILIKE $${paramIndex})`);
+            conditions.push(`(e.name ILIKE $${paramIndex} OR e.email ILIKE $${paramIndex} OR e.role ILIKE $${paramIndex})`);
             values.push(`%${search}%`);
             paramIndex++;
         }
@@ -54,19 +80,20 @@ export class EmployeeService {
 
         // Validate sort field to prevent SQL injection
         const allowedSortFields = ['name', 'email', 'department', 'role', 'status', 'join_date', 'created_at'];
-        const safeSortField = allowedSortFields.includes(sortField) ? sortField : 'name';
+        const safeSortField = allowedSortFields.includes(sortField) ? `e.${sortField}` : 'e.name';
         const safeSortOrder = sortOrder === 'DESC' ? 'DESC' : 'ASC';
 
         // Get total count
         const countResult = await query(
-            `SELECT COUNT(*) as total FROM employees ${whereClause}`,
+            `SELECT COUNT(*) as total FROM employees e ${whereClause}`,
             values
         );
         const total = parseInt(countResult.rows[0].total, 10);
 
         // Get paginated data
         const dataResult = await query(
-            `SELECT * FROM employees ${whereClause}
+            `SELECT e.*, (${effectiveStatusExpr}) AS effective_status
+             FROM employees e ${whereClause}
              ORDER BY ${safeSortField} ${safeSortOrder}
              LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
             [...values, limit, offset]
@@ -77,7 +104,21 @@ export class EmployeeService {
     }
 
     async getEmployeeById(id: string): Promise<Employee | null> {
-        const result = await query('SELECT * FROM employees WHERE id = $1', [id]);
+        const result = await query(
+            `SELECT e.*,
+                CASE
+                    WHEN e.status = 'Active' AND EXISTS (
+                        SELECT 1 FROM leave_requests lr
+                        WHERE lr.employee_id = e.id
+                          AND lr.status = 'Approved'
+                          AND CURRENT_DATE BETWEEN lr.start_date AND lr.end_date
+                    ) THEN 'On Leave'
+                    ELSE e.status
+                END AS effective_status
+             FROM employees e
+             WHERE e.id = $1`,
+            [id]
+        );
         if (result.rows.length === 0) {
             return null;
         }
@@ -265,7 +306,7 @@ export class EmployeeService {
             joinDate: row.join_date || row.created_at,
             salary: row.salary,
             avatar: row.avatar,
-            status: row.status,
+            status: row.effective_status || row.status,
             bio: row.bio,
             phone: row.phone,
             phoneNumber: row.phone_number,
