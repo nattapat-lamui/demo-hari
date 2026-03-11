@@ -4,8 +4,6 @@ import {
     Clock,
     FileText,
     Calendar,
-    ListChecks,
-    GitBranch,
     ArrowLeft,
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
@@ -19,7 +17,7 @@ import { Dropdown } from '../components/Dropdown';
 import { api, BASE_URL, getAuthToken } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import { useOnboardingTasks, useOnboardingContacts, useOnboardingDocuments, useAllEmployees } from '../hooks/queries';
-import { FlowGraph, TaskList, KeyContacts, DocumentChecklist, InviteModal, OnboardingOverview } from '../components/onboarding';
+import { TaskList, KeyContacts, DocumentChecklist, InviteModal, OnboardingOverview } from '../components/onboarding';
 
 export const Onboarding: React.FC = () => {
     const { t, i18n } = useTranslation(['onboarding', 'common']);
@@ -34,9 +32,6 @@ export const Onboarding: React.FC = () => {
     const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
         setToast({ show: true, message, type });
     };
-
-    // Tab state
-    const [activeTab, setActiveTab] = useState<'checklist' | 'flow'>('checklist');
 
     // React Query hooks for data fetching
     const { data: tasks = [] } = useOnboardingTasks();
@@ -459,39 +454,6 @@ export const Onboarding: React.FC = () => {
                     onSelectEmployee={(id) => setSelectedEmployeeId(id)}
                 />
             ) : (<>
-                {/* Tab Switcher */}
-                <div className="flex items-center gap-1 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-1.5 shadow-sm w-fit">
-                    <button
-                        onClick={() => setActiveTab('checklist')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            activeTab === 'checklist'
-                                ? 'bg-primary text-white shadow-sm'
-                                : 'text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark'
-                        }`}
-                    >
-                        <ListChecks size={16} />
-                        {t('checklist')}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('flow')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            activeTab === 'flow'
-                                ? 'bg-primary text-white shadow-sm'
-                                : 'text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark'
-                        }`}
-                    >
-                        <GitBranch size={16} />
-                        {t('onboardingFlow')}
-                    </button>
-                </div>
-
-                {/* ==================== FLOW TAB ==================== */}
-                {activeTab === 'flow' && (
-                    <FlowGraph tasks={visibleTasks} />
-                )}
-
-                {/* ==================== CHECKLIST TAB ==================== */}
-                {activeTab === 'checklist' && <>
                     <TaskList
                         tasks={visibleTasks}
                         filteredTasks={filteredTasks}
@@ -528,7 +490,6 @@ export const Onboarding: React.FC = () => {
                             onDocReview={handleDocReview}
                         />
                     </TaskList>
-                </>}
             </>)}
 
             {/* Invite Employee Modal */}
