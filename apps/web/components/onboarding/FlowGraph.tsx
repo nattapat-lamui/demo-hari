@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { OnboardingTask } from '../../types';
 import { FlowStage } from './OnboardingTypes';
+import { translateTaskTitle } from '../../utils/onboardingTranslation';
 
 export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
     const { t } = useTranslation(['onboarding', 'common']);
@@ -181,7 +182,7 @@ export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
                                                             ? 'line-through text-text-muted-light dark:text-text-muted-dark'
                                                             : 'text-text-light dark:text-text-dark'
                                                     }`}>
-                                                        {task.title}
+                                                        {translateTaskTitle(t, task.title)}
                                                     </span>
                                                 </div>
                                             ))}
@@ -292,7 +293,7 @@ export const FlowGraph: React.FC<{ tasks: OnboardingTask[] }> = ({ tasks }) => {
                                                     ? 'line-through text-text-muted-light dark:text-text-muted-dark'
                                                     : 'text-text-light dark:text-text-dark'
                                             }`}>
-                                                {task.title}
+                                                {translateTaskTitle(t, task.title)}
                                             </span>
                                         </div>
                                     ))}

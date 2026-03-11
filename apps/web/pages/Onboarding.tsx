@@ -96,15 +96,18 @@ export const Onboarding: React.FC = () => {
     const selectedEmployee = allEmployees.find(e => e.id === selectedEmployeeId) ?? null;
 
     // Filter tasks & docs by selected employee (when one is chosen)
+    // When not admin (employee view), show only the current user's tasks
     const visibleTasks = useMemo(() => {
-        if (!isAdmin || !selectedEmployeeId) return tasks;
+        if (!isAdmin) return tasks.filter(t => t.employeeId === user?.employeeId);
+        if (!selectedEmployeeId) return tasks;
         return tasks.filter(t => t.employeeId === selectedEmployeeId);
-    }, [isAdmin, selectedEmployeeId, tasks]);
+    }, [isAdmin, selectedEmployeeId, tasks, user?.employeeId]);
 
     const visibleDocs = useMemo(() => {
-        if (!isAdmin || !selectedEmployeeId) return onboardingDocs;
+        if (!isAdmin) return onboardingDocs.filter(d => d.employeeId === user?.employeeId);
+        if (!selectedEmployeeId) return onboardingDocs;
         return onboardingDocs.filter(d => d.employeeId === selectedEmployeeId);
-    }, [isAdmin, selectedEmployeeId, onboardingDocs]);
+    }, [isAdmin, selectedEmployeeId, onboardingDocs, user?.employeeId]);
 
     const toggleTask = async (id: string) => {
         const task = tasks.find(t => t.id === id);

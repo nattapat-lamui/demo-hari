@@ -12,6 +12,7 @@ import {
     MessageSquare,
 } from 'lucide-react';
 import { DocumentChecklistProps } from './OnboardingTypes';
+import { translateDocName, translateDocDescription } from '../../utils/onboardingTranslation';
 
 const getStatusBadge = (status: string) => {
     switch (status) {
@@ -87,12 +88,12 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-0.5">
-                                        <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">{doc.name}</p>
+                                        <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">{translateDocName(t, doc.name)}</p>
                                         <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${getStatusBadge(doc.status)}`}>
-                                            {doc.status}
+                                            {doc.status === 'Pending' ? t('documentChecklist.pending') : doc.status === 'Uploaded' ? t('documentChecklist.uploadedStatus') : doc.status === 'Approved' ? t('documentChecklist.approved') : t('documentChecklist.rejected')}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{doc.description}</p>
+                                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{translateDocDescription(t, doc.description)}</p>
                                     {doc.fileType && doc.fileSize && (
                                         <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                                             {doc.fileType} &middot; {doc.fileSize}

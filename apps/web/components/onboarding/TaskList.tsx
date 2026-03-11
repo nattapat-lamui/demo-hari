@@ -10,6 +10,7 @@ import {
 import { OnboardingTask } from '../../types';
 import { Dropdown } from '../Dropdown';
 import { TaskListProps } from './OnboardingTypes';
+import { translateTaskTitle, translateTaskDescription, translateStage } from '../../utils/onboardingTranslation';
 
 export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> = ({
     children,
@@ -161,7 +162,7 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="flex items-center gap-2 text-primary font-medium">
                                                 {getStageIcon(stage)}
-                                                <span>{stage}</span>
+                                                <span>{translateStage(t, stage)}</span>
                                             </div>
                                             <div className="flex items-center gap-3" title={`${visibleStageCompleted} of ${visibleStageTotal} tasks completed`}>
                                                 <span className="text-xs text-text-muted-light dark:text-text-muted-dark font-medium">{Math.round(stageProgress)}%</span>
@@ -192,9 +193,9 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
                                                         </button>
                                                         <div className="flex-1">
                                                             <p className={`text-sm font-medium ${task.completed ? 'line-through text-text-muted-light dark:text-text-muted-dark' : 'text-text-light dark:text-text-dark'}`}>
-                                                                {task.title}
+                                                                {translateTaskTitle(t, task.title)}
                                                             </p>
-                                                            <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">{task.description}</p>
+                                                            <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">{translateTaskDescription(t, task.description)}</p>
                                                             {task.link && (
                                                                 <a href={task.link} className="flex items-center gap-1 text-xs text-primary hover:underline mt-1">
                                                                     {t('taskList.readMaterial')} <ExternalLink size={10} />
@@ -210,14 +211,14 @@ export const TaskList: React.FC<TaskListProps & { children?: React.ReactNode }> 
                                                                     className={`px-2 py-0.5 rounded border font-medium transition-colors ${getPriorityBadgeClass(task.priority)} ${readOnly ? 'cursor-default' : ''}`}
                                                                     title={readOnly ? task.priority : 'Click to change priority'}
                                                                 >
-                                                                    {task.priority}
+                                                                    {task.priority === 'High' ? t('taskList.high') : task.priority === 'Medium' ? t('taskList.medium') : t('taskList.low')}
                                                                 </button>
                                                             )}
 
                                                             {userRole === 'HR_ADMIN' && (
                                                                 <div className="flex items-center gap-1 bg-background-light dark:bg-background-dark px-2 py-0.5 rounded border border-border-light dark:border-border-dark">
                                                                     <Mail size={10} />
-                                                                    {task.assignee}
+                                                                    {t(`taskList.assignee${task.assignee}`)}
                                                                 </div>
                                                             )}
 

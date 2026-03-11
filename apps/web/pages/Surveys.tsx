@@ -393,7 +393,7 @@ export const Surveys: React.FC = () => {
             </div>
             <div className="p-5 space-y-3">
               {activeSurveys.length === 0 ? (
-                <p className="text-text-muted-light text-center py-4 text-sm">{t('surveys.noActive')}</p>
+                <p className="text-text-muted-light text-center py-12 text-sm">{t('surveys.noActive')}</p>
               ) : (
                 activeSurveys.map((survey) => (
                   <div key={survey.id} className="flex justify-between items-center p-4 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
@@ -455,7 +455,7 @@ export const Surveys: React.FC = () => {
               </h2>
             </div>
             {closedSurveys.length === 0 ? (
-              <div className="p-5 text-center text-sm text-text-muted-light">{t('surveys.noClosedSurveys')}</div>
+              <div className="flex items-center justify-center py-16 text-sm text-text-muted-light">{t('surveys.noClosedSurveys')}</div>
             ) : (
               <div className="divide-y divide-border-light dark:divide-border-dark">
                 {closedSurveys.map((survey) => (
