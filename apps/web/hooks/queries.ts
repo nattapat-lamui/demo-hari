@@ -800,6 +800,27 @@ export const useAddAnnouncement = () => {
   });
 };
 
+export const useUpdateAnnouncement = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      api.patch(`/announcements/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.announcements.all });
+    },
+  });
+};
+
+export const useDeleteAnnouncement = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/announcements/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.announcements.all });
+    },
+  });
+};
+
 export const useAddEvent = () => {
   const qc = useQueryClient();
   return useMutation({

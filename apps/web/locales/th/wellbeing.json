@@ -9,11 +9,33 @@
     "noDataDesc": "คะแนนความรู้สึกจะปรากฏเมื่อพนักงานเริ่มทำแบบสำรวจ",
     "responseRate": "อัตราการตอบ",
     "respondents": "ผู้ตอบ",
-    "categoryBreakdown": "แยกตามหมวดหมู่"
+    "categoryBreakdown": "แยกตามหมวดหมู่",
+    "categories": {
+      "Work-Life Balance": "สมดุลชีวิตและการทำงาน",
+      "Workload": "ภาระงาน",
+      "Blueprint": "แผนงาน",
+      "Team": "ทีม",
+      "Growth": "การเติบโต",
+      "Knowledge": "ความรู้",
+      "Management": "การจัดการ",
+      "Nurturing": "การดูแล",
+      "Action": "การปฏิบัติ"
+    }
   },
   "announcements": {
     "title": "ประกาศและนโยบาย",
-    "viewAll": "ดูทั้งหมด"
+    "viewAll": "ดูทั้งหมด",
+    "edit": "แก้ไข",
+    "delete": "ลบ",
+    "editTitle": "แก้ไขประกาศ",
+    "save": "บันทึก",
+    "created": "โพสต์ประกาศสำเร็จ!",
+    "updated": "แก้ไขประกาศสำเร็จ!",
+    "deleted": "ลบประกาศสำเร็จ!",
+    "saveFailed": "ไม่สามารถบันทึกประกาศได้",
+    "deleteFailed": "ไม่สามารถลบประกาศได้",
+    "noAnnouncements": "ยังไม่มีประกาศ",
+    "noAnnouncementsHint": "ประกาศและนโยบายจะแสดงที่นี่"
   },
   "calendar": {
     "teamCalendar": "ปฏิทินทีม",

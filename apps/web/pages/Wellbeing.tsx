@@ -1,23 +1,28 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Megaphone, ScrollText, PartyPopper, ChevronLeft, ChevronRight, Plus, X, Check, Calendar, Type, AlignLeft, BarChart3, Users, TrendingUp } from 'lucide-react';
+import { Megaphone, ScrollText, PartyPopper, ChevronLeft, ChevronRight, Plus, X, Check, Calendar, Type, AlignLeft, BarChart3, Users, TrendingUp, Edit3, Trash2 } from 'lucide-react';
 import { Announcement, UpcomingEvent } from '../types';
 import { Toast } from '../components/Toast';
 import { Dropdown } from '../components/Dropdown';
 import { DatePicker } from '../components/DatePicker';
-import { useAnnouncements, useUpcomingEvents, useAddAnnouncement, useAddEvent, useDeleteEvent, useSentimentOverview } from '../hooks/queries';
+import { useAnnouncements, useUpcomingEvents, useAddAnnouncement, useUpdateAnnouncement, useDeleteAnnouncement, useAddEvent, useDeleteEvent, useSentimentOverview } from '../hooks/queries';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Wellbeing: React.FC = () => {
-  const { t } = useTranslation(['wellbeing', 'common']);
+  const { t, i18n } = useTranslation(['wellbeing', 'common']);
+  const { isAdminView } = useAuth();
   const { data: announcementsList = [] } = useAnnouncements();
   const { data: upcomingEvents = [] } = useUpcomingEvents();
   const { data: sentiment } = useSentimentOverview();
   const addAnnouncementMutation = useAddAnnouncement();
+  const updateAnnouncementMutation = useUpdateAnnouncement();
+  const deleteAnnouncementMutation = useDeleteAnnouncement();
   const addEventMutation = useAddEvent();
   const deleteEventMutation = useDeleteEvent();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [newAnnouncement, setNewAnnouncement] = useState<Partial<Announcement>>({
     type: 'announcement'
@@ -129,19 +134,49 @@ export const Wellbeing: React.FC = () => {
     }
 
     try {
-      await addAnnouncementMutation.mutateAsync({
-        title: newAnnouncement.title,
-        description: newAnnouncement.description,
-        type: newAnnouncement.type || 'announcement',
-        date: newAnnouncement.date || null,
-      });
+      if (editingAnnouncementId) {
+        await updateAnnouncementMutation.mutateAsync({
+          id: editingAnnouncementId,
+          data: {
+            title: newAnnouncement.title,
+            description: newAnnouncement.description,
+            type: newAnnouncement.type || 'announcement',
+            date: newAnnouncement.date || null,
+          },
+        });
+        showToast(t('announcements.updated'), 'success');
+      } else {
+        await addAnnouncementMutation.mutateAsync({
+          title: newAnnouncement.title,
+          description: newAnnouncement.description,
+          type: newAnnouncement.type || 'announcement',
+          date: newAnnouncement.date || null,
+        });
+        showToast(t('announcements.created'), 'success');
+      }
 
       setIsModalOpen(false);
+      setEditingAnnouncementId(null);
       setNewAnnouncement({ type: 'announcement', title: '', description: '', date: '' });
-      showToast('Announcement posted successfully!', 'success');
     } catch (error: any) {
-      console.error('Error creating announcement:', error);
-      showToast(error.message || 'Failed to create announcement. Please try again.', 'error');
+      console.error('Error saving announcement:', error);
+      showToast(error.message || t('announcements.saveFailed'), 'error');
+    }
+  };
+
+  const handleEditAnnouncement = (item: Announcement) => {
+    setEditingAnnouncementId(item.id);
+    setNewAnnouncement({ title: item.title, description: item.description, type: item.type, date: item.date || '' });
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    try {
+      await deleteAnnouncementMutation.mutateAsync(id);
+      showToast(t('announcements.deleted'), 'success');
+    } catch (error: any) {
+      console.error('Error deleting announcement:', error);
+      showToast(error.message || t('announcements.deleteFailed'), 'error');
     }
   };
 
@@ -235,13 +270,15 @@ export const Wellbeing: React.FC = () => {
           <h1 className="text-text-light dark:text-text-dark text-2xl sm:text-3xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-text-muted-light dark:text-text-muted-dark text-sm sm:text-base">{t('subtitle')}</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary/90 transition-colors w-full sm:w-auto"
-        >
-          <Plus size={18} />
-          {t('newAnnouncement')}
-        </button>
+        {isAdminView && (
+          <button
+            onClick={() => { setEditingAnnouncementId(null); setNewAnnouncement({ type: 'announcement' }); setIsModalOpen(true); }}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary/90 transition-colors w-full sm:w-auto"
+          >
+            <Plus size={18} />
+            {t('newAnnouncement')}
+          </button>
+        )}
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -381,7 +418,7 @@ export const Wellbeing: React.FC = () => {
                           <div key={cat.category} className="flex items-center gap-2.5">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between mb-0.5">
-                                <span className="text-[11px] text-text-muted-light dark:text-text-muted-dark truncate">{cat.category}</span>
+                                <span className="text-[11px] text-text-muted-light dark:text-text-muted-dark truncate">{t(`sentiment.categories.${cat.category}`, cat.category)}</span>
                                 <span className="text-[11px] font-bold text-text-light dark:text-text-dark ml-1">{cat.score}%</span>
                               </div>
                               <div className="w-full h-1.5 bg-background-light dark:bg-background-dark rounded-full overflow-hidden">
@@ -404,9 +441,17 @@ export const Wellbeing: React.FC = () => {
           <section className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">{t('announcements.title')}</h2>
-              <a className="text-primary text-sm font-medium hover:underline" href="#">{t('announcements.viewAll')}</a>
             </div>
             <div className="space-y-4">
+              {announcementsList.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-14 h-14 rounded-full bg-background-light dark:bg-background-dark flex items-center justify-center mb-3">
+                    <Megaphone size={24} className="text-text-muted-light dark:text-text-muted-dark" />
+                  </div>
+                  <p className="text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('announcements.noAnnouncements')}</p>
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('announcements.noAnnouncementsHint')}</p>
+                </div>
+              )}
               {announcementsList.map((item) => (
                 <div key={item.id} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-background-light dark:bg-background-dark/50 transition-colors hover:bg-background-light/80 dark:hover:bg-background-dark">
                   <div className={`p-2 rounded-full flex-shrink-0 ${item.type === 'announcement' ? 'bg-primary/10 text-primary' :
@@ -417,7 +462,7 @@ export const Wellbeing: React.FC = () => {
                     {item.type === 'policy' && <ScrollText size={20} />}
                     {item.type === 'event' && <PartyPopper size={20} />}
                   </div>
-                  <div className="flex-grow">
+                  <div className="flex-grow min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-text-light dark:text-text-dark font-medium text-sm sm:text-base">{item.title}</p>
                       {item.date && (
@@ -432,11 +477,29 @@ export const Wellbeing: React.FC = () => {
                         {item.author && <span className="font-medium">{item.author}</span>}
                         {item.author && item.createdAt && <span>·</span>}
                         {item.createdAt && (
-                          <span>{new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          <span>{new Date(item.createdAt).toLocaleDateString(i18n.language === 'th' ? 'th-TH' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                         )}
                       </div>
                     )}
                   </div>
+                  {isAdminView && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => handleEditAnnouncement(item)}
+                        className="p-1.5 rounded-lg text-text-muted-light dark:text-text-muted-dark hover:text-primary hover:bg-primary/10 transition-colors"
+                        title={t('announcements.edit')}
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAnnouncement(item.id)}
+                        className="p-1.5 rounded-lg text-text-muted-light dark:text-text-muted-dark hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        title={t('announcements.delete')}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -530,10 +593,10 @@ export const Wellbeing: React.FC = () => {
           <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
               <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
-                {t('announcementModal.title')}
+                {editingAnnouncementId ? t('announcements.editTitle') : t('announcementModal.title')}
               </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => { setIsModalOpen(false); setEditingAnnouncementId(null); setNewAnnouncement({ type: 'announcement' }); }}
                 className="text-text-muted-light hover:text-text-light"
               >
                 <X size={20} />
@@ -604,7 +667,7 @@ export const Wellbeing: React.FC = () => {
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setEditingAnnouncementId(null); setNewAnnouncement({ type: 'announcement' }); }}
                   className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
                 >
                   {t('announcementModal.cancel')}
@@ -613,7 +676,7 @@ export const Wellbeing: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2"
                 >
-                  <Check size={16} /> {t('announcementModal.post')}
+                  <Check size={16} /> {editingAnnouncementId ? t('announcements.save') : t('announcementModal.post')}
                 </button>
               </div>
             </form>

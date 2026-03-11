@@ -25,6 +25,7 @@ const ROUTE_NAME_MAP: Record<string, string> = {
   'surveys': 'breadcrumbs.surveys',
   'attendance': 'breadcrumbs.attendance',
   'payroll': 'breadcrumbs.payroll',
+  'announcements': 'breadcrumbs.announcements',
 };
 
 /**

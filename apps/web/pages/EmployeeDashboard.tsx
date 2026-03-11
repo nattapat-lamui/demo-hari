@@ -485,7 +485,7 @@ export const EmployeeDashboard: React.FC = () => {
             </div>
             <button onClick={() => navigate('/wellbeing')} className="text-xs text-primary font-medium hover:underline">{t('common:buttons.viewAll')}</button>
           </div>
-          <div className="p-4 space-y-3 flex-grow">
+          <div className="p-4 space-y-3 flex-grow flex flex-col">
             {announcementsData.length > 0 ? (
               announcementsData.slice(0, 3).map(ann => (
                 <div key={ann.id} className="p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark hover:border-primary/30 transition-colors">
@@ -515,7 +515,7 @@ export const EmployeeDashboard: React.FC = () => {
                 </div>
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-text-muted-light dark:text-text-muted-dark">
+              <div className="flex flex-col items-center justify-center flex-1 text-text-muted-light dark:text-text-muted-dark">
                 <Megaphone size={28} className="mb-2 opacity-20" />
                 <p className="text-sm">{t('dashboard:employee.noAnnouncements')}</p>
               </div>
