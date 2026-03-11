@@ -590,12 +590,12 @@ export const Documents: React.FC = () => {
                 <table className="w-full text-left text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-800/50 text-xs uppercase text-text-muted-light dark:text-text-muted-dark font-semibold">
                     <tr>
-                      <th className="px-6 py-4">Name</th>
-                      <th className="px-6 py-4">Category</th>
-                      <th className="px-6 py-4">Size</th>
-                      <th className="px-6 py-4">Owner</th>
-                      <th className="px-6 py-4">Last Modified</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
+                      <th className="px-6 py-4">{t('table.name')}</th>
+                      <th className="px-6 py-4">{t('table.category')}</th>
+                      <th className="px-6 py-4">{t('table.size')}</th>
+                      <th className="px-6 py-4">{t('table.owner')}</th>
+                      <th className="px-6 py-4">{t('table.lastModified')}</th>
+                      <th className="px-6 py-4 text-right">{t('table.actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light dark:divide-border-dark">
@@ -679,13 +679,13 @@ export const Documents: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-2 text-xs text-text-muted-light dark:text-text-muted-dark mb-3">
                       <div>
-                        <span className="font-medium">Size:</span> {doc.size}
+                        <span className="font-medium">{t('card.size')}</span> {doc.size}
                       </div>
                       <div>
-                        <span className="font-medium">Owner:</span> {doc.owner}
+                        <span className="font-medium">{t('card.owner')}</span> {doc.owner}
                       </div>
                       <div className="col-span-2">
-                        <span className="font-medium">Modified:</span> {formatDate(doc.lastAccessed)}
+                        <span className="font-medium">{t('card.modified')}</span> {formatDate(doc.lastAccessed)}
                       </div>
                     </div>
 
@@ -719,7 +719,7 @@ export const Documents: React.FC = () => {
           {filteredDocuments.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-text-muted-light py-12">
               <FolderOpen size={48} className="mb-4 opacity-20" />
-              <p className="text-lg font-medium">No documents found.</p>
+              <p className="text-lg font-medium">{t('noDocuments')}</p>
               <p className="text-sm">
                 {t('employeeAccess')}
               </p>

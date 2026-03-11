@@ -62,5 +62,19 @@
     "permanentlyDeleted": "Document permanently deleted.",
     "permanentDeleteFailed": "Failed to permanently delete document."
   },
-  "employeeAccess": "You have access to your personal documents and company policies."
+  "employeeAccess": "You have access to your personal documents and company policies.",
+  "table": {
+    "name": "Name",
+    "category": "Category",
+    "size": "Size",
+    "owner": "Owner",
+    "lastModified": "Last Modified",
+    "actions": "Actions"
+  },
+  "card": {
+    "size": "Size:",
+    "owner": "Owner:",
+    "modified": "Modified:"
+  },
+  "noDocuments": "No documents found."
 }
