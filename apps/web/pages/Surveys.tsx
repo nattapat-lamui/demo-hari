@@ -260,7 +260,7 @@ const CreateSurveyModal: React.FC<{
                       options={categoryOptions}
                       value={q.category}
                       onChange={(val) => updateQuestion(idx, 'category', val)}
-                      placeholder="Category"
+                      placeholder={t('common:placeholders.category')}
                     />
                   </div>
                   {questions.length > 1 && (

@@ -216,6 +216,18 @@ const AdminAttendance: React.FC = () => {
   const displayStatus = (record: AdminAttendanceRecord): string =>
     record.displayStatus || record.status;
 
+  const statusKeyMap: Record<string, string> = {
+    'Active': 'active',
+    'Checked Out': 'checkedOut',
+    'On-Leave': 'onLeave',
+    'Not In': 'notIn',
+    'Late': 'late',
+    'Present': 'present',
+    'Absent': 'absent',
+  };
+  const translateStatus = (ds: string): string =>
+    t(`common:status.${statusKeyMap[ds] || ds}`, { defaultValue: ds });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -423,7 +435,7 @@ const AdminAttendance: React.FC = () => {
                           return (
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                              {t('common:status.' + ds.toLowerCase().replace(/-/g, '').replace(/ /g, ''), { defaultValue: ds })}
+                              {translateStatus(ds)}
                             </span>
                           );
                         })()}
@@ -533,7 +545,7 @@ const AdminAttendance: React.FC = () => {
                         return (
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ring-1 ring-inset ${s.badge}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                            {t('common:status.' + ds.toLowerCase().replace(/-/g, '').replace(/ /g, ''), { defaultValue: ds })}
+                            {translateStatus(ds)}
                           </span>
                         );
                       })()}

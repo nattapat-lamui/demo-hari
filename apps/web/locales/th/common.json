@@ -117,7 +117,11 @@
     "days": "วัน",
     "hours": "ชั่วโมง",
     "minutes": "นาที",
-    "ago": "ที่แล้ว"
+    "ago": "ที่แล้ว",
+    "justNow": "เมื่อสักครู่",
+    "minsAgo": "{{count}} นาทีที่แล้ว",
+    "hoursAgo": "{{count}} ชั่วโมงที่แล้ว",
+    "daysAgo": "{{count}} วันที่แล้ว"
   },
   "months": {
     "january": "มกราคม",
@@ -246,5 +250,37 @@
     }
   },
   "noData": "ไม่มีข้อมูล",
-  "auto": "อัตโนมัติ"
+  "auto": "อัตโนมัติ",
+  "placeholders": {
+    "selectDate": "เลือกวันที่",
+    "selectStartDate": "เลือกวันที่เริ่มต้น",
+    "selectEndDate": "เลือกวันที่สิ้นสุด",
+    "selectRole": "เลือกตำแหน่ง",
+    "selectDepartment": "เลือกแผนก",
+    "selectLocation": "เลือกสถานที่",
+    "selectJoinDate": "เลือกวันที่เข้าร่วม",
+    "selectCategory": "เลือกหมวดหมู่",
+    "selectOption": "เลือกตัวเลือก",
+    "selectAnnouncementType": "เลือกประเภทประกาศ",
+    "selectEventType": "เลือกประเภทกิจกรรม",
+    "selectNewRole": "เลือกตำแหน่งใหม่",
+    "selectNewDepartment": "เลือกแผนกใหม่",
+    "selectReviewDate": "เลือกวันที่รีวิว",
+    "search": "ค้นหา...",
+    "searchEmployees": "ค้นหาพนักงาน...",
+    "egFullName": "เช่น สมชาย ใจดี",
+    "egRole": "เช่น นักวิจัย UX",
+    "egDepartment": "เช่น ผลิตภัณฑ์",
+    "egSeniorDev": "เช่น นักพัฒนาอาวุโส",
+    "egEngineering": "เช่น วิศวกรรม",
+    "egSalary": "เช่น 85000",
+    "slackHandle": "@ชื่อผู้ใช้",
+    "emergencyContact": "ชื่อ - ความสัมพันธ์ - เบอร์โทร",
+    "bio": "ประวัติย่อทางวิชาชีพ...",
+    "responsibilities": "ความรับผิดชอบหลักและผลงาน...",
+    "reviewerName": "ชื่อผู้รีวิว",
+    "detailedFeedback": "ความคิดเห็นโดยละเอียด...",
+    "addressLine": "บ้านเลขที่, อาคาร, ถนน, ซอย",
+    "category": "หมวดหมู่"
+  }
 }

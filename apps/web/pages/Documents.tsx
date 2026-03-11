@@ -882,7 +882,7 @@ export const Documents: React.FC = () => {
                     { value: 'Finance', label: 'Finance' },
                     { value: 'Personal', label: 'Personal' },
                   ]}
-                  placeholder="Select category"
+                  placeholder={t('common:placeholders.selectCategory')}
                 />
               </div>
             </div>

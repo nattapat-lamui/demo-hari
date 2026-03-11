@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface DropdownOption {
   value: string;
@@ -36,13 +37,15 @@ export const Dropdown: React.FC<DropdownProps> = ({
   options,
   value,
   onChange,
-  placeholder = 'Select an option',
+  placeholder: placeholderProp,
   className = '',
   width = 'w-full',
   id,
   name,
   disabled = false
 }) => {
+  const { t } = useTranslation('common');
+  const placeholder = placeholderProp ?? t('placeholders.selectOption');
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);

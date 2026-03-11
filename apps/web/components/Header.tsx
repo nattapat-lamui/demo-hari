@@ -25,7 +25,7 @@ import { useNotifications } from "../contexts/NotificationContext";
 import { useNavigate } from "react-router-dom";
 import { api, API_HOST } from "../lib/api";
 import { Avatar } from "./Avatar";
-import { translateNotifTitle, translateNotifMessage } from "../utils/notificationTranslation";
+import { translateNotifTitle, translateNotifMessage, formatNotifTimeAgo } from "../utils/notificationTranslation";
 
 const notifTypeConfig: Record<NotificationType, { icon: React.ElementType; bg: string; text: string }> = {
   info: { icon: Info, bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-500 dark:text-blue-400' },
@@ -587,7 +587,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                         {translateNotifMessage(t, notif.message)}
                       </p>
                       <p className="text-[11px] text-text-muted-light dark:text-text-muted-dark mt-1">
-                        {notif.time}
+                        {formatNotifTimeAgo(notif.created_at, t)}
                       </p>
                     </div>
 

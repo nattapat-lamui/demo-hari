@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, X, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface SearchableSelectOption {
   value: string;
@@ -27,11 +28,13 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   options,
   onSearch,
   isLoading = false,
-  placeholder = 'Search...',
+  placeholder: placeholderProp,
   disabled = false,
   excludeValues = [],
   label,
 }) => {
+  const { t } = useTranslation('common');
+  const placeholder = placeholderProp ?? t('placeholders.search');
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -163,7 +166,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   type="text"
                   value={searchTerm}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Search employees..."
+                  placeholder={t('placeholders.searchEmployees')}
                   className="w-full pl-8 pr-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/30"
                 />
               </div>

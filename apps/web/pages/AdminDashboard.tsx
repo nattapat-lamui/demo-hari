@@ -162,7 +162,8 @@ export const AdminDashboard: React.FC = () => {
         progress: e.onboardingPercentage ?? 0,
         avatar: e.avatar
       }));
-    return onboarding.length ? onboarding : [];
+    onboarding.sort((a, b) => b.progress - a.progress);
+    return onboarding;
   }, [allEmployees]);
 
   // ----- COMPUTED UPCOMING EVENTS -----
@@ -492,7 +493,7 @@ export const AdminDashboard: React.FC = () => {
                       <p className="font-medium text-sm text-text-light dark:text-text-dark leading-tight">{event.title}</p>
                       <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5 flex items-center gap-1">
                         {event.type === 'Birthday' && <Cake size={12} className="text-accent-red" />}
-                        {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {new Date(event.date).toLocaleDateString(i18n.language === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>
                   </li>

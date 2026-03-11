@@ -117,7 +117,13 @@
     "days": "days",
     "hours": "Hours",
     "minutes": "minutes",
-    "ago": "ago"
+    "ago": "ago",
+    "justNow": "Just now",
+    "minsAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}} hours ago",
+    "hoursAgo_one": "{{count}} hour ago",
+    "daysAgo": "{{count}} days ago",
+    "daysAgo_one": "{{count}} day ago"
   },
   "months": {
     "january": "January",
@@ -246,5 +252,37 @@
     }
   },
   "noData": "No data available",
-  "auto": "Auto"
+  "auto": "Auto",
+  "placeholders": {
+    "selectDate": "Select date",
+    "selectStartDate": "Select start date",
+    "selectEndDate": "Select end date",
+    "selectRole": "Select role",
+    "selectDepartment": "Select department",
+    "selectLocation": "Select location",
+    "selectJoinDate": "Select join date",
+    "selectCategory": "Select category",
+    "selectOption": "Select an option",
+    "selectAnnouncementType": "Select announcement type",
+    "selectEventType": "Select event type",
+    "selectNewRole": "Select new role",
+    "selectNewDepartment": "Select new department",
+    "selectReviewDate": "Select review date",
+    "search": "Search...",
+    "searchEmployees": "Search employees...",
+    "egFullName": "e.g. Alex Morgan",
+    "egRole": "e.g. UX Researcher",
+    "egDepartment": "e.g. Product",
+    "egSeniorDev": "e.g. Senior Developer",
+    "egEngineering": "e.g. Engineering",
+    "egSalary": "e.g. 85000",
+    "slackHandle": "@username",
+    "emergencyContact": "Name - Relation - Phone Number",
+    "bio": "Short professional biography...",
+    "responsibilities": "Key responsibilities and achievements...",
+    "reviewerName": "Reviewer Name",
+    "detailedFeedback": "Detailed feedback...",
+    "addressLine": "House No., Building, Street, Soi",
+    "category": "Category"
+  }
 }

@@ -16,7 +16,7 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { NotificationType } from '../types';
-import { translateNotifTitle, translateNotifMessage } from '../utils/notificationTranslation';
+import { translateNotifTitle, translateNotifMessage, formatNotifTimeAgo } from '../utils/notificationTranslation';
 
 const typeConfig: Record<NotificationType, { icon: React.ElementType; bg: string; text: string }> = {
   info: { icon: Info, bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400' },
@@ -147,7 +147,7 @@ const Notifications: React.FC = () => {
                         {translateNotifMessage(t, notif.message)}
                       </p>
                       <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1.5">
-                        {notif.time}
+                        {formatNotifTimeAgo(notif.created_at, t)}
                       </p>
                     </div>
 

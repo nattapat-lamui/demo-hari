@@ -630,7 +630,7 @@ export const Wellbeing: React.FC = () => {
                       { value: 'policy', label: t('announcementModal.typePolicy') },
                       { value: 'event', label: t('announcementModal.typeEvent') }
                     ]}
-                    placeholder="Select announcement type"
+                    placeholder={t('common:placeholders.selectAnnouncementType')}
                   />
                 </div>
 
@@ -724,7 +724,7 @@ export const Wellbeing: React.FC = () => {
                     value={newEvent.type || 'Meeting'}
                     onChange={(value) => setNewEvent({ ...newEvent, type: value as any })}
                     options={eventTypeOptions}
-                    placeholder="Select event type"
+                    placeholder={t('common:placeholders.selectEventType')}
                   />
                 </div>
 
@@ -733,7 +733,7 @@ export const Wellbeing: React.FC = () => {
                   <DatePicker
                     value={newEvent.date || ''}
                     onChange={(date) => setNewEvent({ ...newEvent, date })}
-                    placeholder="Select date"
+                    placeholder={t('common:placeholders.selectDate')}
                   />
                 </div>
               </div>

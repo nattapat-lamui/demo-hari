@@ -162,7 +162,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 <Dropdown
                                     value={editForm.role || ''}
                                     onChange={(val) => onProfileChange('role', val)}
-                                    placeholder="Select role"
+                                    placeholder={t('common:placeholders.selectRole')}
                                     disabled={!canEditSensitiveInfo}
                                     options={[
                                         ...(editForm.role && !JOB_TITLES.includes(editForm.role as any)
@@ -181,7 +181,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 <Dropdown
                                     value={editForm.department || ''}
                                     onChange={(val) => onProfileChange('department', val)}
-                                    placeholder="Select department"
+                                    placeholder={t('common:placeholders.selectDepartment')}
                                     disabled={!canEditSensitiveInfo}
                                     options={[
                                         ...(editForm.department && !DEPARTMENTS.includes(editForm.department as any)
@@ -214,7 +214,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                         value={editForm.slack || ''}
                                         onChange={(e) => onProfileChange('slack', e.target.value)}
                                         className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
-                                        placeholder="@username"
+                                        placeholder={t('common:placeholders.slackHandle')}
                                     />
                                 </div>
                             </div>
@@ -227,7 +227,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 <Dropdown
                                     value={editForm.location || ''}
                                     onChange={(val) => onProfileChange('location', val)}
-                                    placeholder="Select location"
+                                    placeholder={t('common:placeholders.selectLocation')}
                                     disabled={!canEditSensitiveInfo}
                                     options={[
                                         ...(editForm.location && !OFFICE_LOCATIONS.includes(editForm.location)
@@ -246,7 +246,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 <DatePicker
                                     value={editForm.joinDate || ''}
                                     onChange={(date) => onProfileChange('joinDate', date)}
-                                    placeholder="Select join date"
+                                    placeholder={t('common:placeholders.selectJoinDate')}
                                     disabled={!canEditSensitiveInfo}
                                 />
                             </div>
@@ -277,7 +277,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                         value={editForm.emergencyContact || ''}
                                         onChange={(e) => onProfileChange('emergencyContact', e.target.value)}
                                         className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
-                                        placeholder="Name - Relation - Phone Number"
+                                        placeholder={t('common:placeholders.emergencyContact')}
                                     />
                                 </div>
                             </div>
@@ -317,7 +317,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                         value={editForm.bio || ''}
                                         onChange={(e) => onProfileChange('bio', e.target.value)}
                                         className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark resize-none"
-                                        placeholder="Short professional biography..."
+                                        placeholder={t('common:placeholders.bio')}
                                     />
                                 </div>
                             </div>
@@ -373,7 +373,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     type="text"
                                     value={newHistoryForm.role || ''}
                                     onChange={(e) => onSetNewHistoryForm({ ...newHistoryForm, role: e.target.value })}
-                                    placeholder="e.g. Senior Developer"
+                                    placeholder={t('common:placeholders.egSeniorDev')}
                                     className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                                 />
                             </div>
@@ -384,7 +384,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     type="text"
                                     value={newHistoryForm.department || ''}
                                     onChange={(e) => onSetNewHistoryForm({ ...newHistoryForm, department: e.target.value })}
-                                    placeholder="e.g. Engineering"
+                                    placeholder={t('common:placeholders.egEngineering')}
                                     className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                                 />
                             </div>
@@ -395,7 +395,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                         label={t('employees:modals.historyStartDate')}
                                         value={newHistoryForm.startDate || ''}
                                         onChange={(date) => onSetNewHistoryForm({ ...newHistoryForm, startDate: date })}
-                                        placeholder="Select start date"
+                                        placeholder={t('common:placeholders.selectStartDate')}
                                     />
                                 </div>
                                 <div>
@@ -403,7 +403,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                         label={t('employees:modals.historyEndDate')}
                                         value={newHistoryForm.endDate && newHistoryForm.endDate !== 'Present' ? newHistoryForm.endDate : ''}
                                         onChange={(date) => onSetNewHistoryForm({ ...newHistoryForm, endDate: date })}
-                                        placeholder="Select end date"
+                                        placeholder={t('common:placeholders.selectEndDate')}
                                         disabled={newHistoryForm.endDate === 'Present'}
                                     />
                                     <label className="flex items-center mt-2 cursor-pointer">
@@ -424,7 +424,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     value={newHistoryForm.description || ''}
                                     onChange={(e) => onSetNewHistoryForm({ ...newHistoryForm, description: e.target.value })}
                                     rows={3}
-                                    placeholder="Key responsibilities and achievements..."
+                                    placeholder={t('common:placeholders.responsibilities')}
                                     className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark resize-none"
                                 />
                             </div>
@@ -473,7 +473,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     value={reviewForm.reviewer || ''}
                                     onChange={(e) => isAdmin ? onSetReviewForm({ ...reviewForm, reviewer: e.target.value }) : undefined}
                                     readOnly={!isAdmin}
-                                    placeholder="Reviewer Name"
+                                    placeholder={t('common:placeholders.reviewerName')}
                                     className={`w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark ${!isAdmin ? 'opacity-70 cursor-default' : ''}`}
                                 />
                             </div>
@@ -483,7 +483,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     label={t('employees:modals.reviewDate')}
                                     value={reviewForm.date || ''}
                                     onChange={(date) => onSetReviewForm({ ...reviewForm, date: date })}
-                                    placeholder="Select review date"
+                                    placeholder={t('common:placeholders.selectReviewDate')}
                                 />
                             </div>
 
@@ -512,7 +512,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     value={reviewForm.notes || ''}
                                     onChange={(e) => onSetReviewForm({ ...reviewForm, notes: e.target.value })}
                                     rows={4}
-                                    placeholder="Detailed feedback..."
+                                    placeholder={t('common:placeholders.detailedFeedback')}
                                     className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark resize-none"
                                 />
                             </div>
@@ -555,7 +555,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 <Dropdown
                                     value={promoteForm.role}
                                     onChange={(val) => onPromoteFormChange('role', val)}
-                                    placeholder="Select new role"
+                                    placeholder={t('common:placeholders.selectNewRole')}
                                     options={[
                                         ...(promoteForm.role && !JOB_TITLES.includes(promoteForm.role as any)
                                             ? [{ value: promoteForm.role, label: promoteForm.role }]
@@ -570,7 +570,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                     type="number"
                                     value={promoteForm.salary}
                                     onChange={(e) => onPromoteFormChange('salary', e.target.value)}
-                                    placeholder="e.g. 85000"
+                                    placeholder={t('common:placeholders.egSalary')}
                                     className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                                 />
                             </div>
@@ -610,7 +610,7 @@ export const EmployeeModals: React.FC<EmployeeModalsProps> = ({
                                 <Dropdown
                                     value={transferDepartment}
                                     onChange={onTransferDepartmentChange}
-                                    placeholder="Select new department"
+                                    placeholder={t('common:placeholders.selectNewDepartment')}
                                     options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
                                 />
                             </div>

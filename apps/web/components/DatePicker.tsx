@@ -28,12 +28,13 @@ interface DatePickerProps {
 export const DatePicker: React.FC<DatePickerProps> = ({
   value,
   onChange,
-  placeholder = 'Select date',
+  placeholder: placeholderProp,
   label,
   minDate,
   disabled = false
 }) => {
   const { t, i18n } = useTranslation('common');
+  const placeholder = placeholderProp ?? t('placeholders.selectDate');
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);

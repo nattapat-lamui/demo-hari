@@ -6,6 +6,15 @@ import NotificationService from './NotificationService';
 import { withTransaction } from '../utils/transaction';
 import { PaginationParams, PaginatedResult, createPaginatedResult, buildPaginationClause, buildSortClause } from '../utils/pagination';
 
+/** Convert a pg DATE value to a plain YYYY-MM-DD string to avoid timezone shifts */
+function toDateString(val: unknown): string {
+    if (!val) return '';
+    if (val instanceof Date) {
+        return `${val.getFullYear()}-${String(val.getMonth() + 1).padStart(2, '0')}-${String(val.getDate()).padStart(2, '0')}`;
+    }
+    return String(val);
+}
+
 const BASE_SELECT = `
     SELECT lr.*, e.avatar, e.name as employee_name,
            (lr.end_date::date - lr.start_date::date) + 1 as days,
@@ -580,23 +589,14 @@ export class LeaveRequestService {
         }
     }
 
-    /** Convert a pg DATE value to a plain YYYY-MM-DD string to avoid timezone shifts */
-    private toDateString(val: unknown): string {
-        if (!val) return '';
-        if (val instanceof Date) {
-            return `${val.getFullYear()}-${String(val.getMonth() + 1).padStart(2, '0')}-${String(val.getDate()).padStart(2, '0')}`;
-        }
-        return String(val);
-    }
-
     private mapRowToLeaveRequest(row: any): LeaveRequest {
         return {
             id: row.id,
             employeeId: row.employee_id,
             employeeName: row.employee_name,
             type: row.leave_type,
-            startDate: this.toDateString(row.start_date),
-            endDate: this.toDateString(row.end_date),
+            startDate: toDateString(row.start_date),
+            endDate: toDateString(row.end_date),
             dates: row.dates,
             days: row.days,
             reason: row.reason,

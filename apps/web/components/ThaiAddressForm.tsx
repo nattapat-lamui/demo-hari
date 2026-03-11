@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { MapPin, ChevronDown, Search, X, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 // @ts-expect-error — no type declarations for thai-address-database
 import { searchAddressByProvince } from 'thai-address-database';
 import { EmployeeAddress } from '../types';
@@ -36,6 +37,7 @@ function getAllRecords(): AddressRecord[] {
 }
 
 export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChange }) => {
+    const { t } = useTranslation('common');
     const addr = value || {};
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<TabKey>('province');
@@ -337,7 +339,7 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
                                         }
                                     }}
                                     className="w-full pl-8 pr-3 py-1.5 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md focus:outline-none focus:ring-1 focus:ring-primary text-text-light dark:text-text-dark"
-                                    placeholder="Search..."
+                                    placeholder={t('placeholders.search')}
                                 />
                             </div>
                         </div>
@@ -429,7 +431,7 @@ export const ThaiAddressForm: React.FC<ThaiAddressFormProps> = ({ value, onChang
                         value={addr.addressLine1 || ''}
                         onChange={(e) => onChange({ ...addr, addressLine1: e.target.value })}
                         className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark resize-none"
-                        placeholder="House No., Building, Street, Soi"
+                        placeholder={t('placeholders.addressLine')}
                     />
                 </div>
             </div>

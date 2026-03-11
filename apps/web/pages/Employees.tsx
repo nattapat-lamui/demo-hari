@@ -467,7 +467,7 @@ export const Employees: React.FC = () => {
                 type="text"
                 value={newEmployee.name}
                 onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                placeholder="e.g. Alex Morgan"
+                placeholder={t('common:placeholders.egFullName')}
                 className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
               />
             </div>
@@ -483,7 +483,7 @@ export const Employees: React.FC = () => {
                   type="text"
                   value={newEmployee.role}
                   onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
-                  placeholder="e.g. UX Researcher"
+                  placeholder={t('common:placeholders.egRole')}
                   className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                 />
               </div>
@@ -498,7 +498,7 @@ export const Employees: React.FC = () => {
                   type="text"
                   value={newEmployee.department}
                   onChange={(e) => setNewEmployee({ ...newEmployee, department: e.target.value })}
-                  placeholder="e.g. Product"
+                  placeholder={t('common:placeholders.egDepartment')}
                   className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
                 />
               </div>

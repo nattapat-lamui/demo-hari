@@ -169,7 +169,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               type="text"
               value={newEmployee.name}
               onChange={(e) => updateField('name', e.target.value)}
-              placeholder="e.g. Alex Morgan"
+              placeholder={t('common:placeholders.egFullName')}
               className={`w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border rounded-lg focus:outline-none focus:ring-2 text-text-light dark:text-text-dark ${
                 validationErrors.name
                   ? 'border-red-500 focus:ring-red-500'
@@ -196,7 +196,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             <Dropdown
               value={newEmployee.role}
               onChange={(val) => updateField('role', val)}
-              placeholder="Select role"
+              placeholder={t('common:placeholders.selectRole')}
               options={JOB_TITLES.map((t) => ({ value: t, label: t }))}
             />
             {validationErrors.role && (
@@ -211,7 +211,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             <Dropdown
               value={newEmployee.department}
               onChange={(val) => updateField('department', val)}
-              placeholder="Select department"
+              placeholder={t('common:placeholders.selectDepartment')}
               options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
             />
             {validationErrors.department && (
@@ -253,7 +253,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             label={t('employees:addModal.startDate')}
             value={newEmployee.joinDate}
             onChange={(date) => updateField('joinDate', date)}
-            placeholder="Select start date"
+            placeholder={t('common:placeholders.selectStartDate')}
           />
           {validationErrors.joinDate && (
             <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
