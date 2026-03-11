@@ -214,7 +214,28 @@
     "allMarkedRead": "อ่านการแจ้งเตือนทั้งหมดแล้ว",
     "allCaughtUp": "คุณอ่านครบทุกรายการแล้ว!",
     "noNotificationsYet": "คุณยังไม่มีการแจ้งเตือน",
-    "deleteNotification": "ลบการแจ้งเตือน"
+    "deleteNotification": "ลบการแจ้งเตือน",
+    "titles": {
+      "New Leave Request": "คำขอลาใหม่",
+      "Leave Request Edited": "แก้ไขคำขอลา",
+      "Leave Request Approved": "คำขอลาได้รับอนุมัติ",
+      "Leave Request Rejected": "คำขอลาถูกปฏิเสธ",
+      "Leave Cancellation Requested": "ขอยกเลิกการลา",
+      "Leave Cancellation Approved": "อนุมัติยกเลิกการลา",
+      "Leave Cancellation Rejected": "ปฏิเสธยกเลิกการลา",
+      "Welcome to the team!": "ยินดีต้อนรับสู่ทีม!",
+      "New Employee Registered": "พนักงานใหม่ลงทะเบียน",
+      "Onboarding Tasks Assigned": "มอบหมายงาน Onboarding แล้ว"
+    },
+    "messages": {
+      "hasSubmitted": "{{name}} ได้ส่งคำขอลา{{type}}",
+      "hasEdited": "{{name}} ได้แก้ไขคำขอลา{{type}}",
+      "yourLeaveApproved": "คำขอลา{{type}}ของคุณได้รับอนุมัติแล้ว",
+      "yourLeaveRejected": "คำขอลา{{type}}ของคุณถูกปฏิเสธ",
+      "hasCancelRequested": "{{name}} ขอยกเลิกการลา{{type}}ที่ได้รับอนุมัติ",
+      "yourCancelApproved": "การยกเลิกลา{{type}}ของคุณได้รับอนุมัติแล้ว",
+      "yourCancelRejected": "การยกเลิกลา{{type}}ของคุณถูกปฏิเสธ การลายังคงอยู่"
+    }
   },
   "noData": "ไม่มีข้อมูล",
   "auto": "อัตโนมัติ"

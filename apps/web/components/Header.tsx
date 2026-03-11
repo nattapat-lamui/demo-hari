@@ -12,12 +12,30 @@ import {
   X,
   Menu,
   ArrowLeft,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  Calendar,
+  Users,
+  Settings,
 } from "lucide-react";
+import { NotificationType } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useNavigate } from "react-router-dom";
 import { api, API_HOST } from "../lib/api";
 import { Avatar } from "./Avatar";
+import { translateNotifTitle, translateNotifMessage } from "../utils/notificationTranslation";
+
+const notifTypeConfig: Record<NotificationType, { icon: React.ElementType; bg: string; text: string }> = {
+  info: { icon: Info, bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-500 dark:text-blue-400' },
+  success: { icon: CheckCircle2, bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-500 dark:text-green-400' },
+  warning: { icon: AlertTriangle, bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-500 dark:text-orange-400' },
+  leave: { icon: Calendar, bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-500 dark:text-purple-400' },
+  employee: { icon: Users, bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-500 dark:text-teal-400' },
+  document: { icon: FileText, bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-500 dark:text-indigo-400' },
+  system: { icon: Settings, bg: 'bg-gray-100 dark:bg-gray-700/30', text: 'text-gray-500 dark:text-gray-400' },
+};
 
 interface SearchResult {
   id: string;
@@ -525,43 +543,62 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           <h3 className="font-semibold text-text-light dark:text-text-dark">
             {t('header.notifications')}
           </h3>
-          <button
-            onClick={handleMarkAllRead}
-            className="text-xs text-primary font-medium cursor-pointer hover:underline min-h-[44px] flex items-center"
-          >
-            {t('header.markAllRead')}
-          </button>
+          {unreadCount > 0 && (
+            <button
+              onClick={handleMarkAllRead}
+              className="text-xs text-primary font-medium cursor-pointer hover:underline min-h-[44px] flex items-center"
+            >
+              {t('header.markAllRead')}
+            </button>
+          )}
         </div>
         <div className="max-h-80 sm:max-h-80 overflow-y-auto flex-1">
           {notifications.length > 0 ? (
-            notifications.map((notif) => (
-              <div
-                key={notif.id}
-                onClick={async () => {
-                  if (!notif.read) await markAsRead(notif.id);
-                  setIsNotificationOpen(false);
-                  if (notif.link) navigate(notif.link);
-                }}
-                className={`px-4 py-3 min-h-[44px] hover:bg-background-light dark:hover:bg-background-dark active:bg-background-light dark:active:bg-background-dark cursor-pointer border-b border-border-light dark:border-border-dark last:border-0 ${!notif.read ? "bg-primary/5" : ""}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!notif.read ? "bg-primary" : "bg-transparent"}`}
-                  ></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-light dark:text-text-dark">
-                      {notif.title}
-                    </p>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5 truncate">
-                      {notif.message}
-                    </p>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                      {notif.time}
-                    </p>
+            notifications.map((notif) => {
+              const config = notifTypeConfig[notif.type] || notifTypeConfig.info;
+              const Icon = config.icon;
+
+              return (
+                <div
+                  key={notif.id}
+                  onClick={async () => {
+                    if (!notif.read) await markAsRead(notif.id);
+                    setIsNotificationOpen(false);
+                    if (notif.link) navigate(notif.link);
+                  }}
+                  className={`px-4 py-3 min-h-[44px] hover:bg-background-light dark:hover:bg-background-dark active:bg-background-light dark:active:bg-background-dark cursor-pointer border-b border-border-light dark:border-border-dark last:border-0 transition-colors ${
+                    !notif.read
+                      ? 'bg-primary/5 dark:bg-primary/10'
+                      : ''
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Type Icon */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${config.bg}`}>
+                      <Icon size={14} className={config.text} />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm text-text-light dark:text-text-dark ${!notif.read ? 'font-semibold' : 'font-normal text-text-muted-light dark:text-text-muted-dark'}`}>
+                        {translateNotifTitle(t, notif.title)}
+                      </p>
+                      <p className={`text-xs mt-0.5 truncate ${!notif.read ? 'text-text-light/70 dark:text-text-dark/70' : 'text-text-muted-light dark:text-text-muted-dark'}`}>
+                        {translateNotifMessage(t, notif.message)}
+                      </p>
+                      <p className="text-[11px] text-text-muted-light dark:text-text-muted-dark mt-1">
+                        {notif.time}
+                      </p>
+                    </div>
+
+                    {/* Unread Indicator */}
+                    {!notif.read && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0 mt-1.5"></div>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="px-4 py-8 text-center text-text-muted-light text-sm">
               {t('header.noNotifications')}

@@ -214,7 +214,28 @@
     "allMarkedRead": "All notifications marked as read",
     "allCaughtUp": "You're all caught up!",
     "noNotificationsYet": "You don't have any notifications yet.",
-    "deleteNotification": "Delete notification"
+    "deleteNotification": "Delete notification",
+    "titles": {
+      "New Leave Request": "New Leave Request",
+      "Leave Request Edited": "Leave Request Edited",
+      "Leave Request Approved": "Leave Request Approved",
+      "Leave Request Rejected": "Leave Request Rejected",
+      "Leave Cancellation Requested": "Leave Cancellation Requested",
+      "Leave Cancellation Approved": "Leave Cancellation Approved",
+      "Leave Cancellation Rejected": "Leave Cancellation Rejected",
+      "Welcome to the team!": "Welcome to the team!",
+      "New Employee Registered": "New Employee Registered",
+      "Onboarding Tasks Assigned": "Onboarding Tasks Assigned"
+    },
+    "messages": {
+      "hasSubmitted": "{{name}} has submitted a {{type}} leave request.",
+      "hasEdited": "{{name}} has edited their {{type}} leave request.",
+      "yourLeaveApproved": "Your {{type}} leave request has been approved.",
+      "yourLeaveRejected": "Your {{type}} leave request has been rejected.",
+      "hasCancelRequested": "{{name}} has requested to cancel their approved {{type}} leave.",
+      "yourCancelApproved": "Your {{type}} leave cancellation has been approved.",
+      "yourCancelRejected": "Your {{type}} leave cancellation has been rejected. Your leave remains approved."
+    }
   },
   "noData": "No data available",
   "auto": "Auto"
