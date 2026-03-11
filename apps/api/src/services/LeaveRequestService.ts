@@ -580,14 +580,23 @@ export class LeaveRequestService {
         }
     }
 
+    /** Convert a pg DATE value to a plain YYYY-MM-DD string to avoid timezone shifts */
+    private toDateString(val: unknown): string {
+        if (!val) return '';
+        if (val instanceof Date) {
+            return `${val.getFullYear()}-${String(val.getMonth() + 1).padStart(2, '0')}-${String(val.getDate()).padStart(2, '0')}`;
+        }
+        return String(val);
+    }
+
     private mapRowToLeaveRequest(row: any): LeaveRequest {
         return {
             id: row.id,
             employeeId: row.employee_id,
             employeeName: row.employee_name,
             type: row.leave_type,
-            startDate: row.start_date,
-            endDate: row.end_date,
+            startDate: this.toDateString(row.start_date),
+            endDate: this.toDateString(row.end_date),
             dates: row.dates,
             days: row.days,
             reason: row.reason,
