@@ -62,12 +62,17 @@ export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const pendingRequests = requests.filter(r => r.status === 'Pending');
-  const formatLeaveDate = (startDate: string, endDate: string): string => {
+  const formatLeaveDate = (startDate: string, endDate: string, fallbackDates: string): string => {
     const locale = i18n.language === 'th' ? 'th-TH' : 'en-US';
     const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    const start = new Date(startDate + 'T00:00:00').toLocaleDateString(locale, opts);
-    const end = new Date(endDate + 'T00:00:00').toLocaleDateString(locale, opts);
-    return `${start} - ${end}`;
+    try {
+      const s = new Date(startDate);
+      const e = new Date(endDate);
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) return fallbackDates;
+      return `${s.toLocaleDateString(locale, opts)} - ${e.toLocaleDateString(locale, opts)}`;
+    } catch {
+      return fallbackDates;
+    }
   };
   const myRequests = useMemo(() => requests.filter(r => r.employeeId === user?.employeeId), [requests, user?.employeeId]);
   const teamRequests = useMemo(() => requests.filter(r => r.employeeId !== user?.employeeId), [requests, user?.employeeId]);
@@ -558,7 +563,7 @@ export const AdminDashboard: React.FC = () => {
                             </div>
                           </td>
                           <td className="py-3 px-4 text-text-muted-light dark:text-text-muted-dark">{translateLeaveType(req.type)}</td>
-                          <td className="py-3 px-4 text-text-muted-light dark:text-text-muted-dark">{formatLeaveDate(req.startDate, req.endDate)}</td>
+                          <td className="py-3 px-4 text-text-muted-light dark:text-text-muted-dark">{formatLeaveDate(req.startDate, req.endDate, req.dates)}</td>
                           <td className="py-3 pl-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button
@@ -588,7 +593,7 @@ export const AdminDashboard: React.FC = () => {
                         <Avatar src={req.avatar} name={req.employeeName} size="md" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">{req.employeeName}</p>
-                          <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{translateLeaveType(req.type)} · {formatLeaveDate(req.startDate, req.endDate)}</p>
+                          <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{translateLeaveType(req.type)} · {formatLeaveDate(req.startDate, req.endDate, req.dates)}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
