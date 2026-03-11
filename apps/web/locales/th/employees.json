@@ -322,6 +322,11 @@
     "onLeave": "ลา",
     "terminated": "ถูกเลิกจ้าง"
   },
+  "onboardingStatus": {
+    "notStarted": "ยังไม่เริ่ม",
+    "inProgress": "กำลังดำเนินการ",
+    "completed": "เสร็จสิ้น"
+  },
   "orgChart": {
     "title": "โครงสร้างองค์กร",
     "subtitleAdmin": "วางเมาส์บนการ์ดเพื่อเพิ่ม แก้ไข หรือลบ ลากการ์ดเพื่อเปลี่ยนผู้จัดการ",

@@ -98,6 +98,9 @@ export const Employees: React.FC = () => {
     { value: 'Operations', label: t('common:departments.operations') },
     { value: 'Product', label: t('common:departments.product') },
     { value: 'Design', label: t('common:departments.design') },
+    { value: 'Legal', label: t('common:departments.legal') },
+    { value: 'Customer Support', label: t('common:departments.customerSupport') },
+    { value: 'Tester', label: t('common:departments.tester') },
   ];
   const statuses: DropdownOption[] = [
     { value: 'All', label: t('employees:status.allStatuses') },
@@ -153,6 +156,24 @@ export const Employees: React.FC = () => {
       }
       showToast(errorMessage, 'error');
     }
+  };
+
+  const translateStatus = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'Active': t('employees:status.active'),
+      'On Leave': t('employees:status.onLeave'),
+      'Terminated': t('employees:status.terminated'),
+    };
+    return statusMap[status] || status;
+  };
+
+  const translateOnboardingStatus = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'Not Started': t('employees:onboardingStatus.notStarted'),
+      'In Progress': t('employees:onboardingStatus.inProgress'),
+      'Completed': t('employees:onboardingStatus.completed'),
+    };
+    return statusMap[status] || status;
   };
 
   const getOnboardingIcon = (status: string) => {
@@ -248,13 +269,13 @@ export const Employees: React.FC = () => {
                       }`}>
                       <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${emp.status === 'Active' ? 'bg-green-500' : emp.status === 'Terminated' ? 'bg-red-500' : 'bg-yellow-500'
                         }`}></span>
-                      {emp.status}
+                      {translateStatus(emp.status)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       {getOnboardingIcon(emp.onboardingStatus)}
-                      <span className="text-text-light dark:text-text-dark text-sm">{emp.onboardingStatus}</span>
+                      <span className="text-text-light dark:text-text-dark text-sm">{translateOnboardingStatus(emp.onboardingStatus)}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-text-muted-light dark:text-text-muted-dark">
@@ -336,7 +357,7 @@ export const Employees: React.FC = () => {
                     ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900'
                     : 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900'
                   }`}>
-                  {emp.status}
+                  {translateStatus(emp.status)}
                 </span>
               </div>
 
@@ -354,7 +375,7 @@ export const Employees: React.FC = () => {
                   <p className="text-text-muted-light dark:text-text-muted-dark text-xs">{t('employees:list.onboarding')}</p>
                   <div className="flex items-center gap-1">
                     {getOnboardingIcon(emp.onboardingStatus)}
-                    <span className="text-text-light dark:text-text-dark text-sm">{emp.onboardingStatus}</span>
+                    <span className="text-text-light dark:text-text-dark text-sm">{translateOnboardingStatus(emp.onboardingStatus)}</span>
                   </div>
                 </div>
                 <div>

@@ -103,6 +103,11 @@
     "overdue": "Overdue",
     "notStarted": "Not Started"
   },
+  "datePicker": {
+    "today": "Today",
+    "clear": "Clear",
+    "selectDate": "Select date"
+  },
   "time": {
     "today": "Today",
     "yesterday": "Yesterday",

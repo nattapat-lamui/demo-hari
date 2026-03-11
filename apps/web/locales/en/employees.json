@@ -322,6 +322,11 @@
     "onLeave": "On Leave",
     "terminated": "Terminated"
   },
+  "onboardingStatus": {
+    "notStarted": "Not Started",
+    "inProgress": "In Progress",
+    "completed": "Completed"
+  },
   "orgChart": {
     "title": "Organizational Structure",
     "subtitleAdmin": "Hover over cards to add, edit or remove people. Drag cards to reassign managers.",

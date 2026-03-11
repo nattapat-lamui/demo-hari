@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface DatePickerProps {
   value: string;
@@ -32,6 +33,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   minDate,
   disabled = false
 }) => {
+  const { t, i18n } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -39,11 +41,17 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const calendarRef = useRef<HTMLDivElement>(null);
 
   const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    t('months.january'), t('months.february'), t('months.march'),
+    t('months.april'), t('months.may'), t('months.june'),
+    t('months.july'), t('months.august'), t('months.september'),
+    t('months.october'), t('months.november'), t('months.december')
   ];
 
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = [
+    t('weekdaysShort.sun'), t('weekdaysShort.mon'), t('weekdaysShort.tue'),
+    t('weekdaysShort.wed'), t('weekdaysShort.thu'), t('weekdaysShort.fri'),
+    t('weekdaysShort.sat')
+  ];
 
   // Calculate position and open calendar
   const handleToggle = () => {
@@ -133,7 +141,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const formatDisplayDate = (dateString: string): string => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(i18n.language === 'th' ? 'th-TH' : 'en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
@@ -314,7 +322,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
               onClick={handleToday}
               className="text-xs font-medium text-primary hover:underline"
             >
-              Today
+              {t('datePicker.today')}
             </button>
             <button
               type="button"
@@ -324,7 +332,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
               }}
               className="text-xs font-medium text-text-muted-light hover:text-text-light dark:hover:text-text-dark"
             >
-              Clear
+              {t('datePicker.clear')}
             </button>
           </div>
         </div>,

@@ -103,6 +103,11 @@
     "overdue": "เลยกำหนด",
     "notStarted": "ยังไม่เริ่ม"
   },
+  "datePicker": {
+    "today": "วันนี้",
+    "clear": "ล้าง",
+    "selectDate": "เลือกวันที่"
+  },
   "time": {
     "today": "วันนี้",
     "yesterday": "เมื่อวาน",
