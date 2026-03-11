@@ -154,12 +154,12 @@ export const AdminDashboard: React.FC = () => {
   // ----- COMPUTED ONBOARDING SUMMARY -----
   const onboardingSummary = useMemo<OnboardingProgressSummary[]>(() => {
     const onboarding = allEmployees
-      .filter(e => e.onboardingStatus === 'In Progress')
+      .filter(e => e.onboardingStatus === 'In Progress' || e.onboardingStatus === 'Not Started')
       .map(e => ({
         id: e.id,
         name: e.name,
         role: e.role,
-        progress: e.onboardingStatus === 'In Progress' ? 50 : 0,
+        progress: e.onboardingPercentage ?? 0,
         avatar: e.avatar
       }));
     return onboarding.length ? onboarding : [];
