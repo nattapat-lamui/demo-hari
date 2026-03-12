@@ -1187,10 +1187,11 @@ export interface PayrollRecord {
   overtimeHours: number;
   overtimePay: number;
   bonus: number;
+  leaveDeduction: number;
   deductions: number;
   taxAmount: number;
   netPay: number;
-  status: 'Pending' | 'Processed' | 'Paid';
+  status: 'Pending' | 'Processed' | 'Paid' | 'Cancelled';
   paymentDate: string | null;
   paymentMethod: string | null;
   notes: string | null;
@@ -1215,6 +1216,7 @@ export interface PayrollSummary {
   pendingCount: number;
   processedCount: number;
   paidCount: number;
+  cancelledCount: number;
 }
 
 export const useMyPayslips = () => {
@@ -1256,6 +1258,17 @@ export const useSalaryHistory = (employeeId: string) => {
   });
 };
 
+export const useBatchCreatePayroll = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { payPeriodStart: string; payPeriodEnd: string }) =>
+      api.post<{ created: number; skipped: number; skippedEmployees: string[] }>('/payroll/batch', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.payroll.all });
+    },
+  });
+};
+
 export const useCreatePayroll = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -1266,6 +1279,7 @@ export const useCreatePayroll = () => {
       baseSalary: number;
       overtimeHours?: number;
       bonus?: number;
+      leaveDeduction?: number;
       deductions?: number;
     }) => api.post<PayrollRecord>('/payroll', data),
     onSuccess: () => {
@@ -1292,6 +1306,54 @@ export const useUpdateSalary = () => {
       api.post<SalaryHistoryRecord>(`/payroll/salary/${employeeId}`, { newSalary, changeReason }),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.payroll.salaryHistory(vars.employeeId) });
+    },
+  });
+};
+
+// Payroll Settings
+export interface PayrollSettings {
+  standardHoursPerMonth: number;
+  taxBrackets: { min: number; max: number; rate: number }[];
+  personalAllowance: number;
+  expenseDeduction: number;
+}
+
+export const usePayrollSettings = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: queryKeys.systemConfig.payroll(),
+    queryFn: async () => {
+      const configs = await api.get<{ key: string; value: string; data_type: string }[]>('/configs/payroll');
+      const settings: PayrollSettings = {
+        standardHoursPerMonth: 160,
+        taxBrackets: [],
+        personalAllowance: 60000,
+        expenseDeduction: 100000,
+      };
+      for (const c of configs) {
+        if (c.key === 'standard_hours_per_month') settings.standardHoursPerMonth = parseFloat(c.value);
+        if (c.key === 'tax_brackets') settings.taxBrackets = JSON.parse(c.value);
+        if (c.key === 'personal_allowance') settings.personalAllowance = parseFloat(c.value);
+        if (c.key === 'expense_deduction') settings.expenseDeduction = parseFloat(c.value);
+      }
+      return settings;
+    },
+    enabled,
+  });
+};
+
+export const useUpdatePayrollSettings = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (settings: PayrollSettings) => {
+      await Promise.all([
+        api.put('/configs/payroll/standard_hours_per_month', { value: String(settings.standardHoursPerMonth) } as unknown as Record<string, unknown>),
+        api.put('/configs/payroll/tax_brackets', { value: JSON.stringify(settings.taxBrackets) } as unknown as Record<string, unknown>),
+        api.put('/configs/payroll/personal_allowance', { value: String(settings.personalAllowance) } as unknown as Record<string, unknown>),
+        api.put('/configs/payroll/expense_deduction', { value: String(settings.expenseDeduction) } as unknown as Record<string, unknown>),
+      ]);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.systemConfig.payroll() });
     },
   });
 };

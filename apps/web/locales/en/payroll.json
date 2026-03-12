@@ -34,7 +34,9 @@
       "revertToPending": "Revert to Pending",
       "confirmDelete": "Are you sure you want to delete this payroll record?",
       "confirmProcess": "Are you sure you want to mark this payroll as processed?",
-      "confirmPaid": "Are you sure you want to mark this payroll as paid?"
+      "confirmPaid": "Are you sure you want to mark this payroll as paid?",
+      "markAsCancelled": "Cancel",
+      "confirmCancel": "Are you sure you want to cancel this payroll record?"
     },
     "leaveRequests": {
       "title": "Leave Requests",
@@ -76,6 +78,8 @@
     "overtimeHours": "Overtime Hours",
     "overtimeRate": "Overtime Rate",
     "bonus": "Bonus",
+    "leaveDeduction": "Leave Deduction",
+    "otherDeductions": "Other Deductions",
     "deductions": "Deductions",
     "taxAmount": "Tax Amount",
     "netPay": "Net Pay",
@@ -93,6 +97,7 @@
     "pending": "Pending",
     "processed": "Processed",
     "paid": "Paid",
+    "cancelled": "Cancelled",
     "all": "All Statuses"
   },
 
@@ -135,6 +140,36 @@
     "downloadReport": "Download Report"
   },
 
+  "settings": {
+    "title": "Payroll Settings",
+    "standardHours": "Standard Hours per Month",
+    "standardHoursDesc": "Standard working hours per month used for overtime rate calculation (e.g. 160 = 8hr x 20 days)",
+    "personalAllowance": "Personal Allowance (Annual)",
+    "personalAllowanceDesc": "Personal tax allowance deducted from annual income before applying tax brackets",
+    "expenseDeduction": "Expense Deduction Cap (Annual)",
+    "expenseDeductionDesc": "Maximum expense deduction (50% of income, capped at this amount)",
+    "taxBrackets": "Tax Brackets (Annual Income)",
+    "taxBracketsDesc": "Progressive tax brackets applied to taxable income. Set max to -1 for the highest bracket (unlimited).",
+    "bracketMin": "Min (฿)",
+    "bracketMax": "Max (฿)",
+    "bracketRate": "Rate",
+    "addBracket": "Add Bracket",
+    "save": "Save Settings",
+    "saved": "Payroll settings saved successfully",
+    "saveFailed": "Failed to save payroll settings"
+  },
+
+  "batch": {
+    "runPayroll": "Run Payroll",
+    "title": "Run Payroll for All Employees",
+    "description": "Generate payroll records for all active employees in one go. Records will be created as Pending — you can then edit individual OT, bonuses, and deductions before processing.",
+    "generate": "Generate Payroll",
+    "created": "Created",
+    "skipped": "Skipped",
+    "skippedList": "Skipped employees",
+    "successMessage": "Payroll generated: {{created}} created, {{skipped}} skipped"
+  },
+
   "period": {
     "monthly": "Monthly",
     "biWeekly": "Bi-Weekly",
@@ -157,6 +192,7 @@
   "errors": {
     "fetchFailed": "Failed to load payroll data. Please try again.",
     "createFailed": "Failed to create payroll record.",
+    "duplicatePayroll": "A payroll record already exists for this employee and pay period.",
     "updateFailed": "Failed to update payroll record.",
     "deleteFailed": "Failed to delete payroll record.",
     "statusUpdateFailed": "Failed to update payroll status.",
@@ -165,6 +201,7 @@
     "requiredField": "This field is required.",
     "invalidAmount": "Please enter a valid amount.",
     "exportFailed": "Failed to export payroll report.",
-    "payslipNotFound": "Payslip not found."
+    "payslipNotFound": "Payslip not found.",
+    "batchFailed": "Failed to generate batch payroll."
   }
 }

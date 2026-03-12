@@ -10,10 +10,14 @@ import {
   ChevronDown,
   ChevronUp,
   Plus,
+  Play,
   Users,
   Banknote,
   Receipt,
   TrendingUp,
+  Settings,
+  Trash2,
+  PlusCircle,
   X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,8 +29,12 @@ import {
   useAllPayroll,
   usePayrollSummary,
   useCreatePayroll,
+  useBatchCreatePayroll,
   useUpdatePayrollStatus,
   useAllEmployees,
+  usePayrollSettings,
+  useUpdatePayrollSettings,
+  type PayrollSettings,
 } from '../hooks/queries';
 
 // ---------------------------------------------------------------------------
@@ -45,6 +53,7 @@ function formatDate(raw: string) {
 function statusIcon(status: string) {
   if (status === 'Paid') return <CheckCircle2 size={16} className="text-accent-green" />;
   if (status === 'Processed') return <Clock size={16} className="text-primary" />;
+  if (status === 'Cancelled') return <X size={16} className="text-accent-red" />;
   return <AlertCircle size={16} className="text-accent-orange" />;
 }
 
@@ -53,7 +62,9 @@ function statusBadge(status: string) {
     ? 'text-accent-green bg-accent-green/10'
     : status === 'Processed'
       ? 'text-primary bg-primary/10'
-      : 'text-accent-orange bg-accent-orange/10';
+      : status === 'Cancelled'
+        ? 'text-accent-red bg-accent-red/10'
+        : 'text-accent-orange bg-accent-orange/10';
   return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{status}</span>;
 }
 
@@ -82,6 +93,7 @@ export const Payroll: React.FC = () => {
   const [showCreate, setShowCreate] = useState(false);
   const { data: allEmployees = [] } = useAllEmployees();
   const createPayroll = useCreatePayroll();
+  const batchCreatePayroll = useBatchCreatePayroll();
   const updateStatus = useUpdatePayrollStatus();
 
   const [createForm, setCreateForm] = useState({
@@ -91,8 +103,28 @@ export const Payroll: React.FC = () => {
     baseSalary: '',
     overtimeHours: '0',
     bonus: '0',
+    leaveDeduction: '0',
     deductions: '0',
   });
+
+  // Batch payroll modal
+  const [showBatch, setShowBatch] = useState(false);
+  const [batchForm, setBatchForm] = useState({ payPeriodStart: '', payPeriodEnd: '' });
+  const [batchResult, setBatchResult] = useState<{ created: number; skipped: number; skippedEmployees: string[] } | null>(null);
+
+  const handleBatchCreate = async () => {
+    if (!batchForm.payPeriodStart || !batchForm.payPeriodEnd) {
+      showToast(t('errors.requiredField'), 'warning');
+      return;
+    }
+    try {
+      const result = await batchCreatePayroll.mutateAsync(batchForm);
+      setBatchResult(result);
+      showToast(t('batch.successMessage', { created: result.created, skipped: result.skipped }), 'success');
+    } catch {
+      showToast(t('errors.batchFailed'), 'error');
+    }
+  };
 
   const handleCreate = async () => {
     if (!createForm.employeeId || !createForm.payPeriodStart || !createForm.payPeriodEnd || !createForm.baseSalary) {
@@ -107,11 +139,12 @@ export const Payroll: React.FC = () => {
         baseSalary: parseFloat(createForm.baseSalary),
         overtimeHours: parseFloat(createForm.overtimeHours) || 0,
         bonus: parseFloat(createForm.bonus) || 0,
+        leaveDeduction: parseFloat(createForm.leaveDeduction) || 0,
         deductions: parseFloat(createForm.deductions) || 0,
       });
       showToast('Payroll created successfully', 'success');
       setShowCreate(false);
-      setCreateForm({ employeeId: '', payPeriodStart: '', payPeriodEnd: '', baseSalary: '', overtimeHours: '0', bonus: '0', deductions: '0' });
+      setCreateForm({ employeeId: '', payPeriodStart: '', payPeriodEnd: '', baseSalary: '', overtimeHours: '0', bonus: '0', leaveDeduction: '0', deductions: '0' });
     } catch {
       showToast(t('errors.createFailed'), 'error');
     }
@@ -123,6 +156,35 @@ export const Payroll: React.FC = () => {
       showToast('Status updated successfully', 'success');
     } catch {
       showToast(t('errors.statusUpdateFailed'), 'error');
+    }
+  };
+
+  // Payroll settings
+  const { data: payrollSettings } = usePayrollSettings(isAdminView);
+  const updatePayrollSettings = useUpdatePayrollSettings();
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsForm, setSettingsForm] = useState<PayrollSettings | null>(null);
+
+  const openSettings = () => {
+    if (payrollSettings) {
+      setSettingsForm({ ...payrollSettings, taxBrackets: payrollSettings.taxBrackets.map((b) => ({ ...b })) });
+    }
+    setShowSettings(true);
+  };
+
+  const closeSettings = () => {
+    setShowSettings(false);
+    setSettingsForm(null);
+  };
+
+  const handleSaveSettings = async () => {
+    if (!settingsForm) return;
+    try {
+      await updatePayrollSettings.mutateAsync(settingsForm);
+      showToast(t('settings.saved'), 'success');
+      closeSettings();
+    } catch {
+      showToast(t('settings.saveFailed'), 'error');
     }
   };
 
@@ -141,13 +203,29 @@ export const Payroll: React.FC = () => {
           <p className="text-text-muted-light dark:text-text-muted-dark text-base mt-1">{t('subtitle')}</p>
         </div>
         {isAdminView && (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary/90 transition-colors"
-          >
-            <Plus size={18} />
-            {t('admin.actions.createPayroll')}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openSettings}
+              className="flex items-center gap-2 px-4 py-2.5 border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium rounded-lg text-sm hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+            >
+              <Settings size={18} />
+              {t('settings.title')}
+            </button>
+            <button
+              onClick={() => { setShowBatch(true); setBatchResult(null); }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-accent-green text-white font-medium rounded-lg text-sm shadow-sm hover:bg-accent-green/90 transition-colors"
+            >
+              <Play size={18} />
+              {t('batch.runPayroll')}
+            </button>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary/90 transition-colors"
+            >
+              <Plus size={18} />
+              {t('admin.actions.createPayroll')}
+            </button>
+          </div>
         )}
       </header>
 
@@ -183,7 +261,7 @@ export const Payroll: React.FC = () => {
 
       {/* Admin Status Breakdown */}
       {isAdminView && summary && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-accent-orange/10"><AlertCircle size={18} className="text-accent-orange" /></div>
             <div>
@@ -203,6 +281,13 @@ export const Payroll: React.FC = () => {
             <div>
               <p className="text-2xl font-bold text-text-light dark:text-text-dark">{summary.paidCount}</p>
               <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('status.paid')}</p>
+            </div>
+          </div>
+          <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-accent-red/10"><X size={18} className="text-accent-red" /></div>
+            <div>
+              <p className="text-2xl font-bold text-text-light dark:text-text-dark">{summary.cancelledCount}</p>
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('status.cancelled')}</p>
             </div>
           </div>
         </div>
@@ -271,7 +356,8 @@ export const Payroll: React.FC = () => {
                         <DetailItem label={t('form.overtimeHours')} value={`${record.overtimeHours}h`} />
                         <DetailItem label={t('employee.detail.overtimePay')} value={`฿${formatCurrency(record.overtimePay)}`} />
                         <DetailItem label={t('form.bonus')} value={`฿${formatCurrency(record.bonus)}`} positive />
-                        <DetailItem label={t('form.deductions')} value={`-฿${formatCurrency(record.deductions)}`} negative />
+                        <DetailItem label={t('form.leaveDeduction')} value={`-฿${formatCurrency(record.leaveDeduction)}`} negative />
+                        <DetailItem label={t('form.otherDeductions')} value={`-฿${formatCurrency(record.deductions)}`} negative />
                         <DetailItem label={t('form.taxAmount')} value={`-฿${formatCurrency(record.taxAmount)}`} negative />
                         <DetailItem label={t('form.netPay')} value={`฿${formatCurrency(record.netPay)}`} bold />
                         <DetailItem label={t('form.paymentMethod')} value={record.paymentMethod || '-'} />
@@ -282,7 +368,7 @@ export const Payroll: React.FC = () => {
                         </p>
                       )}
                       {/* Admin: status change buttons */}
-                      {isAdminView && record.status !== 'Paid' && (
+                      {isAdminView && record.status !== 'Paid' && record.status !== 'Cancelled' && (
                         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border-light dark:border-border-dark">
                           {record.status === 'Pending' && (
                             <button
@@ -300,6 +386,12 @@ export const Payroll: React.FC = () => {
                               {t('admin.actions.markAsPaid')}
                             </button>
                           )}
+                          <button
+                            onClick={() => handleStatusChange(record.id, 'Cancelled')}
+                            className="px-3 py-1.5 text-xs font-medium text-accent-red bg-accent-red/10 rounded-lg hover:bg-accent-red/20 transition-colors"
+                          >
+                            {t('admin.actions.markAsCancelled')}
+                          </button>
                         </div>
                       )}
                     </div>
@@ -372,14 +464,19 @@ export const Payroll: React.FC = () => {
                     className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="0" />
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('form.bonus')}</label>
+                <input type="number" value={createForm.bonus} onChange={(e) => setCreateForm((f) => ({ ...f, bonus: e.target.value }))}
+                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="0.00" />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('form.bonus')}</label>
-                  <input type="number" value={createForm.bonus} onChange={(e) => setCreateForm((f) => ({ ...f, bonus: e.target.value }))}
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('form.leaveDeduction')}</label>
+                  <input type="number" value={createForm.leaveDeduction} onChange={(e) => setCreateForm((f) => ({ ...f, leaveDeduction: e.target.value }))}
                     className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="0.00" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('form.deductions')}</label>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('form.otherDeductions')}</label>
                   <input type="number" value={createForm.deductions} onChange={(e) => setCreateForm((f) => ({ ...f, deductions: e.target.value }))}
                     className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="0.00" />
                 </div>
@@ -395,6 +492,214 @@ export const Payroll: React.FC = () => {
                 className="px-5 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 {createPayroll.isPending ? t('form.calculating') : t('admin.actions.createPayroll')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Batch Payroll Modal */}
+      {showBatch && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowBatch(false)}>
+          <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border-light dark:border-border-dark">
+              <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{t('batch.title')}</h3>
+              <button onClick={() => setShowBatch(false)} className="p-1 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
+                <X size={18} className="text-text-muted-light" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-text-muted-light dark:text-text-muted-dark">{t('batch.description')}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <DatePicker
+                  value={batchForm.payPeriodStart}
+                  onChange={(date) => setBatchForm((f) => ({ ...f, payPeriodStart: date }))}
+                  label={t('form.payPeriodStart')}
+                  placeholder={t('form.payPeriodStart')}
+                />
+                <DatePicker
+                  value={batchForm.payPeriodEnd}
+                  onChange={(date) => setBatchForm((f) => ({ ...f, payPeriodEnd: date }))}
+                  label={t('form.payPeriodEnd')}
+                  placeholder={t('form.payPeriodEnd')}
+                  minDate={batchForm.payPeriodStart || undefined}
+                />
+              </div>
+
+              {/* Batch Result */}
+              {batchResult && (
+                <div className="bg-background-light dark:bg-background-dark rounded-lg p-4 space-y-2">
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-accent-green font-medium">{t('batch.created')}: {batchResult.created}</span>
+                    <span className="text-accent-orange font-medium">{t('batch.skipped')}: {batchResult.skipped}</span>
+                  </div>
+                  {batchResult.skippedEmployees.length > 0 && (
+                    <div>
+                      <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{t('batch.skippedList')}:</p>
+                      <ul className="text-xs text-text-muted-light dark:text-text-muted-dark space-y-0.5">
+                        {batchResult.skippedEmployees.map((name, i) => (
+                          <li key={i}>- {name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 p-5 border-t border-border-light dark:border-border-dark">
+              <button onClick={() => setShowBatch(false)} className="px-4 py-2 text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
+                {batchResult ? t('common:buttons.close') : t('common:buttons.cancel')}
+              </button>
+              {!batchResult && (
+                <button
+                  onClick={handleBatchCreate}
+                  disabled={batchCreatePayroll.isPending}
+                  className="px-5 py-2 text-sm font-medium bg-accent-green text-white rounded-lg hover:bg-accent-green/90 transition-colors disabled:opacity-50"
+                >
+                  {batchCreatePayroll.isPending ? t('form.calculating') : t('batch.generate')}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Payroll Settings Modal */}
+      {showSettings && settingsForm && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={closeSettings}>
+          <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl w-full max-w-xl mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border-light dark:border-border-dark">
+              <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{t('settings.title')}</h3>
+              <button onClick={closeSettings} className="p-1 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
+                <X size={18} className="text-text-muted-light" />
+              </button>
+            </div>
+            <div className="p-5 space-y-5">
+              {/* Standard Hours */}
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('settings.standardHours')}</label>
+                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">{t('settings.standardHoursDesc')}</p>
+                <input
+                  type="number"
+                  value={settingsForm.standardHoursPerMonth}
+                  onChange={(e) => setSettingsForm((f) => f ? { ...f, standardHoursPerMonth: parseFloat(e.target.value) || 0 } : f)}
+                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* Personal Allowance */}
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('settings.personalAllowance')}</label>
+                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">{t('settings.personalAllowanceDesc')}</p>
+                <input
+                  type="number"
+                  value={settingsForm.personalAllowance}
+                  onChange={(e) => setSettingsForm((f) => f ? { ...f, personalAllowance: parseFloat(e.target.value) || 0 } : f)}
+                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* Expense Deduction */}
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('settings.expenseDeduction')}</label>
+                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">{t('settings.expenseDeductionDesc')}</p>
+                <input
+                  type="number"
+                  value={settingsForm.expenseDeduction}
+                  onChange={(e) => setSettingsForm((f) => f ? { ...f, expenseDeduction: parseFloat(e.target.value) || 0 } : f)}
+                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* Tax Brackets */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark">{t('settings.taxBrackets')}</label>
+                  <button
+                    onClick={() => {
+                      const brackets = [...settingsForm.taxBrackets];
+                      const lastBracket = brackets[brackets.length - 1];
+                      const lastMax = lastBracket ? lastBracket.max : 0;
+                      brackets.push({ min: lastMax === -1 ? 0 : lastMax, max: -1, rate: 0 });
+                      setSettingsForm((f) => f ? { ...f, taxBrackets: brackets } : f);
+                    }}
+                    className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <PlusCircle size={14} />
+                    {t('settings.addBracket')}
+                  </button>
+                </div>
+                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-3">{t('settings.taxBracketsDesc')}</p>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-[1fr_1fr_1fr_32px] gap-2 text-xs font-medium text-text-muted-light dark:text-text-muted-dark">
+                    <span>{t('settings.bracketMin')}</span>
+                    <span>{t('settings.bracketMax')}</span>
+                    <span>{t('settings.bracketRate')}</span>
+                    <span></span>
+                  </div>
+                  {settingsForm.taxBrackets.map((bracket, idx) => (
+                    <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_32px] gap-2">
+                      <input
+                        type="number"
+                        value={bracket.min}
+                        onChange={(e) => {
+                          const brackets = settingsForm.taxBrackets.map((b, i) =>
+                            i === idx ? { min: parseFloat(e.target.value) || 0, max: b.max, rate: b.rate } : b
+                          );
+                          setSettingsForm((f) => f ? { ...f, taxBrackets: brackets } : f);
+                        }}
+                        className="px-2 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <input
+                        type="number"
+                        value={bracket.max}
+                        onChange={(e) => {
+                          const brackets = settingsForm.taxBrackets.map((b, i) =>
+                            i === idx ? { min: b.min, max: parseFloat(e.target.value) || 0, rate: b.rate } : b
+                          );
+                          setSettingsForm((f) => f ? { ...f, taxBrackets: brackets } : f);
+                        }}
+                        placeholder="-1 = unlimited"
+                        className="px-2 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={bracket.rate}
+                        onChange={(e) => {
+                          const brackets = settingsForm.taxBrackets.map((b, i) =>
+                            i === idx ? { min: b.min, max: b.max, rate: parseFloat(e.target.value) || 0 } : b
+                          );
+                          setSettingsForm((f) => f ? { ...f, taxBrackets: brackets } : f);
+                        }}
+                        className="px-2 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <button
+                        onClick={() => {
+                          const brackets = settingsForm.taxBrackets.filter((_, i) => i !== idx);
+                          setSettingsForm((f) => f ? { ...f, taxBrackets: brackets } : f);
+                        }}
+                        className="p-1 text-accent-red hover:bg-accent-red/10 rounded transition-colors self-center"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-5 border-t border-border-light dark:border-border-dark">
+              <button onClick={closeSettings} className="px-4 py-2 text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
+                {t('common:buttons.cancel')}
+              </button>
+              <button
+                onClick={handleSaveSettings}
+                disabled={updatePayrollSettings.isPending}
+                className="px-5 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {updatePayrollSettings.isPending ? t('form.calculating') : t('settings.save')}
               </button>
             </div>
           </div>

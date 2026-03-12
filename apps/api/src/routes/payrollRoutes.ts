@@ -9,6 +9,28 @@ const router = Router();
 router.use(authenticateToken);
 
 /**
+ * POST /api/payroll/batch
+ * Batch create payroll records for all active employees (admin only)
+ * NOTE: Must be defined BEFORE / to avoid route shadowing
+ */
+router.post('/batch', requireAdmin, apiLimiter, async (req: Request, res: Response) => {
+  try {
+    const { payPeriodStart, payPeriodEnd } = req.body;
+
+    if (!payPeriodStart || !payPeriodEnd) {
+      return res.status(400).json({ error: 'payPeriodStart and payPeriodEnd are required' });
+    }
+
+    const result = await PayrollService.batchCreatePayroll(payPeriodStart, payPeriodEnd);
+    res.status(201).json(result);
+  } catch (error: unknown) {
+    console.error('Error batch creating payroll:', error);
+    const message = error instanceof Error ? error.message : 'Failed to batch create payroll';
+    res.status(400).json({ error: message });
+  }
+});
+
+/**
  * POST /api/payroll
  * Create a new payroll record (admin only)
  */
@@ -191,7 +213,7 @@ router.patch('/:id/status', requireAdmin, apiLimiter, async (req: Request, res: 
   try {
     const { status, paymentMethod } = req.body;
 
-    if (!['Pending', 'Processed', 'Paid'].includes(status)) {
+    if (!['Pending', 'Processed', 'Paid', 'Cancelled'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 

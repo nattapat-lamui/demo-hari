@@ -111,6 +111,7 @@ export const queryKeys = {
   systemConfig: {
     all: ['systemConfig'] as const,
     leaveQuotas: () => [...queryKeys.systemConfig.all, 'leaveQuotas'] as const,
+    payroll: () => [...queryKeys.systemConfig.all, 'payroll'] as const,
   },
   payroll: {
     all: ['payroll'] as const,

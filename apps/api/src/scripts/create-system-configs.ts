@@ -89,6 +89,44 @@ async function createSystemConfigsTable() {
                 data_type: 'json',
                 description: 'Allowed file MIME types for upload'
             },
+            // Payroll settings
+            {
+                category: 'payroll',
+                key: 'standard_hours_per_month',
+                value: '160',
+                data_type: 'number',
+                description: 'Standard working hours per month (used for overtime calculation)'
+            },
+            {
+                category: 'payroll',
+                key: 'tax_brackets',
+                value: JSON.stringify([
+                    { min: 0, max: 150000, rate: 0 },
+                    { min: 150000, max: 300000, rate: 0.05 },
+                    { min: 300000, max: 500000, rate: 0.10 },
+                    { min: 500000, max: 750000, rate: 0.15 },
+                    { min: 750000, max: 1000000, rate: 0.20 },
+                    { min: 1000000, max: 2000000, rate: 0.25 },
+                    { min: 2000000, max: 5000000, rate: 0.30 },
+                    { min: 5000000, max: -1, rate: 0.35 }
+                ]),
+                data_type: 'json',
+                description: 'Progressive tax brackets (Thai PND.1 style). max=-1 means unlimited.'
+            },
+            {
+                category: 'payroll',
+                key: 'personal_allowance',
+                value: '60000',
+                data_type: 'number',
+                description: 'Personal tax allowance deducted from annual income before applying tax brackets'
+            },
+            {
+                category: 'payroll',
+                key: 'expense_deduction',
+                value: '100000',
+                data_type: 'number',
+                description: 'Standard expense deduction (50% of income, capped at this amount)'
+            },
             // System settings
             {
                 category: 'system',

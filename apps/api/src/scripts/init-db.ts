@@ -372,16 +372,22 @@ CREATE TABLE payroll_records (
     overtime_hours DECIMAL(5,2) DEFAULT 0,
     overtime_pay DECIMAL(12,2) DEFAULT 0,
     bonus DECIMAL(12,2) DEFAULT 0,
-    deductions DECIMAL(12,2) DEFAULT 0,
+    leave_deduction DECIMAL(12,2) DEFAULT 0, -- Deduction from unpaid leave
+    deductions DECIMAL(12,2) DEFAULT 0, -- Other deductions
     tax_amount DECIMAL(12,2) DEFAULT 0,
     net_pay DECIMAL(12,2) NOT NULL,
-    status VARCHAR(20) DEFAULT 'Pending', -- Pending, Processed, Paid
+    status VARCHAR(20) DEFAULT 'Pending', -- Pending, Processed, Paid, Cancelled
     payment_date DATE,
     payment_method VARCHAR(50), -- Bank Transfer, Check, Cash
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Partial unique index: prevent duplicate payroll for the same employee+period, excluding Cancelled records
+CREATE UNIQUE INDEX unique_payroll_period
+    ON payroll_records (employee_id, pay_period_start, pay_period_end)
+    WHERE status != 'Cancelled';
 
 -- 19. Salary History
 CREATE TABLE salary_history (
