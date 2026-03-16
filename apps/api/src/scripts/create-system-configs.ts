@@ -125,7 +125,21 @@ async function createSystemConfigsTable() {
                 key: 'expense_deduction',
                 value: '100000',
                 data_type: 'number',
-                description: 'Standard expense deduction (50% of income, capped at this amount)'
+                description: 'Standard expense deduction cap amount'
+            },
+            {
+                category: 'payroll',
+                key: 'expense_deduction_rate',
+                value: '0.5',
+                data_type: 'number',
+                description: 'Expense deduction rate (e.g. 0.5 = 50% of income, capped at expense_deduction)'
+            },
+            {
+                category: 'payroll',
+                key: 'ot_multiplier',
+                value: '1.5',
+                data_type: 'number',
+                description: 'Overtime pay multiplier (e.g. 1.5 = 150% of hourly rate)'
             },
             // System settings
             {
@@ -134,6 +148,13 @@ async function createSystemConfigsTable() {
                 value: 'HARI - HR Management System',
                 data_type: 'string',
                 description: 'Application name'
+            },
+            {
+                category: 'system',
+                key: 'currency',
+                value: 'THB',
+                data_type: 'string',
+                description: 'Default currency code'
             },
             {
                 category: 'system',

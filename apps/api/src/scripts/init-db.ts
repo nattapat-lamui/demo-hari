@@ -542,7 +542,8 @@ export const runMigration = async () => {
 
     // Hash passwords for seeds
     const saltRounds = 10;
-    const passwordHash = await bcrypt.hash("Welcome123!", saltRounds);
+    const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD || "Welcome123!";
+    const passwordHash = await bcrypt.hash(defaultPassword, saltRounds);
 
     const seededSchema =
       schema +

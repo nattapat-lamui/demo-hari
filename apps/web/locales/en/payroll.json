@@ -48,6 +48,12 @@
   },
 
   "employee": {
+    "summary": {
+      "latestNetPay": "Latest Net Pay",
+      "ytdTax": "YTD Tax Paid",
+      "ytdSSF": "YTD Social Security",
+      "paidMonths": "Paid Months"
+    },
     "myPayslips": "My Payslips",
     "viewPayslip": "View Payslip",
     "downloadPayslip": "Download Payslip",

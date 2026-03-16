@@ -48,6 +48,12 @@
   },
 
   "employee": {
+    "summary": {
+      "latestNetPay": "เงินสุทธิล่าสุด",
+      "ytdTax": "ภาษีสะสมปีนี้",
+      "ytdSSF": "ประกันสังคมสะสม",
+      "paidMonths": "เดือนที่จ่ายแล้ว"
+    },
     "myPayslips": "สลิปเงินเดือนของฉัน",
     "viewPayslip": "ดูสลิปเงินเดือน",
     "downloadPayslip": "ดาวน์โหลดสลิปเงินเดือน",

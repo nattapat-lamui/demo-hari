@@ -128,15 +128,12 @@ async function autoMarkAbsent(): Promise<void> {
  * Call this after the server starts listening.
  */
 export function initAttendanceScheduler(): void {
-  // Auto-checkout at 23:59 Bangkok time
-  cron.schedule('59 23 * * *', autoCheckout, {
-    timezone: 'Asia/Bangkok',
-  });
+  const checkoutCron = process.env.CRON_AUTO_CHECKOUT || '59 23 * * *';
+  const absentCron = process.env.CRON_AUTO_ABSENT || '5 0 * * *';
+  const timezone = process.env.CRON_TIMEZONE || 'Asia/Bangkok';
 
-  // Auto-mark absent at 00:05 Bangkok time
-  cron.schedule('5 0 * * *', autoMarkAbsent, {
-    timezone: 'Asia/Bangkok',
-  });
+  cron.schedule(checkoutCron, autoCheckout, { timezone });
+  cron.schedule(absentCron, autoMarkAbsent, { timezone });
 
-  console.log('[AttendanceScheduler] Attendance scheduler initialized');
+  console.log(`[AttendanceScheduler] Initialized (checkout: ${checkoutCron}, absent: ${absentCron}, tz: ${timezone})`);
 }

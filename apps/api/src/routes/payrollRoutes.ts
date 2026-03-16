@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authenticateToken, requireAdmin, requireAdminOrFinance, requireOwnerOrAdmin } from '../middlewares/auth';
 import PayrollService from '../services/PayrollService';
 import { generatePayslipPdf } from '../services/PayslipPdfService';
+import SystemConfigService from '../services/SystemConfigService';
 import { query } from '../db';
 import { apiLimiter } from '../middlewares/security';
 
@@ -286,12 +287,19 @@ router.get('/:id/payslip', async (req: Request, res: Response) => {
     );
     const emp = empResult.rows[0];
 
+    // Fetch company name and currency from system config
+    const [companyName, currency] = await Promise.all([
+      SystemConfigService.getConfigValue('system', 'app_name', 'HARI HR System'),
+      SystemConfigService.getConfigValue('system', 'currency', 'THB'),
+    ]);
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="payslip-${record.payPeriodStart}-${record.payPeriodEnd}.pdf"`);
 
     generatePayslipPdf(
       { ...record, employeeName: emp?.name || 'Unknown', department: emp?.department || '', employeeCode: emp?.employee_code },
-      res
+      res,
+      { companyName: String(companyName), currency: String(currency) }
     );
   } catch (error) {
     console.error('Payslip PDF error:', error);

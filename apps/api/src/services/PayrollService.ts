@@ -75,6 +75,8 @@ const DEFAULT_SSF_RATE = 0.05;
 const DEFAULT_SSF_MAX_BASE = 15000;
 const DEFAULT_PVF_EMPLOYEE_RATE = 0.03;
 const DEFAULT_PVF_EMPLOYER_RATE = 0.03;
+const DEFAULT_OT_MULTIPLIER = 1.5;
+const DEFAULT_EXPENSE_DEDUCTION_RATE = 0.5;
 
 interface PayrollConfig {
   standardHoursPerMonth: number;
@@ -85,6 +87,8 @@ interface PayrollConfig {
   ssfMaxBase: number;
   pvfEmployeeRate: number;
   pvfEmployerRate: number;
+  otMultiplier: number;
+  expenseDeductionRate: number;
 }
 
 export class PayrollService {
@@ -93,7 +97,7 @@ export class PayrollService {
    */
   private async getPayrollConfig(): Promise<PayrollConfig> {
     try {
-      const [standardHours, taxBrackets, personalAllowance, expenseDeduction, ssfRate, ssfMaxBase, pvfEmployeeRate, pvfEmployerRate] = await Promise.all([
+      const [standardHours, taxBrackets, personalAllowance, expenseDeduction, ssfRate, ssfMaxBase, pvfEmployeeRate, pvfEmployerRate, otMultiplier, expenseDeductionRate] = await Promise.all([
         SystemConfigService.getConfigValue('payroll', 'standard_hours_per_month', DEFAULT_STANDARD_HOURS),
         SystemConfigService.getConfigValue('payroll', 'tax_brackets', DEFAULT_TAX_BRACKETS),
         SystemConfigService.getConfigValue('payroll', 'personal_allowance', DEFAULT_PERSONAL_ALLOWANCE),
@@ -102,6 +106,8 @@ export class PayrollService {
         SystemConfigService.getConfigValue('payroll', 'ssf_max_base', DEFAULT_SSF_MAX_BASE),
         SystemConfigService.getConfigValue('payroll', 'pvf_employee_rate', DEFAULT_PVF_EMPLOYEE_RATE),
         SystemConfigService.getConfigValue('payroll', 'pvf_employer_rate', DEFAULT_PVF_EMPLOYER_RATE),
+        SystemConfigService.getConfigValue('payroll', 'ot_multiplier', DEFAULT_OT_MULTIPLIER),
+        SystemConfigService.getConfigValue('payroll', 'expense_deduction_rate', DEFAULT_EXPENSE_DEDUCTION_RATE),
       ]);
 
       return {
@@ -113,6 +119,8 @@ export class PayrollService {
         ssfMaxBase: typeof ssfMaxBase === 'number' ? ssfMaxBase : DEFAULT_SSF_MAX_BASE,
         pvfEmployeeRate: typeof pvfEmployeeRate === 'number' ? pvfEmployeeRate : DEFAULT_PVF_EMPLOYEE_RATE,
         pvfEmployerRate: typeof pvfEmployerRate === 'number' ? pvfEmployerRate : DEFAULT_PVF_EMPLOYER_RATE,
+        otMultiplier: typeof otMultiplier === 'number' && otMultiplier > 0 ? otMultiplier : DEFAULT_OT_MULTIPLIER,
+        expenseDeductionRate: typeof expenseDeductionRate === 'number' ? expenseDeductionRate : DEFAULT_EXPENSE_DEDUCTION_RATE,
       };
     } catch (error) {
       console.error('Failed to load payroll config, using defaults:', error);
@@ -125,6 +133,8 @@ export class PayrollService {
         ssfMaxBase: DEFAULT_SSF_MAX_BASE,
         pvfEmployeeRate: DEFAULT_PVF_EMPLOYEE_RATE,
         pvfEmployerRate: DEFAULT_PVF_EMPLOYER_RATE,
+        otMultiplier: DEFAULT_OT_MULTIPLIER,
+        expenseDeductionRate: DEFAULT_EXPENSE_DEDUCTION_RATE,
       };
     }
   }
@@ -137,10 +147,11 @@ export class PayrollService {
     annualSalary: number,
     brackets: { min: number; max: number; rate: number }[],
     expenseDeduction: number,
-    personalAllowance: number
+    personalAllowance: number,
+    expenseDeductionRate: number = DEFAULT_EXPENSE_DEDUCTION_RATE
   ): number {
-    // Expense deduction: 50% of income, capped at expenseDeduction
-    const expense = Math.min(annualSalary * 0.5, expenseDeduction);
+    // Expense deduction: rate% of income, capped at expenseDeduction
+    const expense = Math.min(annualSalary * expenseDeductionRate, expenseDeduction);
     // Taxable income after deductions
     const taxableIncome = Math.max(0, annualSalary - expense - personalAllowance);
 
@@ -171,7 +182,7 @@ export class PayrollService {
     config: PayrollConfig
   ) {
     const hourlyRate = baseSalary / config.standardHoursPerMonth;
-    const overtimePay = Math.round(overtimeHours * hourlyRate * 1.5 * 100) / 100;
+    const overtimePay = Math.round(overtimeHours * hourlyRate * config.otMultiplier * 100) / 100;
     const grossPay = baseSalary + overtimePay + bonus;
 
     // SSF: employee and employer each pay ssfRate on min(baseSalary, ssfMaxBase)
@@ -186,7 +197,7 @@ export class PayrollService {
     // Thai PND.1 annualization: base salary × 12, OT and bonus are irregular (added as-is)
     // SSF and PVF employee contributions are tax-deductible in Thailand
     const annualIncome = (baseSalary * 12) + overtimePay + bonus - (ssfEmployee * 12) - (pvfEmployee * 12);
-    const annualTax = this.calculateTax(annualIncome, config.taxBrackets, config.expenseDeduction, config.personalAllowance);
+    const annualTax = this.calculateTax(annualIncome, config.taxBrackets, config.expenseDeduction, config.personalAllowance, config.expenseDeductionRate);
     const monthlyTax = Math.round(annualTax / 12 * 100) / 100;
     const netPay = Math.round((grossPay - leaveDeduction - deductions - monthlyTax - ssfEmployee - pvfEmployee) * 100) / 100;
 

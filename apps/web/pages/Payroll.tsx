@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,6 +20,9 @@ import {
   PlusCircle,
   X,
   Download,
+  Wallet,
+  Shield,
+  CalendarCheck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAuthToken, BASE_URL } from '../lib/api';
@@ -290,6 +293,20 @@ export const Payroll: React.FC = () => {
   const records = isAdminView ? allPayroll : myPayslips;
   const isLoading = isAdminView ? adminLoading : payslipsLoading;
 
+  // Employee summary stats computed from payslips
+  const employeeSummary = useMemo(() => {
+    if (isAdminView || myPayslips.length === 0) return null;
+    const currentYear = new Date().getFullYear();
+    const thisYearPaid = myPayslips.filter(p => p.status === 'Paid' && p.payPeriodStart?.startsWith(String(currentYear)));
+    const latest = myPayslips.find(p => p.status === 'Paid');
+    return {
+      latestNetPay: latest?.netPay ?? 0,
+      ytdTax: thisYearPaid.reduce((sum, p) => sum + p.taxAmount, 0),
+      ytdSSF: thisYearPaid.reduce((sum, p) => sum + (p.ssfEmployee || 0), 0),
+      paidMonths: thisYearPaid.length,
+    };
+  }, [isAdminView, myPayslips]);
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -393,6 +410,36 @@ export const Payroll: React.FC = () => {
               <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('status.cancelled')}</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Employee Summary Cards */}
+      {!isAdminView && employeeSummary && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <SummaryCard
+            icon={<Wallet size={20} />}
+            label={t('employee.summary.latestNetPay')}
+            value={`฿${formatCurrency(employeeSummary.latestNetPay)}`}
+            color="text-accent-green bg-accent-green/10"
+          />
+          <SummaryCard
+            icon={<Receipt size={20} />}
+            label={t('employee.summary.ytdTax')}
+            value={`฿${formatCurrency(employeeSummary.ytdTax)}`}
+            color="text-accent-red bg-accent-red/10"
+          />
+          <SummaryCard
+            icon={<Shield size={20} />}
+            label={t('employee.summary.ytdSSF')}
+            value={`฿${formatCurrency(employeeSummary.ytdSSF)}`}
+            color="text-blue-500 bg-blue-500/10"
+          />
+          <SummaryCard
+            icon={<CalendarCheck size={20} />}
+            label={t('employee.summary.paidMonths')}
+            value={String(employeeSummary.paidMonths)}
+            color="text-primary bg-primary/10"
+          />
         </div>
       )}
 

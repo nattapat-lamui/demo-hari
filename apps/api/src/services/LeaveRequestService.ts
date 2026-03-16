@@ -6,6 +6,10 @@ import NotificationService from './NotificationService';
 import { withTransaction } from '../utils/transaction';
 import { PaginationParams, PaginatedResult, createPaginatedResult, buildPaginationClause, buildSortClause } from '../utils/pagination';
 
+// Leave type constants — avoid hardcoded strings throughout the service
+const LEAVE_TYPE_SICK = 'Sick Leave';
+const LEAVE_TYPE_MATERNITY = 'Maternity Leave';
+
 /** Convert a pg DATE value to a plain YYYY-MM-DD string to avoid timezone shifts */
 function toDateString(val: unknown): string {
     if (!val) return '';
@@ -156,14 +160,14 @@ export class LeaveRequestService {
         }
 
         // Validate: Sick Leave >= 3 days requires medical certificate
-        if (type === 'Sick Leave' && days >= 3 && !medicalCertificatePath) {
+        if (type === LEAVE_TYPE_SICK && days >= 3 && !medicalCertificatePath) {
             const err: any = new Error('A medical certificate is required for sick leave of 3 or more days.');
             err.statusCode = 400;
             throw err;
         }
 
         // Validate: Maternity Leave always requires medical certificate
-        if (type === 'Maternity Leave' && !medicalCertificatePath) {
+        if (type === LEAVE_TYPE_MATERNITY && !medicalCertificatePath) {
             const err: any = new Error('A medical certificate is required for maternity leave.');
             err.statusCode = 400;
             throw err;
@@ -278,14 +282,14 @@ export class LeaveRequestService {
 
             // Re-validate medical cert if Sick Leave >= 3 days
             const medCertPath = editData.medicalCertificatePath || row.medical_certificate_path;
-            if (editData.type === 'Sick Leave' && newDays >= 3 && !medCertPath) {
+            if (editData.type === LEAVE_TYPE_SICK && newDays >= 3 && !medCertPath) {
                 const err: any = new Error('A medical certificate is required for sick leave of 3 or more days.');
                 err.statusCode = 400;
                 throw err;
             }
 
             // Re-validate medical cert for Maternity Leave (always required)
-            if (editData.type === 'Maternity Leave' && !medCertPath) {
+            if (editData.type === LEAVE_TYPE_MATERNITY && !medCertPath) {
                 const err: any = new Error('A medical certificate is required for maternity leave.');
                 err.statusCode = 400;
                 throw err;
