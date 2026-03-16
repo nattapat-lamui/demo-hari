@@ -11,6 +11,16 @@ async function autoCheckout(): Promise<void> {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
   try {
+    // Fetch standard_hours from system config (default 8)
+    const configResult = await query(
+      `SELECT key, value FROM system_configs WHERE category = 'attendance'`
+    );
+    const configMap: Record<string, string> = {};
+    for (const row of configResult.rows) {
+      configMap[row.key] = row.value;
+    }
+    const standardHours = parseFloat(configMap['standard_hours'] || '8');
+
     // Find ALL open records up to today (catches missed days too)
     const openRecords = await query(
       `SELECT id, date, clock_in, break_duration, notes FROM attendance_records
@@ -21,19 +31,20 @@ async function autoCheckout(): Promise<void> {
     if (openRecords.rows.length === 0) return;
 
     for (const row of openRecords.rows) {
-      // Use the record's own date for checkout time (not today)
-      const recordDate = new Date(row.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-      const checkoutTime = new Date(`${recordDate}T23:59:00+07:00`);
-
       const clockIn = new Date(row.clock_in);
       const breakDuration = row.break_duration || 0;
-      const totalMinutes = (checkoutTime.getTime() - clockIn.getTime()) / 1000 / 60 - breakDuration;
-      const totalHours = Math.round(totalMinutes / 60 * 100) / 100;
-      // Auto-checkout: no overtime (OT only counts for manual checkout) and no early departure (23:59 is always after work_end)
+
+      // Auto-checkout: cap at standard_hours after clock_in (+ break time)
+      const standardMs = standardHours * 60 * 60 * 1000;
+      const breakMs = breakDuration * 60 * 1000;
+      const checkoutTime = new Date(clockIn.getTime() + standardMs + breakMs);
+      const totalHours = standardHours;
+
+      // Auto-checkout: no overtime, no early departure
       const overtimeHours = 0;
       const earlyDeparture = false;
       const existingNotes = row.notes ? `${row.notes} | ` : '';
-      const notes = `${existingNotes}Auto-checkout: ไม่ได้เช็คเอาท์`;
+      const notes = `${existingNotes}Auto-checkout: capped at ${standardHours}h`;
 
       await query(
         `UPDATE attendance_records
