@@ -5,6 +5,7 @@ import { getPaginationParams, getSortParams } from '../utils/pagination';
 import type { LeaveRequest } from '../models/LeaveRequest';
 import { storageService } from '../services/StorageService';
 import { generateStorageKey, getFileBuffer } from '../middlewares/upload';
+import { query } from '../db';
 
 export class LeaveRequestController {
     async getAllLeaveRequests(req: Request, res: Response): Promise<void> {
@@ -137,13 +138,29 @@ export class LeaveRequestController {
         try {
             const { id } = req.params;
             const { status, rejectionReason } = req.body;
+            const user = (req as any).user;
 
             if (!status || !['Pending', 'Approved', 'Rejected'].includes(status)) {
                 res.status(400).json({ error: 'Invalid status' });
                 return;
             }
 
-            const approverEmployeeId = (req as any).user?.employeeId || undefined;
+            // MANAGER can only approve direct reports' leave requests
+            if (user?.role === 'MANAGER' && user.employeeId) {
+                const leaveReq = await LeaveRequestService.getLeaveRequestById(id);
+                if (leaveReq) {
+                    const empResult = await query(
+                        'SELECT manager_id FROM employees WHERE id = $1',
+                        [leaveReq.employeeId]
+                    );
+                    if (empResult.rows[0]?.manager_id !== user.employeeId) {
+                        res.status(403).json({ error: 'You can only approve leave requests from your direct reports' });
+                        return;
+                    }
+                }
+            }
+
+            const approverEmployeeId = user?.employeeId || undefined;
             const leaveRequest = await LeaveRequestService.updateLeaveRequestStatus(id, {
                 status,
                 rejectionReason: status === 'Rejected' ? rejectionReason : undefined,
@@ -214,11 +231,27 @@ export class LeaveRequestController {
         try {
             const { id } = req.params;
             const { decision } = req.body;
-            const approverEmployeeId = (req as any).user?.employeeId;
+            const user = (req as any).user;
+            const approverEmployeeId = user?.employeeId;
 
             if (!approverEmployeeId) {
                 res.status(401).json({ error: 'Unauthorized' });
                 return;
+            }
+
+            // MANAGER can only handle cancel decisions for direct reports
+            if (user?.role === 'MANAGER') {
+                const leaveReq = await LeaveRequestService.getLeaveRequestById(id);
+                if (leaveReq) {
+                    const empResult = await query(
+                        'SELECT manager_id FROM employees WHERE id = $1',
+                        [leaveReq.employeeId]
+                    );
+                    if (empResult.rows[0]?.manager_id !== approverEmployeeId) {
+                        res.status(403).json({ error: 'You can only manage leave requests from your direct reports' });
+                        return;
+                    }
+                }
             }
 
             if (!decision || !['approve_cancel', 'reject_cancel'].includes(decision)) {

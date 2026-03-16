@@ -104,7 +104,7 @@ export const requireOwnerOrAdmin = (getResourceOwnerId: (req: Request) => string
 
         const resourceOwnerId = getResourceOwnerId(req);
         const isOwner = req.user.employeeId === resourceOwnerId || req.user.userId === resourceOwnerId;
-        const isAdmin = req.user.role === 'HR_ADMIN';
+        const isAdmin = req.user.role === 'HR_ADMIN' || req.user.role === 'FINANCE';
 
         if (!isOwner && !isAdmin) {
             return res.status(403).json({
