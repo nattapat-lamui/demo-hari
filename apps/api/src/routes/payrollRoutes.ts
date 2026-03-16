@@ -178,6 +178,21 @@ router.get(
 );
 
 /**
+ * PUT /api/payroll/:id
+ * Update an existing payroll record (admin only, only Pending records)
+ */
+router.put('/:id', requireAdmin, apiLimiter, async (req: Request, res: Response) => {
+  try {
+    const payroll = await PayrollService.updatePayroll(req.params.id, req.body);
+    res.json(payroll);
+  } catch (error: unknown) {
+    console.error('Error updating payroll:', error);
+    const message = error instanceof Error ? error.message : 'Failed to update payroll';
+    res.status(400).json({ error: message });
+  }
+});
+
+/**
  * GET /api/payroll/:id
  * Get a specific payroll record
  * NOTE: Must be defined AFTER all literal path routes to avoid shadowing

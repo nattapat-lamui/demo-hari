@@ -31,10 +31,12 @@ import {
   useCreatePayroll,
   useBatchCreatePayroll,
   useUpdatePayrollStatus,
+  useUpdatePayroll,
   useAllEmployees,
   usePayrollSettings,
   useUpdatePayrollSettings,
   type PayrollSettings,
+  type PayrollRecord,
 } from '../hooks/queries';
 
 // ---------------------------------------------------------------------------
@@ -57,7 +59,7 @@ function statusIcon(status: string) {
   return <AlertCircle size={16} className="text-accent-orange" />;
 }
 
-function statusBadge(status: string) {
+function statusBadge(status: string, label: string) {
   const cls = status === 'Paid'
     ? 'text-accent-green bg-accent-green/10'
     : status === 'Processed'
@@ -65,7 +67,7 @@ function statusBadge(status: string) {
       : status === 'Cancelled'
         ? 'text-accent-red bg-accent-red/10'
         : 'text-accent-orange bg-accent-orange/10';
-  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{status}</span>;
+  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{label}</span>;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +97,7 @@ export const Payroll: React.FC = () => {
   const createPayroll = useCreatePayroll();
   const batchCreatePayroll = useBatchCreatePayroll();
   const updateStatus = useUpdatePayrollStatus();
+  const updatePayroll = useUpdatePayroll();
 
   const [createForm, setCreateForm] = useState({
     employeeId: '',
@@ -142,7 +145,7 @@ export const Payroll: React.FC = () => {
         leaveDeduction: parseFloat(createForm.leaveDeduction) || 0,
         deductions: parseFloat(createForm.deductions) || 0,
       });
-      showToast('Payroll created successfully', 'success');
+      showToast(t('success.created'), 'success');
       setShowCreate(false);
       setCreateForm({ employeeId: '', payPeriodStart: '', payPeriodEnd: '', baseSalary: '', overtimeHours: '0', bonus: '0', leaveDeduction: '0', deductions: '0' });
     } catch {
@@ -152,11 +155,59 @@ export const Payroll: React.FC = () => {
 
   const handleStatusChange = async (id: string, status: string) => {
     try {
-      await updateStatus.mutateAsync({ id, status, paymentMethod: status === 'Paid' ? 'Bank Transfer' : undefined });
-      showToast('Status updated successfully', 'success');
+      await updateStatus.mutateAsync({ id, status });
+      showToast(t('success.statusUpdated'), 'success');
     } catch {
       showToast(t('errors.statusUpdateFailed'), 'error');
     }
+  };
+
+  // Edit payroll modal
+  const [editingRecord, setEditingRecord] = useState<PayrollRecord | null>(null);
+  const [editForm, setEditForm] = useState({
+    baseSalary: '',
+    overtimeHours: '0',
+    bonus: '0',
+    leaveDeduction: '0',
+    deductions: '0',
+  });
+
+  const openEdit = (record: PayrollRecord) => {
+    setEditForm({
+      baseSalary: String(record.baseSalary),
+      overtimeHours: String(record.overtimeHours),
+      bonus: String(record.bonus),
+      leaveDeduction: String(record.leaveDeduction),
+      deductions: String(record.deductions),
+    });
+    setEditingRecord(record);
+  };
+
+  const handleEdit = async () => {
+    if (!editingRecord) return;
+    try {
+      await updatePayroll.mutateAsync({
+        id: editingRecord.id,
+        data: {
+          baseSalary: parseFloat(editForm.baseSalary) || undefined,
+          overtimeHours: parseFloat(editForm.overtimeHours) || 0,
+          bonus: parseFloat(editForm.bonus) || 0,
+          leaveDeduction: parseFloat(editForm.leaveDeduction) || 0,
+          deductions: parseFloat(editForm.deductions) || 0,
+        },
+      });
+      showToast(t('success.updated'), 'success');
+      setEditingRecord(null);
+    } catch {
+      showToast(t('errors.updateFailed'), 'error');
+    }
+  };
+
+  // Close batch modal and reset
+  const closeBatch = () => {
+    setShowBatch(false);
+    setBatchForm({ payPeriodStart: '', payPeriodEnd: '' });
+    setBatchResult(null);
   };
 
   // Payroll settings
@@ -341,7 +392,7 @@ export const Payroll: React.FC = () => {
                     <p className="text-sm font-bold text-text-light dark:text-text-dark">฿{formatCurrency(record.netPay)}</p>
                     <div className="flex items-center gap-1 justify-end mt-0.5">
                       {statusIcon(record.status)}
-                      {statusBadge(record.status)}
+                      {statusBadge(record.status, t(`status.${record.status.toLowerCase()}`))}
                     </div>
                   </div>
                   {expandedId === record.id ? <ChevronUp size={16} className="text-text-muted-light" /> : <ChevronDown size={16} className="text-text-muted-light" />}
@@ -367,9 +418,17 @@ export const Payroll: React.FC = () => {
                           {t('employee.detail.paidOn')}: {formatDate(record.paymentDate)}
                         </p>
                       )}
-                      {/* Admin: status change buttons */}
+                      {/* Admin: action buttons */}
                       {isAdminView && record.status !== 'Paid' && record.status !== 'Cancelled' && (
                         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+                          {record.status === 'Pending' && (
+                            <button
+                              onClick={() => openEdit(record)}
+                              className="px-3 py-1.5 text-xs font-medium text-text-light dark:text-text-dark bg-background-light dark:bg-background-dark rounded-lg hover:bg-border-light dark:hover:bg-border-dark transition-colors"
+                            >
+                              {t('admin.actions.editPayroll')}
+                            </button>
+                          )}
                           {record.status === 'Pending' && (
                             <button
                               onClick={() => handleStatusChange(record.id, 'Processed')}
@@ -501,11 +560,11 @@ export const Payroll: React.FC = () => {
 
       {/* Batch Payroll Modal */}
       {showBatch && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowBatch(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={closeBatch}>
           <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-border-light dark:border-border-dark">
               <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{t('batch.title')}</h3>
-              <button onClick={() => setShowBatch(false)} className="p-1 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
+              <button onClick={closeBatch} className="p-1 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
                 <X size={18} className="text-text-muted-light" />
               </button>
             </div>
@@ -548,7 +607,7 @@ export const Payroll: React.FC = () => {
               )}
             </div>
             <div className="flex justify-end gap-3 p-5 border-t border-border-light dark:border-border-dark">
-              <button onClick={() => setShowBatch(false)} className="px-4 py-2 text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
+              <button onClick={closeBatch} className="px-4 py-2 text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
                 {batchResult ? t('common:buttons.close') : t('common:buttons.cancel')}
               </button>
               {!batchResult && (
@@ -700,6 +759,65 @@ export const Payroll: React.FC = () => {
                 className="px-5 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 {updatePayrollSettings.isPending ? t('form.calculating') : t('settings.save')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Edit Payroll Modal */}
+      {editingRecord && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setEditingRecord(null)}>
+          <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border-light dark:border-border-dark">
+              <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{t('form.editTitle')}</h3>
+              <button onClick={() => setEditingRecord(null)} className="p-1 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
+                <X size={18} className="text-text-muted-light" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('form.baseSalary')}</label>
+                  <input type="number" value={editForm.baseSalary} onChange={(e) => setEditForm((f) => ({ ...f, baseSalary: e.target.value }))}
+                    className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('form.overtimeHours')}</label>
+                  <input type="number" value={editForm.overtimeHours} onChange={(e) => setEditForm((f) => ({ ...f, overtimeHours: e.target.value }))}
+                    className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('form.bonus')}</label>
+                <input type="number" value={editForm.bonus} onChange={(e) => setEditForm((f) => ({ ...f, bonus: e.target.value }))}
+                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('form.leaveDeduction')}</label>
+                  <input type="number" value={editForm.leaveDeduction} onChange={(e) => setEditForm((f) => ({ ...f, leaveDeduction: e.target.value }))}
+                    className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('form.otherDeductions')}</label>
+                  <input type="number" value={editForm.deductions} onChange={(e) => setEditForm((f) => ({ ...f, deductions: e.target.value }))}
+                    className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+              </div>
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('form.autoCalculated')}</p>
+            </div>
+            <div className="flex justify-end gap-3 p-5 border-t border-border-light dark:border-border-dark">
+              <button onClick={() => setEditingRecord(null)} className="px-4 py-2 text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
+                {t('common:buttons.cancel')}
+              </button>
+              <button
+                onClick={handleEdit}
+                disabled={updatePayroll.isPending}
+                className="px-5 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {updatePayroll.isPending ? t('form.calculating') : t('form.save')}
               </button>
             </div>
           </div>

@@ -1299,6 +1299,23 @@ export const useUpdatePayrollStatus = () => {
   });
 };
 
+export const useUpdatePayroll = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: {
+      baseSalary?: number;
+      overtimeHours?: number;
+      bonus?: number;
+      leaveDeduction?: number;
+      deductions?: number;
+      notes?: string;
+    }}) => api.put<PayrollRecord>(`/payroll/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.payroll.all });
+    },
+  });
+};
+
 export const useUpdateSalary = () => {
   const qc = useQueryClient();
   return useMutation({

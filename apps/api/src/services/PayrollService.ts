@@ -1,4 +1,4 @@
-import { query } from '../db';
+import pool, { query } from '../db';
 import SystemConfigService from './SystemConfigService';
 
 export interface PayrollRecord {
@@ -30,6 +30,15 @@ export interface CreatePayrollData {
   bonus?: number;
   leaveDeduction?: number;
   deductions?: number;
+}
+
+export interface UpdatePayrollData {
+  baseSalary?: number;
+  overtimeHours?: number;
+  bonus?: number;
+  leaveDeduction?: number;
+  deductions?: number;
+  notes?: string;
 }
 
 export interface SalaryHistory {
@@ -71,19 +80,29 @@ export class PayrollService {
    * Load payroll configuration from system_configs
    */
   private async getPayrollConfig(): Promise<PayrollConfig> {
-    const [standardHours, taxBrackets, personalAllowance, expenseDeduction] = await Promise.all([
-      SystemConfigService.getConfigValue('payroll', 'standard_hours_per_month', DEFAULT_STANDARD_HOURS),
-      SystemConfigService.getConfigValue('payroll', 'tax_brackets', DEFAULT_TAX_BRACKETS),
-      SystemConfigService.getConfigValue('payroll', 'personal_allowance', DEFAULT_PERSONAL_ALLOWANCE),
-      SystemConfigService.getConfigValue('payroll', 'expense_deduction', DEFAULT_EXPENSE_DEDUCTION),
-    ]);
+    try {
+      const [standardHours, taxBrackets, personalAllowance, expenseDeduction] = await Promise.all([
+        SystemConfigService.getConfigValue('payroll', 'standard_hours_per_month', DEFAULT_STANDARD_HOURS),
+        SystemConfigService.getConfigValue('payroll', 'tax_brackets', DEFAULT_TAX_BRACKETS),
+        SystemConfigService.getConfigValue('payroll', 'personal_allowance', DEFAULT_PERSONAL_ALLOWANCE),
+        SystemConfigService.getConfigValue('payroll', 'expense_deduction', DEFAULT_EXPENSE_DEDUCTION),
+      ]);
 
-    return {
-      standardHoursPerMonth: typeof standardHours === 'number' ? standardHours : DEFAULT_STANDARD_HOURS,
-      taxBrackets: Array.isArray(taxBrackets) ? taxBrackets : DEFAULT_TAX_BRACKETS,
-      personalAllowance: typeof personalAllowance === 'number' ? personalAllowance : DEFAULT_PERSONAL_ALLOWANCE,
-      expenseDeduction: typeof expenseDeduction === 'number' ? expenseDeduction : DEFAULT_EXPENSE_DEDUCTION,
-    };
+      return {
+        standardHoursPerMonth: typeof standardHours === 'number' && standardHours > 0 ? standardHours : DEFAULT_STANDARD_HOURS,
+        taxBrackets: Array.isArray(taxBrackets) && taxBrackets.length > 0 ? taxBrackets : DEFAULT_TAX_BRACKETS,
+        personalAllowance: typeof personalAllowance === 'number' ? personalAllowance : DEFAULT_PERSONAL_ALLOWANCE,
+        expenseDeduction: typeof expenseDeduction === 'number' ? expenseDeduction : DEFAULT_EXPENSE_DEDUCTION,
+      };
+    } catch (error) {
+      console.error('Failed to load payroll config, using defaults:', error);
+      return {
+        standardHoursPerMonth: DEFAULT_STANDARD_HOURS,
+        taxBrackets: DEFAULT_TAX_BRACKETS,
+        personalAllowance: DEFAULT_PERSONAL_ALLOWANCE,
+        expenseDeduction: DEFAULT_EXPENSE_DEDUCTION,
+      };
+    }
   }
 
   /**
@@ -117,6 +136,30 @@ export class PayrollService {
   }
 
   /**
+   * Calculate payroll amounts given inputs and config
+   */
+  private calculatePayrollAmounts(
+    baseSalary: number,
+    overtimeHours: number,
+    bonus: number,
+    leaveDeduction: number,
+    deductions: number,
+    config: PayrollConfig
+  ) {
+    const hourlyRate = baseSalary / config.standardHoursPerMonth;
+    const overtimePay = Math.round(overtimeHours * hourlyRate * 1.5 * 100) / 100;
+    const grossPay = baseSalary + overtimePay + bonus;
+
+    // Thai PND.1 annualization: base salary × 12, OT and bonus are irregular (added as-is)
+    const annualIncome = (baseSalary * 12) + overtimePay + bonus;
+    const annualTax = this.calculateTax(annualIncome, config.taxBrackets, config.expenseDeduction, config.personalAllowance);
+    const monthlyTax = Math.round(annualTax / 12 * 100) / 100;
+    const netPay = Math.round((grossPay - leaveDeduction - deductions - monthlyTax) * 100) / 100;
+
+    return { overtimePay, monthlyTax, netPay };
+  }
+
+  /**
    * Create payroll record for an employee
    */
   async createPayroll(data: CreatePayrollData): Promise<PayrollRecord> {
@@ -131,6 +174,16 @@ export class PayrollService {
       deductions = 0,
     } = data;
 
+    // Validate baseSalary
+    if (!baseSalary || baseSalary <= 0) {
+      throw new Error('Base salary must be greater than 0');
+    }
+
+    // Validate date range
+    if (payPeriodEnd <= payPeriodStart) {
+      throw new Error('Pay period end date must be after start date');
+    }
+
     // Check for duplicate payroll (same employee + same pay period, excluding Cancelled)
     const existing = await query(
       `SELECT id FROM payroll_records
@@ -141,24 +194,10 @@ export class PayrollService {
       throw new Error('A payroll record already exists for this employee and pay period');
     }
 
-    // Load payroll config
     const config = await this.getPayrollConfig();
-
-    // Calculate overtime pay (1.5x hourly rate)
-    const hourlyRate = baseSalary / config.standardHoursPerMonth;
-    const overtimePay = Math.round(overtimeHours * hourlyRate * 1.5 * 100) / 100;
-
-    // Calculate gross pay
-    const grossPay = baseSalary + overtimePay + bonus;
-
-    // Calculate tax (Thai PND.1 annualization method)
-    // Base salary is regular income (x12), OT and bonus are irregular income (added as-is)
-    const annualIncome = (baseSalary * 12) + overtimePay + bonus;
-    const annualTax = this.calculateTax(annualIncome, config.taxBrackets, config.expenseDeduction, config.personalAllowance);
-    const monthlyTax = Math.round(annualTax / 12 * 100) / 100;
-
-    // Calculate net pay (gross - leave deduction - other deductions - tax)
-    const netPay = Math.round((grossPay - leaveDeduction - deductions - monthlyTax) * 100) / 100;
+    const { overtimePay, monthlyTax, netPay } = this.calculatePayrollAmounts(
+      baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config
+    );
 
     const result = await query(
       `INSERT INTO payroll_records
@@ -166,6 +205,48 @@ export class PayrollService {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [employeeId, payPeriodStart, payPeriodEnd, baseSalary, overtimeHours, overtimePay, bonus, leaveDeduction, deductions, monthlyTax, netPay]
+    );
+
+    return this.mapRowToPayroll(result.rows[0]);
+  }
+
+  /**
+   * Update an existing payroll record (only Pending records can be edited)
+   */
+  async updatePayroll(id: string, data: UpdatePayrollData): Promise<PayrollRecord> {
+    // Get existing record
+    const existing = await this.getPayrollById(id);
+    if (!existing) {
+      throw new Error('Payroll record not found');
+    }
+    if (existing.status !== 'Pending') {
+      throw new Error('Only Pending payroll records can be edited');
+    }
+
+    const baseSalary = data.baseSalary ?? existing.baseSalary;
+    const overtimeHours = data.overtimeHours ?? existing.overtimeHours;
+    const bonus = data.bonus ?? existing.bonus;
+    const leaveDeduction = data.leaveDeduction ?? existing.leaveDeduction;
+    const deductions = data.deductions ?? existing.deductions;
+    const notes = data.notes !== undefined ? data.notes : existing.notes;
+
+    if (baseSalary <= 0) {
+      throw new Error('Base salary must be greater than 0');
+    }
+
+    const config = await this.getPayrollConfig();
+    const { overtimePay, monthlyTax, netPay } = this.calculatePayrollAmounts(
+      baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config
+    );
+
+    const result = await query(
+      `UPDATE payroll_records
+       SET base_salary = $1, overtime_hours = $2, overtime_pay = $3, bonus = $4,
+           leave_deduction = $5, deductions = $6, tax_amount = $7, net_pay = $8,
+           notes = $9, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $10
+       RETURNING *`,
+      [baseSalary, overtimeHours, overtimePay, bonus, leaveDeduction, deductions, monthlyTax, netPay, notes, id]
     );
 
     return this.mapRowToPayroll(result.rows[0]);
@@ -234,7 +315,7 @@ export class PayrollService {
        SET status = $1, payment_date = $2, payment_method = $3, updated_at = CURRENT_TIMESTAMP
        WHERE id = $4
        RETURNING *`,
-      [status, paymentDate, paymentMethod, id]
+      [status, paymentDate, paymentMethod || null, id]
     );
 
     if (result.rows.length === 0) {
@@ -299,82 +380,115 @@ export class PayrollService {
 
     const previousSalary = currentResult.rows.length > 0 ? currentResult.rows[0].base_salary : null;
 
-    // Insert new salary history
-    const result = await query(
-      `INSERT INTO salary_history (employee_id, effective_date, base_salary, previous_salary, change_reason, approved_by)
-       VALUES ($1, CURRENT_DATE, $2, $3, $4, $5)
-       RETURNING *`,
-      [employeeId, newSalary, previousSalary, changeReason, approvedById]
-    );
+    // Insert new salary history and update employees.salary
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    return this.mapRowToSalaryHistory(result.rows[0]);
+      const result = await client.query(
+        `INSERT INTO salary_history (employee_id, effective_date, base_salary, previous_salary, change_reason, approved_by)
+         VALUES ($1, CURRENT_DATE, $2, $3, $4, $5)
+         RETURNING *`,
+        [employeeId, newSalary, previousSalary, changeReason, approvedById]
+      );
+
+      // Keep employees.salary in sync
+      await client.query(
+        'UPDATE employees SET salary = $1 WHERE id = $2',
+        [newSalary, employeeId]
+      );
+
+      await client.query('COMMIT');
+      return this.mapRowToSalaryHistory(result.rows[0]);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   /**
    * Batch create payroll records for all active employees
-   * Skips employees that already have a non-cancelled record for the same period
+   * Wrapped in a transaction for atomicity
    */
   async batchCreatePayroll(payPeriodStart: string, payPeriodEnd: string): Promise<{
     created: number;
     skipped: number;
     skippedEmployees: string[];
   }> {
-    // Get all active employees with their salary (from employees table or salary_history)
-    const employees = await query(
-      `SELECT e.id, e.name, COALESCE(e.salary, sh.base_salary, 0) AS salary
-       FROM employees e
-       LEFT JOIN LATERAL (
-         SELECT base_salary FROM salary_history
-         WHERE employee_id = e.id
-         ORDER BY effective_date DESC LIMIT 1
-       ) sh ON true
-       WHERE e.status = 'Active'`
-    );
-
-    // Load payroll config once for all employees
-    const config = await this.getPayrollConfig();
-
-    let created = 0;
-    let skipped = 0;
-    const skippedEmployees: string[] = [];
-
-    for (const emp of employees.rows) {
-      const salary = parseFloat(emp.salary);
-      if (!salary || salary <= 0) {
-        skipped++;
-        skippedEmployees.push(`${emp.name} (no salary)`);
-        continue;
-      }
-
-      // Check if payroll already exists for this period (excluding Cancelled)
-      const existing = await query(
-        `SELECT id FROM payroll_records
-         WHERE employee_id = $1 AND pay_period_start = $2 AND pay_period_end = $3 AND status != 'Cancelled'`,
-        [emp.id, payPeriodStart, payPeriodEnd]
-      );
-
-      if (existing.rows.length > 0) {
-        skipped++;
-        skippedEmployees.push(`${emp.name} (already exists)`);
-        continue;
-      }
-
-      // Calculate payroll (base salary only — OT/bonus are 0, admin edits later; tax recalculated on edit)
-      const annualIncome = salary * 12;
-      const annualTax = this.calculateTax(annualIncome, config.taxBrackets, config.expenseDeduction, config.personalAllowance);
-      const monthlyTax = Math.round(annualTax / 12 * 100) / 100;
-      const netPay = Math.round((salary - monthlyTax) * 100) / 100;
-
-      await query(
-        `INSERT INTO payroll_records
-         (employee_id, pay_period_start, pay_period_end, base_salary, overtime_hours, overtime_pay, bonus, leave_deduction, deductions, tax_amount, net_pay)
-         VALUES ($1, $2, $3, $4, 0, 0, 0, 0, 0, $5, $6)`,
-        [emp.id, payPeriodStart, payPeriodEnd, salary, monthlyTax, netPay]
-      );
-      created++;
+    // Validate date range
+    if (payPeriodEnd <= payPeriodStart) {
+      throw new Error('Pay period end date must be after start date');
     }
 
-    return { created, skipped, skippedEmployees };
+    // Load payroll config once
+    const config = await this.getPayrollConfig();
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Get all active employees with their salary (from employees table or salary_history)
+      const employees = await client.query(
+        `SELECT e.id, e.name, COALESCE(e.salary, sh.base_salary, 0) AS salary
+         FROM employees e
+         LEFT JOIN LATERAL (
+           SELECT base_salary FROM salary_history
+           WHERE employee_id = e.id
+           ORDER BY effective_date DESC LIMIT 1
+         ) sh ON true
+         WHERE e.status = 'Active'`
+      );
+
+      let created = 0;
+      let skipped = 0;
+      const skippedEmployees: string[] = [];
+
+      for (const emp of employees.rows) {
+        const salary = parseFloat(emp.salary);
+        if (!salary || salary <= 0) {
+          skipped++;
+          skippedEmployees.push(`${emp.name} (no salary)`);
+          continue;
+        }
+
+        // Check if payroll already exists for this period (excluding Cancelled)
+        const existing = await client.query(
+          `SELECT id FROM payroll_records
+           WHERE employee_id = $1 AND pay_period_start = $2 AND pay_period_end = $3 AND status != 'Cancelled'`,
+          [emp.id, payPeriodStart, payPeriodEnd]
+        );
+
+        if (existing.rows.length > 0) {
+          skipped++;
+          skippedEmployees.push(`${emp.name} (already exists)`);
+          continue;
+        }
+
+        // Calculate payroll (base salary only — OT/bonus are 0, admin edits later)
+        const annualIncome = salary * 12;
+        const annualTax = this.calculateTax(annualIncome, config.taxBrackets, config.expenseDeduction, config.personalAllowance);
+        const monthlyTax = Math.round(annualTax / 12 * 100) / 100;
+        const netPay = Math.round((salary - monthlyTax) * 100) / 100;
+
+        await client.query(
+          `INSERT INTO payroll_records
+           (employee_id, pay_period_start, pay_period_end, base_salary, overtime_hours, overtime_pay, bonus, leave_deduction, deductions, tax_amount, net_pay)
+           VALUES ($1, $2, $3, $4, 0, 0, 0, 0, 0, $5, $6)`,
+          [emp.id, payPeriodStart, payPeriodEnd, salary, monthlyTax, netPay]
+        );
+        created++;
+      }
+
+      await client.query('COMMIT');
+      return { created, skipped, skippedEmployees };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   /**

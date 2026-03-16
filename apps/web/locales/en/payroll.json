@@ -189,6 +189,12 @@
     "noSalaryHistory": "No salary history available for this employee."
   },
 
+  "success": {
+    "created": "Payroll record created successfully.",
+    "updated": "Payroll record updated successfully.",
+    "statusUpdated": "Payroll status updated successfully."
+  },
+
   "errors": {
     "fetchFailed": "Failed to load payroll data. Please try again.",
     "createFailed": "Failed to create payroll record.",
