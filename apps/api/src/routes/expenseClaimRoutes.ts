@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { apiLimiter } from '../middlewares/security';
-import { authenticateToken, requireAdmin } from '../middlewares/auth';
+import { authenticateToken, requireAdmin, requireAdminOrFinance } from '../middlewares/auth';
 import { cacheMiddleware, invalidateCache } from '../middlewares/cache';
 import { receiptUpload, generateStorageKey, getFileBuffer } from '../middlewares/upload';
 import { storageService } from '../services/StorageService';
@@ -37,8 +37,8 @@ router.get('/summary/:employeeId', cacheMiddleware(60000), async (req, res) => {
     }
 });
 
-// GET /api/expense-claims/admin/summary - Admin summary (requireAdmin, cached 60s)
-router.get('/admin/summary', requireAdmin, cacheMiddleware(60000), async (_req, res) => {
+// GET /api/expense-claims/admin/summary - Admin/Finance summary (cached 60s)
+router.get('/admin/summary', requireAdminOrFinance, cacheMiddleware(60000), async (_req, res) => {
     try {
         const summary = await ExpenseClaimService.getAdminSummary();
         res.json(summary);
@@ -124,8 +124,8 @@ router.put('/:id', apiLimiter, receiptUpload.single('receipt'), invalidateCache(
     }
 });
 
-// PATCH /api/expense-claims/:id - Update status (requireAdmin)
-router.patch('/:id', requireAdmin, apiLimiter, invalidateCache('/api/expense-claims'), async (req, res) => {
+// PATCH /api/expense-claims/:id - Update status (requireAdmin or Finance)
+router.patch('/:id', requireAdminOrFinance, apiLimiter, invalidateCache('/api/expense-claims'), async (req, res) => {
     try {
         const { id } = req.params;
         const { status, rejectionReason, approverEmployeeId } = req.body;
@@ -182,8 +182,8 @@ router.post('/:id/cancel', apiLimiter, invalidateCache('/api/expense-claims'), a
     }
 });
 
-// DELETE /api/expense-claims/:id - Delete (requireAdmin)
-router.delete('/:id', requireAdmin, apiLimiter, invalidateCache('/api/expense-claims'), async (req, res) => {
+// DELETE /api/expense-claims/:id - Delete (requireAdmin or Finance)
+router.delete('/:id', requireAdminOrFinance, apiLimiter, invalidateCache('/api/expense-claims'), async (req, res) => {
     try {
         const { id } = req.params;
         await ExpenseClaimService.deleteExpenseClaim(id);
@@ -208,7 +208,7 @@ router.get('/:id/receipt', async (req, res) => {
             return;
         }
 
-        if (user.role !== 'HR_ADMIN' && user.employeeId !== claim.employeeId) {
+        if (user.role !== 'HR_ADMIN' && user.role !== 'FINANCE' && user.employeeId !== claim.employeeId) {
             res.status(403).json({ error: 'Access denied' });
             return;
         }

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authenticateToken, requireAdmin, requireOwnerOrAdmin } from '../middlewares/auth';
+import { authenticateToken, requireAdmin, requireAdminOrFinance, requireOwnerOrAdmin } from '../middlewares/auth';
 import PayrollService from '../services/PayrollService';
 import { generatePayslipPdf } from '../services/PayslipPdfService';
 import { query } from '../db';
@@ -15,7 +15,7 @@ router.use(authenticateToken);
  * Batch create payroll records for all active employees (admin only)
  * NOTE: Must be defined BEFORE / to avoid route shadowing
  */
-router.post('/batch', requireAdmin, apiLimiter, async (req: Request, res: Response) => {
+router.post('/batch', requireAdminOrFinance, apiLimiter, async (req: Request, res: Response) => {
   try {
     const { payPeriodStart, payPeriodEnd } = req.body;
 
@@ -36,7 +36,7 @@ router.post('/batch', requireAdmin, apiLimiter, async (req: Request, res: Respon
  * POST /api/payroll
  * Create a new payroll record (admin only)
  */
-router.post('/', requireAdmin, apiLimiter, async (req: Request, res: Response) => {
+router.post('/', requireAdminOrFinance, apiLimiter, async (req: Request, res: Response) => {
   try {
     const payroll = await PayrollService.createPayroll(req.body);
     res.status(201).json(payroll);
@@ -90,11 +90,93 @@ router.get(
 );
 
 /**
+ * GET /api/payroll/export
+ * Export payroll records as CSV (admin or finance only)
+ */
+router.get('/export', requireAdminOrFinance, async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    // Build query
+    let sql = `SELECT pr.*, e.name AS employee_name, e.department, e.employee_code
+               FROM payroll_records pr
+               LEFT JOIN employees e ON pr.employee_id = e.id
+               WHERE pr.status != 'Cancelled'`;
+    const values: string[] = [];
+
+    if (startDate && endDate) {
+      sql += ` AND pr.pay_period_start >= $1 AND pr.pay_period_end <= $2`;
+      values.push(startDate as string, endDate as string);
+    }
+    sql += ` ORDER BY pr.pay_period_start DESC, e.name ASC`;
+
+    const result = await query(sql, values);
+
+    // Build CSV
+    const headers = [
+      'Employee Code', 'Employee Name', 'Department',
+      'Pay Period Start', 'Pay Period End', 'Status',
+      'Base Salary', 'Overtime Hours', 'Overtime Pay', 'Bonus',
+      'SSF Employee', 'SSF Employer', 'PVF Employee', 'PVF Employer',
+      'Tax Amount', 'Leave Deduction', 'Other Deductions', 'Net Pay',
+      'Payment Date', 'Payment Method'
+    ];
+
+    const rows = result.rows.map(row => [
+      row.employee_code || '',
+      row.employee_name || '',
+      row.department || '',
+      row.pay_period_start,
+      row.pay_period_end,
+      row.status,
+      row.base_salary,
+      row.overtime_hours,
+      row.overtime_pay,
+      row.bonus,
+      row.ssf_employee || 0,
+      row.ssf_employer || 0,
+      row.pvf_employee || 0,
+      row.pvf_employer || 0,
+      row.tax_amount,
+      row.leave_deduction || 0,
+      row.deductions,
+      row.net_pay,
+      row.payment_date || '',
+      row.payment_method || '',
+    ]);
+
+    // CSV escape helper
+    const escapeCsv = (val: any) => {
+      const str = String(val ?? '');
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const csv = [
+      headers.map(escapeCsv).join(','),
+      ...rows.map(row => row.map(escapeCsv).join(','))
+    ].join('\n');
+
+    // Add BOM for Excel UTF-8 compatibility
+    const bom = '\uFEFF';
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="payroll-export-${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(bom + csv);
+  } catch (error) {
+    console.error('Payroll export error:', error);
+    res.status(500).json({ error: 'Failed to export payroll' });
+  }
+});
+
+/**
  * GET /api/payroll/all
  * Get all payroll records (admin only)
  * NOTE: Must be defined BEFORE /:id to avoid route shadowing
  */
-router.get('/all', requireAdmin, async (req: Request, res: Response) => {
+router.get('/all', requireAdminOrFinance, async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string, 10) || 50;
     const payroll = await PayrollService.getAllPayroll(limit);
@@ -110,7 +192,7 @@ router.get('/all', requireAdmin, async (req: Request, res: Response) => {
  * Get payroll summary for a period (admin only)
  * NOTE: Must be defined BEFORE /:id to avoid route shadowing
  */
-router.get('/reports/summary', requireAdmin, async (req: Request, res: Response) => {
+router.get('/reports/summary', requireAdminOrFinance, async (req: Request, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
 
@@ -192,8 +274,8 @@ router.get('/:id/payslip', async (req: Request, res: Response) => {
     const record = await PayrollService.getPayrollById(id);
     if (!record) return res.status(404).json({ error: 'Payroll record not found' });
 
-    // Check access: owner or admin
-    if (user?.role !== 'HR_ADMIN' && user?.employeeId !== record.employeeId) {
+    // Check access: owner, admin, or finance
+    if (user?.role !== 'HR_ADMIN' && user?.role !== 'FINANCE' && user?.employeeId !== record.employeeId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -221,7 +303,7 @@ router.get('/:id/payslip', async (req: Request, res: Response) => {
  * PUT /api/payroll/:id
  * Update an existing payroll record (admin only, only Pending records)
  */
-router.put('/:id', requireAdmin, apiLimiter, async (req: Request, res: Response) => {
+router.put('/:id', requireAdminOrFinance, apiLimiter, async (req: Request, res: Response) => {
   try {
     const payroll = await PayrollService.updatePayroll(req.params.id, req.body);
     res.json(payroll);
@@ -248,8 +330,9 @@ router.get('/:id', async (req: Request, res: Response) => {
     // Check if user can access this payroll
     const isOwner = req.user?.employeeId === payroll.employeeId;
     const isAdmin = req.user?.role === 'HR_ADMIN';
+    const isFinance = req.user?.role === 'FINANCE';
 
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isAdmin && !isFinance) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -264,7 +347,7 @@ router.get('/:id', async (req: Request, res: Response) => {
  * PATCH /api/payroll/:id/status
  * Update payroll status (admin only)
  */
-router.patch('/:id/status', requireAdmin, apiLimiter, async (req: Request, res: Response) => {
+router.patch('/:id/status', requireAdminOrFinance, apiLimiter, async (req: Request, res: Response) => {
   try {
     const { status, paymentMethod } = req.body;
 

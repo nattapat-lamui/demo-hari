@@ -261,6 +261,29 @@ export const Payroll: React.FC = () => {
     }
   };
 
+  // Export payroll as CSV
+  const handleExportCSV = async () => {
+    try {
+      const token = getAuthToken();
+      const url = `${BASE_URL}/payroll/export`;
+
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Export failed');
+
+      const blob = await res.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `payroll-export-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(downloadUrl);
+    } catch {
+      showToast(t('errors.exportFailed'), 'error');
+    }
+  };
+
   // Payslip detail expand
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -283,6 +306,13 @@ export const Payroll: React.FC = () => {
             >
               <Settings size={18} />
               {t('settings.title')}
+            </button>
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 px-4 py-2.5 border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium rounded-lg text-sm hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+            >
+              <Download size={18} />
+              {t('admin.actions.exportCSV')}
             </button>
             <button
               onClick={() => { setShowBatch(true); setBatchResult(null); }}

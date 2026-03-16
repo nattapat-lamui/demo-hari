@@ -260,6 +260,12 @@
     "offline": "Offline",
     "messagePlaceholder": "Set a status message..."
   },
+  "roles": {
+    "HR_ADMIN": "HR Admin",
+    "EMPLOYEE": "Employee",
+    "MANAGER": "Manager",
+    "FINANCE": "Finance"
+  },
   "noData": "No data available",
   "auto": "Auto",
   "placeholders": {

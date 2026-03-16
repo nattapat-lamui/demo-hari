@@ -13,7 +13,7 @@ export class LeaveRequestController {
             const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
 
             const sanitize = (requests: LeaveRequest[]) => {
-                if (user?.role === 'HR_ADMIN') return requests;
+                if (user?.role === 'HR_ADMIN' || user?.role === 'MANAGER') return requests;
                 return requests.map((r) =>
                     r.employeeId === user?.employeeId
                         ? r
@@ -256,7 +256,7 @@ export class LeaveRequestController {
                 return;
             }
 
-            if (user.role !== 'HR_ADMIN' && user.employeeId !== leaveRequest.employeeId) {
+            if (user.role !== 'HR_ADMIN' && user.role !== 'MANAGER' && user.employeeId !== leaveRequest.employeeId) {
                 res.status(403).json({ error: 'Access denied' });
                 return;
             }

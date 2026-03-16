@@ -37,7 +37,8 @@
       "confirmPaid": "Are you sure you want to mark this payroll as paid?",
       "downloadPayslip": "Download Payslip",
       "markAsCancelled": "Cancel",
-      "confirmCancel": "Are you sure you want to cancel this payroll record?"
+      "confirmCancel": "Are you sure you want to cancel this payroll record?",
+      "exportCSV": "Export CSV"
     },
     "leaveRequests": {
       "title": "Leave Requests",

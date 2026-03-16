@@ -258,6 +258,12 @@
     "offline": "ออฟไลน์",
     "messagePlaceholder": "ตั้งข้อความสถานะ..."
   },
+  "roles": {
+    "HR_ADMIN": "ผู้ดูแลระบบ HR",
+    "EMPLOYEE": "พนักงาน",
+    "MANAGER": "ผู้จัดการ",
+    "FINANCE": "การเงิน"
+  },
   "noData": "ไม่มีข้อมูล",
   "auto": "อัตโนมัติ",
   "placeholders": {

@@ -23,7 +23,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     () => (sessionStorage.getItem('viewMode') as 'admin' | 'employee') || 'admin'
   );
 
-  const isAdminView = user?.role === 'HR_ADMIN' && viewMode === 'admin';
+  const isAdminView = ['HR_ADMIN', 'MANAGER', 'FINANCE'].includes(user?.role || '') && viewMode === 'admin';
 
   const toggleViewMode = () => {
     setViewMode(prev => {

@@ -354,8 +354,8 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             )}
           </div>
 
-          {/* Admin/Employee Toggle — only for HR_ADMIN */}
-          {user?.role === "HR_ADMIN" && (
+          {/* Admin/Employee Toggle — for HR_ADMIN, MANAGER, FINANCE */}
+          {['HR_ADMIN', 'MANAGER', 'FINANCE'].includes(user?.role || '') && (
             <button
               onClick={() => {
                 toggleViewMode();
@@ -531,7 +531,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             </div>
             {renderProfileContent()}
             {/* Admin toggle for mobile */}
-            {user?.role === "HR_ADMIN" && (
+            {['HR_ADMIN', 'MANAGER', 'FINANCE'].includes(user?.role || '') && (
               <div className="px-5 py-3 border-t border-border-light dark:border-border-dark">
                 <button
                   onClick={() => {

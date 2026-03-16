@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type UserRole = 'HR_ADMIN' | 'EMPLOYEE';
+export type UserRole = 'HR_ADMIN' | 'EMPLOYEE' | 'MANAGER' | 'FINANCE';
 
 // Availability Status Types
 export type AvailabilityStatus = 'online' | 'busy' | 'away' | 'offline';
@@ -342,7 +342,7 @@ export interface BackendUser {
   employeeId: string;
   email: string;
   name: string;
-  role: 'HR_ADMIN' | 'EMPLOYEE';
+  role: 'HR_ADMIN' | 'EMPLOYEE' | 'MANAGER' | 'FINANCE';
   avatar?: string;
   jobTitle?: string;
   department?: string;

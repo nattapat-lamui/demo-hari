@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import LeaveRequestController from '../controllers/LeaveRequestController';
 import { apiLimiter, validateLeaveRequest, validateRequest } from '../middlewares/security';
-import { authenticateToken, requireAdmin } from '../middlewares/auth';
+import { authenticateToken, requireAdmin, requireAdminOrManager } from '../middlewares/auth';
 import { cacheMiddleware, invalidateCache } from '../middlewares/cache';
 import { medicalCertUpload } from '../middlewares/upload';
 
@@ -35,13 +35,13 @@ router.put(
 );
 
 // PATCH /api/leave-requests/:id - Update leave request status (HR_ADMIN only - for approval/rejection)
-router.patch('/:id', requireAdmin, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.updateLeaveRequest.bind(LeaveRequestController));
+router.patch('/:id', requireAdminOrManager, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.updateLeaveRequest.bind(LeaveRequestController));
 
 // POST /api/leave-requests/:id/cancel - Cancel own leave request (any authenticated user)
 router.post('/:id/cancel', apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.cancelLeaveRequest.bind(LeaveRequestController));
 
 // POST /api/leave-requests/:id/cancel-decision - Approve/reject cancel request (HR_ADMIN only)
-router.post('/:id/cancel-decision', requireAdmin, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.handleCancelDecision.bind(LeaveRequestController));
+router.post('/:id/cancel-decision', requireAdminOrManager, apiLimiter, invalidateCache('/api/leave-requests'), LeaveRequestController.handleCancelDecision.bind(LeaveRequestController));
 
 // GET /api/leave-requests/:id/medical-certificate - Download medical certificate
 router.get('/:id/medical-certificate', LeaveRequestController.downloadMedicalCertificate.bind(LeaveRequestController));

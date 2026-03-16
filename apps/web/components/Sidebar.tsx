@@ -24,6 +24,8 @@ import { useLeaveRequests } from '../hooks/queries';
 export const Sidebar: React.FC = () => {
   const { t } = useTranslation('common');
   const { user, logout, isAdminView } = useAuth();
+  const isHrAdmin = user?.role === 'HR_ADMIN';
+  const isManager = user?.role === 'MANAGER';
   const { data: leaveRequests = [] } = useLeaveRequests();
   const hasPendingLeaves = isAdminView && leaveRequests.some(
     (r) => r.status === 'Pending' || r.status === 'Cancel Requested',
@@ -33,9 +35,9 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     { icon: <LayoutDashboard size={20} />, label: t('nav.dashboard'), path: '/', allowed: true },
 
-    // Admin Attendance — right below Dashboard for admins
-    { icon: <Clock size={20} />, label: t('nav.attendance'), path: '/admin-attendance', allowed: isAdminView },
-    { icon: <Calendar size={20} />, label: t('nav.leaveRequests'), path: '/leave-requests', allowed: isAdminView },
+    // Admin Attendance — for HR_ADMIN and MANAGER
+    { icon: <Clock size={20} />, label: t('nav.attendance'), path: '/admin-attendance', allowed: isAdminView && (isHrAdmin || isManager) },
+    { icon: <Calendar size={20} />, label: t('nav.leaveRequests'), path: '/leave-requests', allowed: isAdminView && (isHrAdmin || isManager) },
 
     // Employee Focused Tools
     { icon: <Clock size={20} />, label: t('nav.attendance'), path: '/attendance', allowed: !isAdminView },
@@ -49,9 +51,9 @@ export const Sidebar: React.FC = () => {
     { icon: <GitGraph size={20} />, label: t('nav.orgChart'), path: '/org-chart', allowed: true },
     { icon: <ClipboardList size={20} />, label: t('nav.onboarding'), path: '/onboarding', allowed: true },
 
-    // Admin Specific
-    { icon: <ShieldCheck size={20} />, label: t('nav.compliance'), path: '/compliance', allowed: isAdminView },
-    { icon: <BarChart2 size={20} />, label: t('nav.analytics'), path: '/analytics', allowed: isAdminView },
+    // Admin Specific — HR_ADMIN only
+    { icon: <ShieldCheck size={20} />, label: t('nav.compliance'), path: '/compliance', allowed: isAdminView && isHrAdmin },
+    { icon: <BarChart2 size={20} />, label: t('nav.analytics'), path: '/analytics', allowed: isAdminView && isHrAdmin },
 
     { icon: <FileText size={20} />, label: t('nav.documents'), path: '/documents', allowed: true },
   ];

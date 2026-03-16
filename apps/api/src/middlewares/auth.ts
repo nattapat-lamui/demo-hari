@@ -13,7 +13,7 @@ if (process.env.JWT_SECRET.length < 32) {
 const JWT_SECRET: string = process.env.JWT_SECRET;
 
 // User roles
-export type UserRole = 'HR_ADMIN' | 'EMPLOYEE';
+export type UserRole = 'HR_ADMIN' | 'EMPLOYEE' | 'MANAGER' | 'FINANCE';
 
 // Extend Express Request to include user
 declare global {
@@ -82,6 +82,16 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
  * Middleware to check if user is HR Admin
  */
 export const requireAdmin = requireRole('HR_ADMIN');
+
+/**
+ * Middleware to check if user is HR Admin or Finance
+ */
+export const requireAdminOrFinance = requireRole('HR_ADMIN', 'FINANCE');
+
+/**
+ * Middleware to check if user is HR Admin or Manager
+ */
+export const requireAdminOrManager = requireRole('HR_ADMIN', 'MANAGER');
 
 /**
  * Middleware to check if user can access their own resource or is admin
