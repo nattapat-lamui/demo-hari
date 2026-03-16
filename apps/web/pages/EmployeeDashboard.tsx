@@ -285,7 +285,7 @@ export const EmployeeDashboard: React.FC = () => {
           </div>
           <span className="font-medium text-text-light dark:text-text-dark">{t('common:nav.expenses')}</span>
         </button>
-          <button
+        <button
           onClick={() => navigate('/surveys')}
           className="flex items-center justify-center gap-3 p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
         >
@@ -293,6 +293,15 @@ export const EmployeeDashboard: React.FC = () => {
             <MessageSquare size={20} />
           </div>
           <span className="font-medium text-text-light dark:text-text-dark">{t('dashboard:employee.surveys')}</span>
+        </button>
+        <button
+          onClick={() => navigate('/payroll')}
+          className="flex items-center justify-center gap-3 p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
+        >
+          <div className="p-2 bg-blue-100 dark:bg-blue-900/20 text-blue-500 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors">
+            <Wallet size={20} />
+          </div>
+          <span className="font-medium text-text-light dark:text-text-dark">{t('common:nav.payroll')}</span>
         </button>
       </div>
 
