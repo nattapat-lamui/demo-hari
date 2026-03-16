@@ -130,6 +130,12 @@ export const queryKeys = {
     checks: () => [...queryKeys.compliance.all, 'checks'] as const,
     auditLogs: (filters: Record<string, unknown>) => [...queryKeys.compliance.all, 'auditLogs', filters] as const,
   },
+  expenseClaims: {
+    all: ['expenseClaims'] as const,
+    list: () => ['expenseClaims', 'list'] as const,
+    summary: (id: string) => ['expenseClaims', 'summary', id] as const,
+    adminSummary: () => ['expenseClaims', 'adminSummary'] as const,
+  },
   userStatuses: {
     all: ['userStatuses'] as const,
     list: () => ['userStatuses', 'list'] as const,

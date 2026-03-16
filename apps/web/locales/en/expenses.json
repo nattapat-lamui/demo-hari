@@ -1,0 +1,84 @@
+{
+  "page": {
+    "title": "Expense Management",
+    "subtitle": "Submit and track your expense reports",
+    "adminTitle": "Expense Claims",
+    "adminSubtitle": "Review and manage employee expense claims"
+  },
+  "stats": {
+    "totalReimbursed": "Total Reimbursed",
+    "pendingApproval": "Pending Approval",
+    "thisMonth": "This Month",
+    "reports": "reports",
+    "pendingCount": "Pending Claims",
+    "pendingAmount": "Pending Amount",
+    "monthReimbursed": "Reimbursed This Month"
+  },
+  "form": {
+    "newExpense": "New Expense",
+    "editExpense": "Edit Expense",
+    "title": "Title",
+    "titlePlaceholder": "e.g., Client lunch meeting",
+    "category": "Category",
+    "selectCategory": "Select category",
+    "amount": "Amount (฿)",
+    "amountPlaceholder": "e.g., 1500",
+    "expenseDate": "Expense Date",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe the expense...",
+    "receipt": "Receipt",
+    "uploadReceipt": "Upload Receipt (PDF, JPG, PNG)",
+    "changeReceipt": "Change Receipt",
+    "submit": "Submit Expense",
+    "update": "Update Expense"
+  },
+  "categories": {
+    "Travel": "Travel",
+    "Meals": "Meals",
+    "Equipment": "Equipment",
+    "Office Supplies": "Office Supplies",
+    "Training": "Training",
+    "Other": "Other"
+  },
+  "status": {
+    "Pending": "Pending",
+    "Approved": "Approved",
+    "Rejected": "Rejected",
+    "Reimbursed": "Reimbursed",
+    "Cancelled": "Cancelled"
+  },
+  "actions": {
+    "approve": "Approve",
+    "reject": "Reject",
+    "markReimbursed": "Mark Reimbursed",
+    "cancel": "Cancel Claim",
+    "edit": "Edit",
+    "viewReceipt": "View Receipt",
+    "delete": "Delete"
+  },
+  "toast": {
+    "createSuccess": "Expense claim submitted successfully",
+    "updateSuccess": "Expense claim updated",
+    "cancelSuccess": "Expense claim cancelled",
+    "approveSuccess": "Expense claim approved",
+    "rejectSuccess": "Expense claim rejected",
+    "reimbursedSuccess": "Marked as reimbursed",
+    "deleteSuccess": "Expense claim deleted",
+    "createFailed": "Failed to submit expense claim",
+    "fillRequired": "Please fill in all required fields",
+    "titleRequired": "Title is required",
+    "categoryRequired": "Please select a category",
+    "amountRequired": "Please enter a valid amount",
+    "dateRequired": "Please select a date"
+  },
+  "empty": "No expense claims yet",
+  "emptyAdmin": "No expense claims to review",
+  "history": "Expense History",
+  "allClaims": "All Claims",
+  "rejectReason": "Rejection Reason",
+  "rejectReasonPlaceholder": "Reason for rejection...",
+  "confirmCancel": "Are you sure you want to cancel this expense claim?",
+  "confirmDelete": "Are you sure you want to delete this expense claim? This cannot be undone.",
+  "noReceipt": "No receipt attached",
+  "filterAll": "All Statuses"
+}

@@ -95,6 +95,12 @@ export const onboardingDocUpload = multer({
     fileFilter: documentFilter,
 });
 
+export const receiptUpload = multer({
+    storage: useR2 ? multer.memoryStorage() : buildDiskStorage('expense-receipts'),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    fileFilter: documentFilter,
+});
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

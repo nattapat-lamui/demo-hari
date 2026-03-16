@@ -36,6 +36,7 @@ import analyticsRoutes from "./routes/analyticsRoutes";
 import adminAttendanceRoutes from "./routes/adminAttendanceRoutes";
 import surveyRoutes from "./routes/surveyRoutes";
 import complianceRoutes from "./routes/complianceRoutes";
+import expenseClaimRoutes from "./routes/expenseClaimRoutes";
 import { runMigration } from "./scripts/init-db";
 import { initAttendanceScheduler } from "./services/AttendanceScheduler";
 
@@ -160,6 +161,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/admin/attendance", adminAttendanceRoutes);
 app.use("/api/surveys", surveyRoutes);
 app.use("/api/compliance", complianceRoutes);
+app.use("/api/expense-claims", expenseClaimRoutes);
 
 // Backward compatibility for leave balances endpoint
 // Old: GET /api/leave-balances/:employeeId

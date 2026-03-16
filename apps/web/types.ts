@@ -658,6 +658,50 @@ export interface AdminAttendanceFilters {
 // System Config Types
 // ============================================================================
 
+// ============================================================================
+// Expense Claim Types
+// ============================================================================
+
+export type ExpenseClaimStatus = 'Pending' | 'Approved' | 'Rejected' | 'Reimbursed' | 'Cancelled';
+
+export const EXPENSE_CATEGORIES = [
+  'Travel', 'Meals', 'Equipment', 'Office Supplies', 'Training', 'Other',
+] as const;
+
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+
+export interface ExpenseClaim {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  avatar: string;
+  title: string;
+  category: ExpenseCategory;
+  amount: number;
+  currency: string;
+  expenseDate: string;
+  description?: string;
+  receiptPath?: string;
+  status: ExpenseClaimStatus;
+  rejectionReason?: string;
+  approverEmployeeId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ExpenseSummary {
+  totalReimbursed: number;
+  pendingAmount: number;
+  pendingCount: number;
+  thisMonthCount: number;
+}
+
+export interface AdminExpenseSummary {
+  pendingCount: number;
+  pendingAmount: number;
+  monthReimbursed: number;
+}
+
 export interface LeaveQuotaConfig {
   type: string;
   total: number;

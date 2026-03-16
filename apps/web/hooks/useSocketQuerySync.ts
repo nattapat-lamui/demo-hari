@@ -39,6 +39,17 @@ export const useSocketQuerySync = () => {
       );
     };
 
+    // -- Expense Claim events --
+    const onExpenseCreated = () => {
+      qc.invalidateQueries({ queryKey: queryKeys.expenseClaims.all });
+    };
+    const onExpenseUpdated = () => {
+      qc.invalidateQueries({ queryKey: queryKeys.expenseClaims.all });
+    };
+    const onExpenseDeleted = () => {
+      qc.invalidateQueries({ queryKey: queryKeys.expenseClaims.all });
+    };
+
     // -- Attendance events --
     const onAttendanceUpdated = () => {
       qc.invalidateQueries({ queryKey: queryKeys.attendance.all });
@@ -62,6 +73,9 @@ export const useSocketQuerySync = () => {
     socket.on('attendance:updated', onAttendanceUpdated);
     socket.on('notification:new', onNotificationNew);
     socket.on('notification:refresh', onNotificationRefresh);
+    socket.on('expense-claim:created', onExpenseCreated);
+    socket.on('expense-claim:updated', onExpenseUpdated);
+    socket.on('expense-claim:deleted', onExpenseDeleted);
 
     return () => {
       socket.off('leave-request:created', onLeaveCreated);
@@ -70,6 +84,9 @@ export const useSocketQuerySync = () => {
       socket.off('attendance:updated', onAttendanceUpdated);
       socket.off('notification:new', onNotificationNew);
       socket.off('notification:refresh', onNotificationRefresh);
+      socket.off('expense-claim:created', onExpenseCreated);
+      socket.off('expense-claim:updated', onExpenseUpdated);
+      socket.off('expense-claim:deleted', onExpenseDeleted);
     };
   }, [qc]);
 };

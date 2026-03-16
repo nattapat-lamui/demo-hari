@@ -55,6 +55,7 @@
     "survey": "Survey",
     "attendance": "Attendance",
     "payroll": "Payroll",
+    "expenses": "Expenses",
     "announcements": "Announcements"
   },
   "sidebar": {

@@ -195,6 +195,25 @@ export const emitNotificationRefresh = () => {
   }
 };
 
+// Event emitters for expense claims
+export const emitExpenseClaimCreated = (expenseClaim: any) => {
+  if (io) {
+    io.emit('expense-claim:created', expenseClaim);
+  }
+};
+
+export const emitExpenseClaimUpdated = (expenseClaim: any) => {
+  if (io) {
+    io.emit('expense-claim:updated', expenseClaim);
+  }
+};
+
+export const emitExpenseClaimDeleted = (id: string) => {
+  if (io) {
+    io.emit('expense-claim:deleted', { id });
+  }
+};
+
 // Event emitters for attendance
 export const emitAttendanceUpdated = (attendance: any) => {
   if (io) {

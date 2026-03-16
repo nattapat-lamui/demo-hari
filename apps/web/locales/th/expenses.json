@@ -1,0 +1,84 @@
+{
+  "page": {
+    "title": "จัดการค่าใช้จ่าย",
+    "subtitle": "ส่งและติดตามรายงานค่าใช้จ่าย",
+    "adminTitle": "คำขอเบิกค่าใช้จ่าย",
+    "adminSubtitle": "ตรวจสอบและจัดการคำขอเบิกค่าใช้จ่ายของพนักงาน"
+  },
+  "stats": {
+    "totalReimbursed": "เบิกจ่ายแล้วทั้งหมด",
+    "pendingApproval": "รออนุมัติ",
+    "thisMonth": "เดือนนี้",
+    "reports": "รายการ",
+    "pendingCount": "คำขอที่รออนุมัติ",
+    "pendingAmount": "ยอดรออนุมัติ",
+    "monthReimbursed": "เบิกจ่ายเดือนนี้"
+  },
+  "form": {
+    "newExpense": "เบิกค่าใช้จ่ายใหม่",
+    "editExpense": "แก้ไขค่าใช้จ่าย",
+    "title": "หัวข้อ",
+    "titlePlaceholder": "เช่น ค่าอาหารกลางวันกับลูกค้า",
+    "category": "หมวดหมู่",
+    "selectCategory": "เลือกหมวดหมู่",
+    "amount": "จำนวนเงิน (฿)",
+    "amountPlaceholder": "เช่น 1500",
+    "expenseDate": "วันที่เกิดค่าใช้จ่าย",
+    "description": "รายละเอียด",
+    "descriptionPlaceholder": "อธิบายค่าใช้จ่าย...",
+    "receipt": "ใบเสร็จ",
+    "uploadReceipt": "อัปโหลดใบเสร็จ (PDF, JPG, PNG)",
+    "changeReceipt": "เปลี่ยนใบเสร็จ",
+    "submit": "ส่งคำขอเบิก",
+    "update": "อัปเดตคำขอเบิก"
+  },
+  "categories": {
+    "Travel": "ค่าเดินทาง",
+    "Meals": "ค่าอาหาร",
+    "Equipment": "ค่าอุปกรณ์",
+    "Office Supplies": "อุปกรณ์สำนักงาน",
+    "Training": "ค่าฝึกอบรม",
+    "Other": "อื่น ๆ"
+  },
+  "status": {
+    "Pending": "รอดำเนินการ",
+    "Approved": "อนุมัติแล้ว",
+    "Rejected": "ถูกปฏิเสธ",
+    "Reimbursed": "เบิกจ่ายแล้ว",
+    "Cancelled": "ยกเลิกแล้ว"
+  },
+  "actions": {
+    "approve": "อนุมัติ",
+    "reject": "ปฏิเสธ",
+    "markReimbursed": "เบิกจ่ายแล้ว",
+    "cancel": "ยกเลิก",
+    "edit": "แก้ไข",
+    "viewReceipt": "ดูใบเสร็จ",
+    "delete": "ลบ"
+  },
+  "toast": {
+    "createSuccess": "ส่งคำขอเบิกค่าใช้จ่ายสำเร็จ",
+    "updateSuccess": "อัปเดตคำขอเบิกแล้ว",
+    "cancelSuccess": "ยกเลิกคำขอเบิกแล้ว",
+    "approveSuccess": "อนุมัติคำขอเบิกแล้ว",
+    "rejectSuccess": "ปฏิเสธคำขอเบิกแล้ว",
+    "reimbursedSuccess": "เบิกจ่ายเรียบร้อย",
+    "deleteSuccess": "ลบคำขอเบิกแล้ว",
+    "createFailed": "ไม่สามารถส่งคำขอเบิกได้",
+    "fillRequired": "กรุณากรอกข้อมูลที่จำเป็นให้ครบ",
+    "titleRequired": "กรุณากรอกหัวข้อ",
+    "categoryRequired": "กรุณาเลือกหมวดหมู่",
+    "amountRequired": "กรุณากรอกจำนวนเงินที่ถูกต้อง",
+    "dateRequired": "กรุณาเลือกวันที่"
+  },
+  "empty": "ยังไม่มีคำขอเบิกค่าใช้จ่าย",
+  "emptyAdmin": "ไม่มีคำขอเบิกให้ตรวจสอบ",
+  "history": "ประวัติการเบิกค่าใช้จ่าย",
+  "allClaims": "คำขอทั้งหมด",
+  "rejectReason": "เหตุผลที่ปฏิเสธ",
+  "rejectReasonPlaceholder": "ระบุเหตุผลที่ปฏิเสธ...",
+  "confirmCancel": "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำขอเบิกนี้?",
+  "confirmDelete": "คุณแน่ใจหรือไม่ว่าต้องการลบคำขอเบิกนี้? ไม่สามารถกู้คืนได้",
+  "noReceipt": "ไม่มีใบเสร็จแนบ",
+  "filterAll": "ทุกสถานะ"
+}

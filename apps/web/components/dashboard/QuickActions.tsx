@@ -64,16 +64,15 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         </div>
         <span className="font-medium text-text-light dark:text-text-dark">{t('dashboard:quickActions.timeOff')}</span>
       </button>
-      {/* Expenses - Hidden until implemented */}
-      {/* <button
+      <button
         onClick={() => navigate('/expenses')}
         className="flex items-center justify-center gap-3 p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
       >
         <div className="p-2 bg-accent-green/10 text-accent-green rounded-lg group-hover:bg-accent-green group-hover:text-white transition-colors">
           <DollarSign size={20} />
         </div>
-        <span className="font-medium text-text-light dark:text-text-dark">Expenses</span>
-      </button> */}
+        <span className="font-medium text-text-light dark:text-text-dark">{t('common:nav.expenses')}</span>
+      </button>
       <button
         onClick={() => navigate('/surveys')}
         className="flex items-center justify-center gap-3 p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
