@@ -18,7 +18,16 @@
     "role": "ตำแหน่ง",
     "onboarding": "การรับเข้าทำงาน",
     "location": "สถานที่",
-    "moreActions": "การดำเนินการเพิ่มเติม"
+    "moreActions": "การดำเนินการเพิ่มเติม",
+    "importCSV": "นำเข้า CSV",
+    "downloadTemplate": "ดาวน์โหลดตัวอย่าง",
+    "importTitle": "นำเข้าพนักงานจาก CSV",
+    "importDesc": "อัปโหลดไฟล์ CSV ที่มีคอลัมน์: name, email, role, department, joinDate, salary",
+    "selectFile": "เลือกไฟล์ CSV",
+    "importing": "กำลังนำเข้า...",
+    "importComplete": "นำเข้าเสร็จสิ้น",
+    "created": "สร้างแล้ว",
+    "skipped": "ข้ามแล้ว"
   },
   "detail": {
     "back": "กลับ",

@@ -13,6 +13,10 @@ export interface PayrollRecord {
   leaveDeduction: number;
   deductions: number;
   taxAmount: number;
+  ssfEmployee: number;
+  ssfEmployer: number;
+  pvfEmployee: number;
+  pvfEmployer: number;
   netPay: number;
   status: 'Pending' | 'Processed' | 'Paid' | 'Cancelled';
   paymentDate: string | null;
@@ -67,12 +71,20 @@ const DEFAULT_TAX_BRACKETS = [
 const DEFAULT_STANDARD_HOURS = 160;
 const DEFAULT_PERSONAL_ALLOWANCE = 60000;
 const DEFAULT_EXPENSE_DEDUCTION = 100000;
+const DEFAULT_SSF_RATE = 0.05;
+const DEFAULT_SSF_MAX_BASE = 15000;
+const DEFAULT_PVF_EMPLOYEE_RATE = 0.03;
+const DEFAULT_PVF_EMPLOYER_RATE = 0.03;
 
 interface PayrollConfig {
   standardHoursPerMonth: number;
   taxBrackets: { min: number; max: number; rate: number }[];
   personalAllowance: number;
   expenseDeduction: number;
+  ssfRate: number;
+  ssfMaxBase: number;
+  pvfEmployeeRate: number;
+  pvfEmployerRate: number;
 }
 
 export class PayrollService {
@@ -81,11 +93,15 @@ export class PayrollService {
    */
   private async getPayrollConfig(): Promise<PayrollConfig> {
     try {
-      const [standardHours, taxBrackets, personalAllowance, expenseDeduction] = await Promise.all([
+      const [standardHours, taxBrackets, personalAllowance, expenseDeduction, ssfRate, ssfMaxBase, pvfEmployeeRate, pvfEmployerRate] = await Promise.all([
         SystemConfigService.getConfigValue('payroll', 'standard_hours_per_month', DEFAULT_STANDARD_HOURS),
         SystemConfigService.getConfigValue('payroll', 'tax_brackets', DEFAULT_TAX_BRACKETS),
         SystemConfigService.getConfigValue('payroll', 'personal_allowance', DEFAULT_PERSONAL_ALLOWANCE),
         SystemConfigService.getConfigValue('payroll', 'expense_deduction', DEFAULT_EXPENSE_DEDUCTION),
+        SystemConfigService.getConfigValue('payroll', 'ssf_rate', DEFAULT_SSF_RATE),
+        SystemConfigService.getConfigValue('payroll', 'ssf_max_base', DEFAULT_SSF_MAX_BASE),
+        SystemConfigService.getConfigValue('payroll', 'pvf_employee_rate', DEFAULT_PVF_EMPLOYEE_RATE),
+        SystemConfigService.getConfigValue('payroll', 'pvf_employer_rate', DEFAULT_PVF_EMPLOYER_RATE),
       ]);
 
       return {
@@ -93,6 +109,10 @@ export class PayrollService {
         taxBrackets: Array.isArray(taxBrackets) && taxBrackets.length > 0 ? taxBrackets : DEFAULT_TAX_BRACKETS,
         personalAllowance: typeof personalAllowance === 'number' ? personalAllowance : DEFAULT_PERSONAL_ALLOWANCE,
         expenseDeduction: typeof expenseDeduction === 'number' ? expenseDeduction : DEFAULT_EXPENSE_DEDUCTION,
+        ssfRate: typeof ssfRate === 'number' ? ssfRate : DEFAULT_SSF_RATE,
+        ssfMaxBase: typeof ssfMaxBase === 'number' ? ssfMaxBase : DEFAULT_SSF_MAX_BASE,
+        pvfEmployeeRate: typeof pvfEmployeeRate === 'number' ? pvfEmployeeRate : DEFAULT_PVF_EMPLOYEE_RATE,
+        pvfEmployerRate: typeof pvfEmployerRate === 'number' ? pvfEmployerRate : DEFAULT_PVF_EMPLOYER_RATE,
       };
     } catch (error) {
       console.error('Failed to load payroll config, using defaults:', error);
@@ -101,6 +121,10 @@ export class PayrollService {
         taxBrackets: DEFAULT_TAX_BRACKETS,
         personalAllowance: DEFAULT_PERSONAL_ALLOWANCE,
         expenseDeduction: DEFAULT_EXPENSE_DEDUCTION,
+        ssfRate: DEFAULT_SSF_RATE,
+        ssfMaxBase: DEFAULT_SSF_MAX_BASE,
+        pvfEmployeeRate: DEFAULT_PVF_EMPLOYEE_RATE,
+        pvfEmployerRate: DEFAULT_PVF_EMPLOYER_RATE,
       };
     }
   }
@@ -150,13 +174,23 @@ export class PayrollService {
     const overtimePay = Math.round(overtimeHours * hourlyRate * 1.5 * 100) / 100;
     const grossPay = baseSalary + overtimePay + bonus;
 
+    // SSF: employee and employer each pay ssfRate on min(baseSalary, ssfMaxBase)
+    const ssfBase = Math.min(baseSalary, config.ssfMaxBase);
+    const ssfEmployee = Math.round(ssfBase * config.ssfRate * 100) / 100;
+    const ssfEmployer = Math.round(ssfBase * config.ssfRate * 100) / 100;
+
+    // PVF: employee and employer contributions based on full base salary
+    const pvfEmployee = Math.round(baseSalary * config.pvfEmployeeRate * 100) / 100;
+    const pvfEmployer = Math.round(baseSalary * config.pvfEmployerRate * 100) / 100;
+
     // Thai PND.1 annualization: base salary × 12, OT and bonus are irregular (added as-is)
-    const annualIncome = (baseSalary * 12) + overtimePay + bonus;
+    // SSF and PVF employee contributions are tax-deductible in Thailand
+    const annualIncome = (baseSalary * 12) + overtimePay + bonus - (ssfEmployee * 12) - (pvfEmployee * 12);
     const annualTax = this.calculateTax(annualIncome, config.taxBrackets, config.expenseDeduction, config.personalAllowance);
     const monthlyTax = Math.round(annualTax / 12 * 100) / 100;
-    const netPay = Math.round((grossPay - leaveDeduction - deductions - monthlyTax) * 100) / 100;
+    const netPay = Math.round((grossPay - leaveDeduction - deductions - monthlyTax - ssfEmployee - pvfEmployee) * 100) / 100;
 
-    return { overtimePay, monthlyTax, netPay };
+    return { overtimePay, monthlyTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer };
   }
 
   /**
@@ -195,16 +229,16 @@ export class PayrollService {
     }
 
     const config = await this.getPayrollConfig();
-    const { overtimePay, monthlyTax, netPay } = this.calculatePayrollAmounts(
+    const { overtimePay, monthlyTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = this.calculatePayrollAmounts(
       baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config
     );
 
     const result = await query(
       `INSERT INTO payroll_records
-       (employee_id, pay_period_start, pay_period_end, base_salary, overtime_hours, overtime_pay, bonus, leave_deduction, deductions, tax_amount, net_pay)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       (employee_id, pay_period_start, pay_period_end, base_salary, overtime_hours, overtime_pay, bonus, leave_deduction, deductions, tax_amount, ssf_employee, ssf_employer, pvf_employee, pvf_employer, net_pay)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
-      [employeeId, payPeriodStart, payPeriodEnd, baseSalary, overtimeHours, overtimePay, bonus, leaveDeduction, deductions, monthlyTax, netPay]
+      [employeeId, payPeriodStart, payPeriodEnd, baseSalary, overtimeHours, overtimePay, bonus, leaveDeduction, deductions, monthlyTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay]
     );
 
     return this.mapRowToPayroll(result.rows[0]);
@@ -235,18 +269,19 @@ export class PayrollService {
     }
 
     const config = await this.getPayrollConfig();
-    const { overtimePay, monthlyTax, netPay } = this.calculatePayrollAmounts(
+    const { overtimePay, monthlyTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = this.calculatePayrollAmounts(
       baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config
     );
 
     const result = await query(
       `UPDATE payroll_records
        SET base_salary = $1, overtime_hours = $2, overtime_pay = $3, bonus = $4,
-           leave_deduction = $5, deductions = $6, tax_amount = $7, net_pay = $8,
-           notes = $9, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $10
+           leave_deduction = $5, deductions = $6, tax_amount = $7,
+           ssf_employee = $8, ssf_employer = $9, pvf_employee = $10, pvf_employer = $11,
+           net_pay = $12, notes = $13, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $14
        RETURNING *`,
-      [baseSalary, overtimeHours, overtimePay, bonus, leaveDeduction, deductions, monthlyTax, netPay, notes, id]
+      [baseSalary, overtimeHours, overtimePay, bonus, leaveDeduction, deductions, monthlyTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay, notes, id]
     );
 
     return this.mapRowToPayroll(result.rows[0]);
@@ -467,16 +502,15 @@ export class PayrollService {
         }
 
         // Calculate payroll (base salary only — OT/bonus are 0, admin edits later)
-        const annualIncome = salary * 12;
-        const annualTax = this.calculateTax(annualIncome, config.taxBrackets, config.expenseDeduction, config.personalAllowance);
-        const monthlyTax = Math.round(annualTax / 12 * 100) / 100;
-        const netPay = Math.round((salary - monthlyTax) * 100) / 100;
+        const { monthlyTax: batchTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = this.calculatePayrollAmounts(
+          salary, 0, 0, 0, 0, config
+        );
 
         await client.query(
           `INSERT INTO payroll_records
-           (employee_id, pay_period_start, pay_period_end, base_salary, overtime_hours, overtime_pay, bonus, leave_deduction, deductions, tax_amount, net_pay)
-           VALUES ($1, $2, $3, $4, 0, 0, 0, 0, 0, $5, $6)`,
-          [emp.id, payPeriodStart, payPeriodEnd, salary, monthlyTax, netPay]
+           (employee_id, pay_period_start, pay_period_end, base_salary, overtime_hours, overtime_pay, bonus, leave_deduction, deductions, tax_amount, ssf_employee, ssf_employer, pvf_employee, pvf_employer, net_pay)
+           VALUES ($1, $2, $3, $4, 0, 0, 0, 0, 0, $5, $6, $7, $8, $9, $10)`,
+          [emp.id, payPeriodStart, payPeriodEnd, salary, batchTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay]
         );
         created++;
       }
@@ -516,6 +550,10 @@ export class PayrollService {
       leaveDeduction: parseFloat(row.leave_deduction as string) || 0,
       deductions: parseFloat(row.deductions as string),
       taxAmount: parseFloat(row.tax_amount as string),
+      ssfEmployee: parseFloat(row.ssf_employee as string) || 0,
+      ssfEmployer: parseFloat(row.ssf_employer as string) || 0,
+      pvfEmployee: parseFloat(row.pvf_employee as string) || 0,
+      pvfEmployer: parseFloat(row.pvf_employer as string) || 0,
       netPay: parseFloat(row.net_pay as string),
       status: row.status as PayrollRecord['status'],
       paymentDate: row.payment_date as string | null,

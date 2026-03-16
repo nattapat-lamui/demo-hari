@@ -19,8 +19,10 @@ import {
   Trash2,
   PlusCircle,
   X,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getAuthToken, BASE_URL } from '../lib/api';
 import { Toast } from '../components/Toast';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { DatePicker } from '../components/DatePicker';
@@ -239,6 +241,26 @@ export const Payroll: React.FC = () => {
     }
   };
 
+  // Download payslip as PDF
+  const handleDownloadPayslip = async (id: string) => {
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`${BASE_URL}/payroll/${id}/payslip`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'payslip.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast(t('errors.exportFailed'), 'error');
+    }
+  };
+
   // Payslip detail expand
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -410,6 +432,10 @@ export const Payroll: React.FC = () => {
                         <DetailItem label={t('form.leaveDeduction')} value={`-฿${formatCurrency(record.leaveDeduction)}`} negative />
                         <DetailItem label={t('form.otherDeductions')} value={`-฿${formatCurrency(record.deductions)}`} negative />
                         <DetailItem label={t('form.taxAmount')} value={`-฿${formatCurrency(record.taxAmount)}`} negative />
+                        <DetailItem label={t('employee.detail.ssfEmployee')} value={`-฿${formatCurrency(record.ssfEmployee)}`} negative />
+                        <DetailItem label={t('employee.detail.pvfEmployee')} value={`-฿${formatCurrency(record.pvfEmployee)}`} negative />
+                        <DetailItem label={t('employee.detail.ssfEmployer')} value={`฿${formatCurrency(record.ssfEmployer)}`} />
+                        <DetailItem label={t('employee.detail.pvfEmployer')} value={`฿${formatCurrency(record.pvfEmployer)}`} />
                         <DetailItem label={t('form.netPay')} value={`฿${formatCurrency(record.netPay)}`} bold />
                         <DetailItem label={t('form.paymentMethod')} value={record.paymentMethod || '-'} />
                       </div>
@@ -418,6 +444,16 @@ export const Payroll: React.FC = () => {
                           {t('employee.detail.paidOn')}: {formatDate(record.paymentDate)}
                         </p>
                       )}
+                      {/* Download payslip button */}
+                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+                        <button
+                          onClick={() => handleDownloadPayslip(record.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                        >
+                          <Download size={14} />
+                          {t('employee.downloadPayslip')}
+                        </button>
+                      </div>
                       {/* Admin: action buttons */}
                       {isAdminView && record.status !== 'Paid' && record.status !== 'Cancelled' && (
                         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border-light dark:border-border-dark">
@@ -668,6 +704,57 @@ export const Payroll: React.FC = () => {
                   type="number"
                   value={settingsForm.expenseDeduction}
                   onChange={(e) => setSettingsForm((f) => f ? { ...f, expenseDeduction: parseFloat(e.target.value) || 0 } : f)}
+                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* SSF Rate */}
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('settings.ssfRate')}</label>
+                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">{t('settings.ssfRateDesc')}</p>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={settingsForm.ssfRate}
+                  onChange={(e) => setSettingsForm((f) => f ? { ...f, ssfRate: parseFloat(e.target.value) || 0 } : f)}
+                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* SSF Max Base */}
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('settings.ssfMaxBase')}</label>
+                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">{t('settings.ssfMaxBaseDesc')}</p>
+                <input
+                  type="number"
+                  value={settingsForm.ssfMaxBase}
+                  onChange={(e) => setSettingsForm((f) => f ? { ...f, ssfMaxBase: parseFloat(e.target.value) || 0 } : f)}
+                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* PVF Employee Rate */}
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('settings.pvfEmployeeRate')}</label>
+                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">{t('settings.pvfEmployeeRateDesc')}</p>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={settingsForm.pvfEmployeeRate}
+                  onChange={(e) => setSettingsForm((f) => f ? { ...f, pvfEmployeeRate: parseFloat(e.target.value) || 0 } : f)}
+                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* PVF Employer Rate */}
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">{t('settings.pvfEmployerRate')}</label>
+                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">{t('settings.pvfEmployerRateDesc')}</p>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={settingsForm.pvfEmployerRate}
+                  onChange={(e) => setSettingsForm((f) => f ? { ...f, pvfEmployerRate: parseFloat(e.target.value) || 0 } : f)}
                   className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>

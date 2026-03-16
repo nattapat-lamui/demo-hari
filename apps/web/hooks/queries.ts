@@ -1190,6 +1190,10 @@ export interface PayrollRecord {
   leaveDeduction: number;
   deductions: number;
   taxAmount: number;
+  ssfEmployee: number;
+  ssfEmployer: number;
+  pvfEmployee: number;
+  pvfEmployer: number;
   netPay: number;
   status: 'Pending' | 'Processed' | 'Paid' | 'Cancelled';
   paymentDate: string | null;
@@ -1333,6 +1337,10 @@ export interface PayrollSettings {
   taxBrackets: { min: number; max: number; rate: number }[];
   personalAllowance: number;
   expenseDeduction: number;
+  ssfRate: number;
+  ssfMaxBase: number;
+  pvfEmployeeRate: number;
+  pvfEmployerRate: number;
 }
 
 export const usePayrollSettings = (enabled: boolean = true) => {
@@ -1345,12 +1353,20 @@ export const usePayrollSettings = (enabled: boolean = true) => {
         taxBrackets: [],
         personalAllowance: 60000,
         expenseDeduction: 100000,
+        ssfRate: 0.05,
+        ssfMaxBase: 15000,
+        pvfEmployeeRate: 0.03,
+        pvfEmployerRate: 0.03,
       };
       for (const c of configs) {
         if (c.key === 'standard_hours_per_month') settings.standardHoursPerMonth = parseFloat(c.value);
         if (c.key === 'tax_brackets') settings.taxBrackets = JSON.parse(c.value);
         if (c.key === 'personal_allowance') settings.personalAllowance = parseFloat(c.value);
         if (c.key === 'expense_deduction') settings.expenseDeduction = parseFloat(c.value);
+        if (c.key === 'ssf_rate') settings.ssfRate = parseFloat(c.value);
+        if (c.key === 'ssf_max_base') settings.ssfMaxBase = parseFloat(c.value);
+        if (c.key === 'pvf_employee_rate') settings.pvfEmployeeRate = parseFloat(c.value);
+        if (c.key === 'pvf_employer_rate') settings.pvfEmployerRate = parseFloat(c.value);
       }
       return settings;
     },
@@ -1367,6 +1383,10 @@ export const useUpdatePayrollSettings = () => {
         api.put('/configs/payroll/tax_brackets', { value: JSON.stringify(settings.taxBrackets) } as unknown as Record<string, unknown>),
         api.put('/configs/payroll/personal_allowance', { value: String(settings.personalAllowance) } as unknown as Record<string, unknown>),
         api.put('/configs/payroll/expense_deduction', { value: String(settings.expenseDeduction) } as unknown as Record<string, unknown>),
+        api.put('/configs/payroll/ssf_rate', { value: String(settings.ssfRate) } as unknown as Record<string, unknown>),
+        api.put('/configs/payroll/ssf_max_base', { value: String(settings.ssfMaxBase) } as unknown as Record<string, unknown>),
+        api.put('/configs/payroll/pvf_employee_rate', { value: String(settings.pvfEmployeeRate) } as unknown as Record<string, unknown>),
+        api.put('/configs/payroll/pvf_employer_rate', { value: String(settings.pvfEmployerRate) } as unknown as Record<string, unknown>),
       ]);
     },
     onSuccess: () => {

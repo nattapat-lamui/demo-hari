@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MoreHorizontal, Mail, MapPin, Eye, User, Briefcase, Users, Calendar, Check, Circle, CheckCircle2, Clock, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Mail, MapPin, Eye, User, Briefcase, Users, Calendar, Check, Circle, CheckCircle2, Clock, Pencil, Trash2, Upload, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +13,7 @@ import { useUserStatus } from '../contexts/UserStatusContext';
 import { Pagination } from '../components/Pagination';
 import { FilterToolbar } from '../components/FilterToolbar';
 import QueryErrorState from '../components/QueryErrorState';
+import { BASE_URL, getAuthToken } from '../lib/api';
 
 export const Employees: React.FC = () => {
   const { t } = useTranslation(['employees', 'common']);
@@ -67,6 +68,12 @@ export const Employees: React.FC = () => {
   const actionMenuRef = useRef<HTMLDivElement>(null);
   const deleteEmployeeMutation = useDeleteEmployee();
 
+  // CSV Import state
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importResult, setImportResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
   // Close action menu on click outside
   useEffect(() => {
     if (!actionMenuId) return;
@@ -87,6 +94,29 @@ export const Employees: React.FC = () => {
       showToast(t('employees:toast.employeeDeleted'), 'success');
     } catch (error) {
       showToast((error as Error).message || t('employees:toast.deleteFailed'), 'error');
+    }
+  };
+
+  const handleImportCSV = async () => {
+    if (!importFile) return;
+    setIsImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', importFile);
+      const token = getAuthToken();
+      const res = await fetch(`${BASE_URL}/employees/import-csv`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setImportResult(data);
+      refetchEmployees();
+    } catch (err) {
+      showToast((err as Error).message, 'error');
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -197,6 +227,12 @@ export const Employees: React.FC = () => {
         <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">{t('employees:list.title')}</h1>
         {isAdmin && (
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => { setIsImportOpen(true); setImportFile(null); setImportResult(null); }}
+              className="px-5 py-2.5 border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium rounded-lg text-sm shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
+            >
+              <Upload size={16} /> {t('employees:list.importCSV')}
+            </button>
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="px-5 py-2.5 bg-primary text-white font-medium rounded-lg text-sm shadow-sm hover:bg-primary-hover transition-colors"
@@ -588,6 +624,69 @@ export const Employees: React.FC = () => {
               className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2 disabled:opacity-50"
             >
               <Trash2 size={16} /> {deleteEmployeeMutation.isPending ? t('employees:modals.deleting') : t('employees:modals.delete')}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Import CSV Modal */}
+      <Modal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        title={t('employees:list.importTitle')}
+        maxWidth="lg"
+      >
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
+            {t('employees:list.importDesc')}
+          </p>
+          <a
+            href={`${BASE_URL}/employees/csv-template`}
+            className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+          >
+            <Download size={16} /> {t('employees:list.downloadTemplate')}
+          </a>
+          <div>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+              {t('employees:list.selectFile')}
+            </label>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => { setImportFile(e.target.files?.[0] || null); setImportResult(null); }}
+              className="w-full text-sm text-text-light dark:text-text-dark file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+            />
+          </div>
+
+          {importResult && (
+            <div className="rounded-lg border border-border-light dark:border-border-dark p-4 space-y-2">
+              <p className="font-semibold text-text-light dark:text-text-dark">{t('employees:list.importComplete')}</p>
+              <div className="flex gap-4 text-sm">
+                <span className="text-green-600 dark:text-green-400">{t('employees:list.created')}: {importResult.created}</span>
+                <span className="text-yellow-600 dark:text-yellow-400">{t('employees:list.skipped')}: {importResult.skipped}</span>
+              </div>
+              {importResult.errors.length > 0 && (
+                <ul className="text-sm text-red-600 dark:text-red-400 list-disc list-inside max-h-40 overflow-y-auto">
+                  {importResult.errors.map((err, i) => <li key={i}>{err}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setIsImportOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-text-muted-light hover:text-text-light dark:text-text-muted-dark dark:hover:text-text-dark"
+            >
+              {t('employees:modals.cancel')}
+            </button>
+            <button
+              onClick={handleImportCSV}
+              disabled={!importFile || isImporting}
+              className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50"
+            >
+              <Upload size={16} /> {isImporting ? t('employees:list.importing') : t('employees:list.importCSV')}
             </button>
           </div>
         </div>

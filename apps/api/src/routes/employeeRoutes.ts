@@ -4,7 +4,7 @@ import EmployeeLeaveQuotaController from '../controllers/EmployeeLeaveQuotaContr
 import { apiLimiter, validateEmployeeCreation, validateRequest } from '../middlewares/security';
 import { authenticateToken, requireAdmin } from '../middlewares/auth';
 import { cacheMiddleware, invalidateCache } from '../middlewares/cache';
-import { avatarUpload, generateStorageKey, getFileBuffer } from '../middlewares/upload';
+import { avatarUpload, csvUpload, generateStorageKey, getFileBuffer } from '../middlewares/upload';
 import { storageService } from '../services/StorageService';
 import { getStatusMap } from '../socket';
 import { query } from '../db';
@@ -68,6 +68,89 @@ router.patch('/:id/availability-status', apiLimiter, async (req, res) => {
         console.error('Error updating availability status:', error);
         res.status(500).json({ error: 'Failed to update availability status' });
     }
+});
+
+// POST /api/employees/import-csv - Bulk import employees from CSV (HR_ADMIN only)
+router.post('/import-csv', requireAdmin, apiLimiter, csvUpload.single('file'), invalidateCache('/api/employees'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No CSV file uploaded' });
+        }
+
+        const { parse } = await import('csv-parse/sync');
+        const buffer = req.file.buffer || require('fs').readFileSync(req.file.path);
+        const csvContent = buffer.toString('utf-8');
+
+        const records = parse(csvContent, {
+            columns: true,
+            skip_empty_lines: true,
+            trim: true,
+            bom: true,
+        }) as Record<string, string>[];
+
+        if (records.length === 0) {
+            return res.status(400).json({ error: 'CSV file is empty' });
+        }
+
+        // Validate required columns
+        const requiredColumns = ['name', 'email', 'role', 'department'];
+        const headers = Object.keys(records[0]);
+        const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+        if (missingColumns.length > 0) {
+            return res.status(400).json({ error: `Missing required columns: ${missingColumns.join(', ')}` });
+        }
+
+        const results = { created: 0, skipped: 0, errors: [] as string[] };
+        const EmployeeService = (await import('../services/EmployeeService')).default;
+
+        for (let i = 0; i < records.length; i++) {
+            const row = records[i];
+            const rowNum = i + 2; // +2 because row 1 is header, data starts at row 2
+
+            try {
+                if (!row.name?.trim() || !row.email?.trim()) {
+                    results.errors.push(`Row ${rowNum}: Missing name or email`);
+                    results.skipped++;
+                    continue;
+                }
+
+                await EmployeeService.createEmployee({
+                    name: row.name.trim(),
+                    email: row.email.trim(),
+                    role: row.role?.trim() || 'Employee',
+                    department: row.department?.trim() || 'General',
+                    joinDate: row.joinDate?.trim() || row.join_date?.trim() || new Date().toISOString().split('T')[0],
+                    salary: row.salary ? parseFloat(row.salary) : undefined,
+                });
+                results.created++;
+            } catch (error: any) {
+                const msg = error.message || 'Unknown error';
+                if (msg.includes('already exists')) {
+                    results.errors.push(`Row ${rowNum}: ${row.email} already exists`);
+                } else {
+                    results.errors.push(`Row ${rowNum}: ${msg}`);
+                }
+                results.skipped++;
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Import complete: ${results.created} created, ${results.skipped} skipped`,
+            ...results,
+        });
+    } catch (error: any) {
+        console.error('CSV import error:', error);
+        res.status(500).json({ error: error.message || 'Failed to import CSV' });
+    }
+});
+
+// GET /api/employees/csv-template - Download CSV template
+router.get('/csv-template', authenticateToken, (_req, res) => {
+    const template = 'name,email,role,department,joinDate,salary\nJohn Doe,john@example.com,Software Engineer,Engineering,2024-01-15,50000\n';
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="employee-import-template.csv"');
+    res.send(template);
 });
 
 // GET /api/employees - Get all employees (any authenticated user) - cached for 30s

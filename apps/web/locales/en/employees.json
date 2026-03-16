@@ -18,7 +18,16 @@
     "role": "Role",
     "onboarding": "Onboarding",
     "location": "Location",
-    "moreActions": "More Actions"
+    "moreActions": "More Actions",
+    "importCSV": "Import CSV",
+    "downloadTemplate": "Download Template",
+    "importTitle": "Import Employees from CSV",
+    "importDesc": "Upload a CSV file with columns: name, email, role, department, joinDate, salary",
+    "selectFile": "Select CSV File",
+    "importing": "Importing...",
+    "importComplete": "Import Complete",
+    "created": "Created",
+    "skipped": "Skipped"
   },
   "detail": {
     "back": "Back",

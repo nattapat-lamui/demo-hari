@@ -101,6 +101,21 @@ export const receiptUpload = multer({
     fileFilter: documentFilter,
 });
 
+const csvFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+    const allowed = ['text/csv', 'application/vnd.ms-excel', 'text/plain'];
+    if (allowed.includes(file.mimetype) || file.originalname.endsWith('.csv')) {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type. Only CSV files are allowed.'));
+    }
+};
+
+export const csvUpload = multer({
+    storage: useR2 ? multer.memoryStorage() : buildDiskStorage('csv-imports'),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    fileFilter: csvFilter,
+});
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
