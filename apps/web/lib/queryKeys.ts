@@ -130,4 +130,8 @@ export const queryKeys = {
     checks: () => [...queryKeys.compliance.all, 'checks'] as const,
     auditLogs: (filters: Record<string, unknown>) => [...queryKeys.compliance.all, 'auditLogs', filters] as const,
   },
+  userStatuses: {
+    all: ['userStatuses'] as const,
+    list: () => ['userStatuses', 'list'] as const,
+  },
 } as const;

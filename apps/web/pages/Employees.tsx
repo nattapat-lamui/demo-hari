@@ -8,6 +8,8 @@ import { Toast } from '../components/Toast';
 import { Modal } from '../components/Modal';
 import { Dropdown, DropdownOption } from '../components/Dropdown';
 import { Avatar } from '../components/Avatar';
+import { StatusIndicator } from '../components/StatusIndicator';
+import { useUserStatus } from '../contexts/UserStatusContext';
 import { Pagination } from '../components/Pagination';
 import { FilterToolbar } from '../components/FilterToolbar';
 import QueryErrorState from '../components/QueryErrorState';
@@ -15,6 +17,7 @@ import QueryErrorState from '../components/QueryErrorState';
 export const Employees: React.FC = () => {
   const { t } = useTranslation(['employees', 'common']);
   const { user, isAdminView } = useAuth();
+  const { getStatus, getStatusMessage } = useUserStatus();
   const isAdmin = isAdminView;
 
   // Toast state
@@ -247,7 +250,10 @@ export const Employees: React.FC = () => {
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <Avatar src={emp.avatar} name={emp.name} size="lg" className="ring-2 ring-transparent group-hover:ring-primary/20 transition-all" />
+                      <div className="relative">
+                        <Avatar src={emp.avatar} name={emp.name} size="lg" className="ring-2 ring-transparent group-hover:ring-primary/20 transition-all" />
+                        <StatusIndicator status={getStatus(emp.id)} statusMessage={getStatusMessage(emp.id)} showTooltip size="sm" className="absolute -bottom-0.5 -right-0.5" />
+                      </div>
                       <div>
                         <p className="font-semibold text-text-light dark:text-text-dark group-hover:text-primary transition-colors">{emp.name}</p>
                         <p className="text-xs text-text-muted-light dark:text-text-muted-dark flex items-center gap-1">
@@ -344,7 +350,10 @@ export const Employees: React.FC = () => {
             >
               {/* Employee Info */}
               <div className="flex items-center gap-3 mb-3">
-                <Avatar src={emp.avatar} name={emp.name} size="xl" className="ring-2 ring-primary/20" />
+                <div className="relative">
+                  <Avatar src={emp.avatar} name={emp.name} size="xl" className="ring-2 ring-primary/20" />
+                  <StatusIndicator status={getStatus(emp.id)} statusMessage={getStatusMessage(emp.id)} showTooltip size="md" className="absolute -bottom-0.5 -right-0.5" />
+                </div>
                 <div className="flex-1">
                   <p className="font-semibold text-text-light dark:text-text-dark">{emp.name}</p>
                   <p className="text-xs text-text-muted-light dark:text-text-muted-dark flex items-center gap-1">

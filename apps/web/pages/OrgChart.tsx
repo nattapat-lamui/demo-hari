@@ -82,9 +82,11 @@ const AvatarWithFallback: React.FC<{
 };
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
+import { useUserStatus } from '../contexts/UserStatusContext';
 import { useOrg } from '../contexts/OrgContext';
 import { Toast } from '../components/Toast';
 import { Dropdown } from '../components/Dropdown';
+import { StatusIndicator } from '../components/StatusIndicator';
 
 // Helper to build tree structure
 const buildTree = (nodes: OrgNode[]): OrgNode[] => {
@@ -136,6 +138,7 @@ interface ModalState {
 export const OrgChart: React.FC = () => {
   const { t } = useTranslation(['employees', 'common']);
   const { user, isAdminView } = useAuth();
+  const { getStatus: getAvailabilityStatus } = useUserStatus();
   const isAdmin = isAdminView;
   const { nodes, addNode, updateNode, deleteNode, fetchSubTree, fetchAllNodes, isSubTreeView } =
     useOrg();
@@ -690,21 +693,15 @@ export const OrgChart: React.FC = () => {
               ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''}
               ${isAdmin && !isDragging ? 'hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5' : ''}`}
           >
-            {/* Avatar with fallback and status indicator */}
+            {/* Avatar with fallback and availability status indicator */}
             <div className="relative mb-3">
               <AvatarWithFallback src={node.avatar} name={node.name} size="md" isRoot={isRoot} />
-              {node.status && (
-                <span
-                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
-                    node.status === 'Active'
-                      ? 'bg-green-500'
-                      : node.status === 'On Leave'
-                        ? 'bg-yellow-500'
-                        : 'bg-gray-400'
-                  }`}
-                  title={node.status}
-                ></span>
-              )}
+              <StatusIndicator
+                status={getAvailabilityStatus(node.id)}
+                showTooltip
+                size="md"
+                className="absolute -bottom-0.5 -right-0.5"
+              />
             </div>
             <h3
               className={`font-bold text-text-light dark:text-text-dark text-center ${isRoot ? 'text-sm' : 'text-sm'}`}

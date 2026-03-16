@@ -2,6 +2,16 @@ import React from 'react';
 
 export type UserRole = 'HR_ADMIN' | 'EMPLOYEE';
 
+// Availability Status Types
+export type AvailabilityStatus = 'online' | 'busy' | 'away' | 'offline';
+
+export interface UserStatusInfo {
+  employeeId: string;
+  status: AvailabilityStatus;
+  statusMessage?: string;
+  updatedAt: string;
+}
+
 // Department type for strict type checking
 export const DEPARTMENTS = [
   'Human Resources',

@@ -249,6 +249,14 @@
       "yourCancelRejected": "การยกเลิกลา{{type}}ของคุณถูกปฏิเสธ การลายังคงอยู่"
     }
   },
+  "availability": {
+    "title": "ตั้งสถานะ",
+    "online": "ออนไลน์",
+    "busy": "ไม่ว่าง",
+    "away": "ไม่อยู่",
+    "offline": "ออฟไลน์",
+    "messagePlaceholder": "ตั้งข้อความสถานะ..."
+  },
   "noData": "ไม่มีข้อมูล",
   "auto": "อัตโนมัติ",
   "placeholders": {

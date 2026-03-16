@@ -25,6 +25,9 @@ import { useNotifications } from "../contexts/NotificationContext";
 import { useNavigate } from "react-router-dom";
 import { api, API_HOST } from "../lib/api";
 import { Avatar } from "./Avatar";
+import { StatusIndicator } from "./StatusIndicator";
+import { StatusPicker } from "./StatusPicker";
+import { useUserStatus } from "../contexts/UserStatusContext";
 import { translateNotifTitle, translateNotifMessage, formatNotifTimeAgo } from "../utils/notificationTranslation";
 
 const notifTypeConfig: Record<NotificationType, { icon: React.ElementType; bg: string; text: string }> = {
@@ -55,7 +58,10 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const { user, logout, isAdminView, toggleViewMode } = useAuth();
+  const { getStatus, getStatusMessage } = useUserStatus();
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useNotifications();
+  const myStatus = user?.id ? getStatus(user.id) : 'offline';
+  const myStatusMessage = user?.id ? getStatusMessage(user.id) : '';
   const notificationRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -375,12 +381,21 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-3 hover:bg-background-light dark:hover:bg-background-dark p-1.5 rounded-lg transition-colors min-h-[44px] active:bg-background-light"
             >
-              <Avatar
-                src={user?.avatar}
-                name={user?.name}
-                size="md"
-                className="ring-2 ring-primary/20"
-              />
+              <div className="relative">
+                <Avatar
+                  src={user?.avatar}
+                  name={user?.name}
+                  size="md"
+                  className="ring-2 ring-primary/20"
+                />
+                <StatusIndicator
+                  status={myStatus}
+                  statusMessage={myStatusMessage}
+                  showTooltip
+                  size="sm"
+                  className="absolute -bottom-0.5 -right-0.5"
+                />
+              </div>
               <div className="text-left hidden sm:block">
                 <p className="text-sm font-semibold text-text-light dark:text-text-dark leading-none">
                   {user?.name}
@@ -397,7 +412,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
             {/* Desktop Profile Dropdown */}
             {isProfileOpen && (
-              <div className="hidden sm:block absolute right-0 top-full mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg py-1 z-30 animate-fade-in">
+              <div className="hidden sm:block absolute right-0 top-full mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg py-1 z-30 animate-fade-in">
                 {renderProfileContent()}
               </div>
             )}
@@ -493,12 +508,19 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             </div>
             {/* Profile Header */}
             <div className="flex items-center gap-3 px-5 py-3 border-b border-border-light dark:border-border-dark">
-              <Avatar
-                src={user?.avatar}
-                name={user?.name}
-                size="lg"
-                className="ring-2 ring-primary/20"
-              />
+              <div className="relative">
+                <Avatar
+                  src={user?.avatar}
+                  name={user?.name}
+                  size="lg"
+                  className="ring-2 ring-primary/20"
+                />
+                <StatusIndicator
+                  status={myStatus}
+                  size="md"
+                  className="absolute -bottom-0.5 -right-0.5"
+                />
+              </div>
               <div>
                 <p className="text-sm font-semibold text-text-light dark:text-text-dark">{user?.name}</p>
                 <p className="text-xs text-text-muted-light dark:text-text-muted-dark flex items-center gap-1">
@@ -629,6 +651,8 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         >
           <UserIcon size={16} /> {t('header.profile')}
         </button>
+        <div className="h-px bg-border-light dark:bg-border-dark my-1"></div>
+        <StatusPicker onClose={() => setIsProfileOpen(false)} />
         <div className="h-px bg-border-light dark:bg-border-dark my-1"></div>
         <button
           onClick={() => {

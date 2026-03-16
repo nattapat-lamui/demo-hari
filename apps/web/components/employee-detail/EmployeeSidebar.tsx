@@ -4,6 +4,9 @@ import { Phone, Mail, MapPin, HeartPulse, Home } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmployeeSidebarProps } from './EmployeeDetailTypes';
 import { EmployeeAddress } from '../../types';
+import { Avatar } from '../Avatar';
+import { StatusIndicator } from '../StatusIndicator';
+import { useUserStatus } from '../../contexts/UserStatusContext';
 
 function formatAddress(address: EmployeeAddress): string {
     const parts = [
@@ -24,6 +27,7 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 }) => {
     const { t } = useTranslation(['employees', 'common']);
     const navigate = useNavigate();
+    const { getStatus, getStatusMessage } = useUserStatus();
     const { canViewSensitiveTabs } = permissions;
 
     return (
@@ -86,11 +90,20 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                                     className="flex items-center gap-3 p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors cursor-pointer"
                                     onClick={() => navigate(`/employees/${manager.id}`)}
                                 >
-                                    <img
-                                        src={manager.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(manager.name)}&background=random`}
-                                        alt={manager.name}
-                                        className="w-10 h-10 rounded-full object-cover"
-                                    />
+                                    <div className="relative">
+                                        <Avatar
+                                            src={manager.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(manager.name)}&background=random`}
+                                            name={manager.name}
+                                            size="lg"
+                                        />
+                                        <StatusIndicator
+                                            status={getStatus(manager.id)}
+                                            statusMessage={getStatusMessage(manager.id)}
+                                            showTooltip
+                                            size="sm"
+                                            className="absolute -bottom-0.5 -right-0.5"
+                                        />
+                                    </div>
                                     <div>
                                         <p className="font-medium text-text-light dark:text-text-dark text-sm">{manager.name}</p>
                                         <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{manager.role}</p>
@@ -102,16 +115,25 @@ export const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                         {directReports.length > 0 && (
                             <div>
                                 <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-2 uppercase font-semibold">{t('employees:sidebar.directReports')}</p>
-                                <div className="flex -space-x-2 overflow-hidden py-1">
+                                <div className="flex gap-1.5 py-1">
                                     {directReports.slice(0, 3).map((report) => (
-                                        <img
+                                        <div
                                             key={report.id}
-                                            className="inline-block h-8 w-8 rounded-full ring-2 ring-card-light dark:ring-card-dark cursor-pointer hover:z-10 transition-transform hover:scale-110"
-                                            src={report.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(report.name)}&background=random`}
-                                            alt={report.name}
-                                            title={report.name}
+                                            className="relative cursor-pointer transition-transform hover:scale-110"
                                             onClick={() => navigate(`/employees/${report.id}`)}
-                                        />
+                                            title={report.name}
+                                        >
+                                            <Avatar
+                                                src={report.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(report.name)}&background=random`}
+                                                name={report.name}
+                                                size="md"
+                                            />
+                                            <StatusIndicator
+                                                status={getStatus(report.id)}
+                                                size="sm"
+                                                className="absolute -bottom-0.5 -right-0.5"
+                                            />
+                                        </div>
                                     ))}
                                     {directReports.length > 3 && (
                                         <div className="h-8 w-8 rounded-full ring-2 ring-card-light dark:ring-card-dark bg-background-light dark:bg-background-dark flex items-center justify-center text-xs text-text-muted-light font-medium">

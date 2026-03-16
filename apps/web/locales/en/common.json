@@ -251,6 +251,14 @@
       "yourCancelRejected": "Your {{type}} leave cancellation has been rejected. Your leave remains approved."
     }
   },
+  "availability": {
+    "title": "Set Status",
+    "online": "Online",
+    "busy": "Busy",
+    "away": "Away",
+    "offline": "Offline",
+    "messagePlaceholder": "Set a status message..."
+  },
   "noData": "No data available",
   "auto": "Auto",
   "placeholders": {

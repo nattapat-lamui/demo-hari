@@ -24,6 +24,8 @@ import {
 import { Toast } from '../components/Toast';
 import { LeaveGanttCalendar } from '../components/LeaveGanttCalendar';
 import { Avatar } from '../components/Avatar';
+import { StatusIndicator } from '../components/StatusIndicator';
+import { useUserStatus } from '../contexts/UserStatusContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useLeave } from '../contexts/LeaveContext';
 import { Employee, UpcomingEvent } from '../types';
@@ -47,6 +49,7 @@ import { translateLeaveType } from '../lib/leaveTypeConfig';
 export const EmployeeDashboard: React.FC = () => {
   const { t, i18n } = useTranslation(['dashboard', 'common']);
   const { user } = useAuth();
+  const { getStatus, getStatusMessage } = useUserStatus();
   const { requests } = useLeave();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -439,13 +442,20 @@ export const EmployeeDashboard: React.FC = () => {
             {/* Manager info */}
             {teamHierarchy?.manager && (
               <div className="flex items-center gap-3 pb-3 border-b border-border-light dark:border-border-dark">
-                <img
-                  src={
-                    teamHierarchy.manager.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(teamHierarchy.manager.name)}&background=random`
-                  }
-                  alt={teamHierarchy.manager.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
+                <div className="relative">
+                  <Avatar
+                    src={teamHierarchy.manager.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(teamHierarchy.manager.name)}&background=random`}
+                    name={teamHierarchy.manager.name}
+                    size="lg"
+                  />
+                  <StatusIndicator
+                    status={getStatus(teamHierarchy.manager.id)}
+                    statusMessage={getStatusMessage(teamHierarchy.manager.id)}
+                    showTooltip
+                    size="sm"
+                    className="absolute -bottom-0.5 -right-0.5"
+                  />
+                </div>
                 <div>
                   <p className="text-sm font-medium text-text-light dark:text-text-dark">{teamHierarchy.manager.name}</p>
                   <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{teamHierarchy.manager.role}</p>
@@ -457,12 +467,20 @@ export const EmployeeDashboard: React.FC = () => {
             {/* Team members */}
             {myTeam.map(teammate => (
               <div key={teammate.id} className="flex items-center gap-3">
-                <Avatar src={teammate.avatar} name={teammate.name} size="lg" />
+                <div className="relative">
+                  <Avatar src={teammate.avatar} name={teammate.name} size="lg" />
+                  <StatusIndicator
+                    status={getStatus(teammate.id)}
+                    statusMessage={getStatusMessage(teammate.id)}
+                    showTooltip
+                    size="sm"
+                    className="absolute -bottom-0.5 -right-0.5"
+                  />
+                </div>
                 <div>
                   <p className="text-sm font-medium text-text-light dark:text-text-dark">{teammate.name}</p>
                   <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{teammate.role}</p>
                 </div>
-                <span className={`ml-auto w-2.5 h-2.5 rounded-full ${teammate.status === 'Active' ? 'bg-green-500' : 'bg-yellow-500'}`} title={teammate.status}></span>
               </div>
             ))}
             {myTeam.length === 0 && !teamHierarchy?.manager && (

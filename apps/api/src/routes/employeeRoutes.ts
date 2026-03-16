@@ -6,6 +6,8 @@ import { authenticateToken, requireAdmin } from '../middlewares/auth';
 import { cacheMiddleware, invalidateCache } from '../middlewares/cache';
 import { avatarUpload, generateStorageKey, getFileBuffer } from '../middlewares/upload';
 import { storageService } from '../services/StorageService';
+import { getStatusMap } from '../socket';
+import { query } from '../db';
 
 const router = Router();
 
@@ -33,6 +35,38 @@ router.post('/upload-avatar', apiLimiter, avatarUpload.single('avatar'), async (
     } catch (error) {
         console.error('Avatar upload error:', error);
         res.status(500).json({ error: 'Failed to upload avatar' });
+    }
+});
+
+// GET /api/employees/statuses - Get all availability statuses (for initial load)
+router.get('/statuses', (_req, res) => {
+    const statusMap = getStatusMap();
+    const statuses: Record<string, { status: string; statusMessage: string; updatedAt: string }> = {};
+    statusMap.forEach((val, key) => { statuses[key] = val; });
+    res.json(statuses);
+});
+
+// PATCH /api/employees/:id/availability-status - Update availability status (REST fallback)
+router.patch('/:id/availability-status', apiLimiter, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, statusMessage } = req.body;
+        const validStatuses = ['online', 'busy', 'away', 'offline'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: 'Invalid status. Must be one of: online, busy, away, offline' });
+        }
+        const msg = typeof statusMessage === 'string' ? statusMessage.slice(0, 100) : '';
+        await query(
+            'UPDATE employees SET availability_status = $1, status_message = $2 WHERE id = $3',
+            [status, msg, id]
+        );
+        // Update in-memory map too
+        const statusMapRef = getStatusMap();
+        statusMapRef.set(id, { status, statusMessage: msg, updatedAt: new Date().toISOString() });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating availability status:', error);
+        res.status(500).json({ error: 'Failed to update availability status' });
     }
 });
 

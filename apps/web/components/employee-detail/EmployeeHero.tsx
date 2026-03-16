@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Camera, MoreHorizontal, Palette } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmployeeHeroProps } from './EmployeeDetailTypes';
+import { StatusIndicator } from '../StatusIndicator';
+import { useUserStatus } from '../../contexts/UserStatusContext';
 
 const BANNER_PRESETS = [
     { label: 'Blue Teal',      from: '#4a90d9', to: '#50c5b7' },
@@ -36,7 +38,10 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
     onTerminate,
 }) => {
     const { t } = useTranslation(['employees', 'common']);
+    const { getStatus, getStatusMessage } = useUserStatus();
     const { canEditBasicInfo, isAdmin } = permissions;
+    const availabilityStatus = getStatus(employee.id);
+    const availabilityMessage = getStatusMessage(employee.id);
     const [actionsOpen, setActionsOpen] = useState(false);
     const [paletteOpen, setPaletteOpen] = useState(false);
     const [imgError, setImgError] = useState(false);
@@ -143,6 +148,13 @@ export const EmployeeHero: React.FC<EmployeeHeroProps> = ({
                                     />
                                 </div>
                             )}
+                            <StatusIndicator
+                                status={availabilityStatus}
+                                statusMessage={availabilityMessage}
+                                showTooltip
+                                size="lg"
+                                className="absolute -bottom-1 -right-1 z-10"
+                            />
                         </div>
                         <div className="mb-1 flex flex-col">
                             <h1 className="text-2xl font-bold text-text-light dark:text-text-dark leading-[1.2]">{employee.name}</h1>
