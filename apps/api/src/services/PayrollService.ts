@@ -1,5 +1,6 @@
 import pool, { query } from '../db';
 import SystemConfigService from './SystemConfigService';
+import { BusinessError } from '../utils/errorResponse';
 
 export interface PayrollRecord {
   id: string;
@@ -221,12 +222,12 @@ export class PayrollService {
 
     // Validate baseSalary
     if (!baseSalary || baseSalary <= 0) {
-      throw new Error('Base salary must be greater than 0');
+      throw new BusinessError('Base salary must be greater than 0');
     }
 
     // Validate date range
     if (payPeriodEnd <= payPeriodStart) {
-      throw new Error('Pay period end date must be after start date');
+      throw new BusinessError('Pay period end date must be after start date');
     }
 
     // Check for duplicate payroll (same employee + same pay period, excluding Cancelled)
@@ -236,7 +237,7 @@ export class PayrollService {
       [employeeId, payPeriodStart, payPeriodEnd]
     );
     if (existing.rows.length > 0) {
-      throw new Error('A payroll record already exists for this employee and pay period');
+      throw new BusinessError('A payroll record already exists for this employee and pay period');
     }
 
     const config = await this.getPayrollConfig();
@@ -262,10 +263,10 @@ export class PayrollService {
     // Get existing record
     const existing = await this.getPayrollById(id);
     if (!existing) {
-      throw new Error('Payroll record not found');
+      throw new BusinessError('Payroll record not found');
     }
     if (existing.status !== 'Pending') {
-      throw new Error('Only Pending payroll records can be edited');
+      throw new BusinessError('Only Pending payroll records can be edited');
     }
 
     const baseSalary = data.baseSalary ?? existing.baseSalary;
@@ -276,7 +277,7 @@ export class PayrollService {
     const notes = data.notes !== undefined ? data.notes : existing.notes;
 
     if (baseSalary <= 0) {
-      throw new Error('Base salary must be greater than 0');
+      throw new BusinessError('Base salary must be greater than 0');
     }
 
     const config = await this.getPayrollConfig();
@@ -365,7 +366,7 @@ export class PayrollService {
     );
 
     if (result.rows.length === 0) {
-      throw new Error('Payroll record not found');
+      throw new BusinessError('Payroll record not found');
     }
 
     return this.mapRowToPayroll(result.rows[0]);
@@ -465,7 +466,7 @@ export class PayrollService {
   }> {
     // Validate date range
     if (payPeriodEnd <= payPeriodStart) {
-      throw new Error('Pay period end date must be after start date');
+      throw new BusinessError('Pay period end date must be after start date');
     }
 
     // Load payroll config once
@@ -487,9 +488,21 @@ export class PayrollService {
          WHERE e.status = 'Active'`
       );
 
+      // Single query to check all existing payroll records for this period
+      const existingResult = await client.query(
+        `SELECT DISTINCT employee_id FROM payroll_records
+         WHERE pay_period_start = $1 AND pay_period_end = $2 AND status != 'Cancelled'`,
+        [payPeriodStart, payPeriodEnd]
+      );
+      const existingSet = new Set(existingResult.rows.map((r: Record<string, unknown>) => r.employee_id));
+
       let created = 0;
       let skipped = 0;
       const skippedEmployees: string[] = [];
+
+      // Calculate values in JS loop (no queries)
+      const insertValues: any[] = [];
+      const PARAMS_PER_ROW = 10;
 
       for (const emp of employees.rows) {
         const salary = parseFloat(emp.salary);
@@ -499,14 +512,7 @@ export class PayrollService {
           continue;
         }
 
-        // Check if payroll already exists for this period (excluding Cancelled)
-        const existing = await client.query(
-          `SELECT id FROM payroll_records
-           WHERE employee_id = $1 AND pay_period_start = $2 AND pay_period_end = $3 AND status != 'Cancelled'`,
-          [emp.id, payPeriodStart, payPeriodEnd]
-        );
-
-        if (existing.rows.length > 0) {
+        if (existingSet.has(emp.id)) {
           skipped++;
           skippedEmployees.push(`${emp.name} (already exists)`);
           continue;
@@ -517,13 +523,21 @@ export class PayrollService {
           salary, 0, 0, 0, 0, config
         );
 
-        await client.query(
-          `INSERT INTO payroll_records
-           (employee_id, pay_period_start, pay_period_end, base_salary, overtime_hours, overtime_pay, bonus, leave_deduction, deductions, tax_amount, ssf_employee, ssf_employer, pvf_employee, pvf_employer, net_pay)
-           VALUES ($1, $2, $3, $4, 0, 0, 0, 0, 0, $5, $6, $7, $8, $9, $10)`,
-          [emp.id, payPeriodStart, payPeriodEnd, salary, batchTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay]
-        );
+        insertValues.push(emp.id, payPeriodStart, payPeriodEnd, salary, batchTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay);
         created++;
+      }
+
+      // One bulk INSERT for all new payroll records
+      if (insertValues.length > 0) {
+        const rows: string[] = [];
+        for (let i = 0; i < created; i++) {
+          const o = i * PARAMS_PER_ROW;
+          rows.push(`($${o+1},$${o+2},$${o+3},$${o+4},0,0,0,0,0,$${o+5},$${o+6},$${o+7},$${o+8},$${o+9},$${o+10})`);
+        }
+        await client.query(
+          `INSERT INTO payroll_records (employee_id,pay_period_start,pay_period_end,base_salary,overtime_hours,overtime_pay,bonus,leave_deduction,deductions,tax_amount,ssf_employee,ssf_employer,pvf_employee,pvf_employer,net_pay) VALUES ${rows.join(',')}`,
+          insertValues
+        );
       }
 
       await client.query('COMMIT');

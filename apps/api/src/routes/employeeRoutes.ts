@@ -8,6 +8,7 @@ import { avatarUpload, csvUpload, generateStorageKey, getFileBuffer } from '../m
 import { storageService } from '../services/StorageService';
 import { getStatusMap } from '../socket';
 import { query } from '../db';
+import { safeErrorMessage } from '../utils/errorResponse';
 
 const router = Router();
 
@@ -141,7 +142,7 @@ router.post('/import-csv', requireAdmin, apiLimiter, csvUpload.single('file'), i
         });
     } catch (error: any) {
         console.error('CSV import error:', error);
-        res.status(500).json({ error: error.message || 'Failed to import CSV' });
+        res.status(500).json({ error: safeErrorMessage(error, 'Failed to import CSV') });
     }
 });
 

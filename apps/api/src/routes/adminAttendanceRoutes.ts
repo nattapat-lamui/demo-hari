@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken, requireAdmin } from '../middlewares/auth';
 import AttendanceService from '../services/AttendanceService';
+import { safeErrorMessage } from '../utils/errorResponse';
 
 const router = Router();
 
@@ -95,9 +96,8 @@ router.put('/records', async (req: Request, res: Response) => {
 
     res.json(record);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to upsert attendance record';
     console.error('Error upserting attendance:', error);
-    res.status(400).json({ error: message });
+    res.status(400).json({ error: safeErrorMessage(error, 'Failed to upsert attendance record') });
   }
 });
 
@@ -110,9 +110,8 @@ router.delete('/records/:id', async (req: Request, res: Response) => {
     await AttendanceService.adminDeleteAttendance(req.params.id);
     res.json({ message: 'Attendance record deleted' });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to delete attendance record';
     console.error('Error deleting attendance:', error);
-    res.status(400).json({ error: message });
+    res.status(400).json({ error: safeErrorMessage(error, 'Failed to delete attendance record') });
   }
 });
 

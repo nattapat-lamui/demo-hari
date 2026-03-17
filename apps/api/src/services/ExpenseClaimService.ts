@@ -1,5 +1,6 @@
 import { query } from '../db';
 import { ExpenseClaim, CreateExpenseClaimDTO, UpdateExpenseClaimStatusDTO } from '../models/ExpenseClaim';
+import { BusinessError } from '../utils/errorResponse';
 
 export class ExpenseClaimService {
     async getAllExpenseClaims(): Promise<ExpenseClaim[]> {
@@ -72,10 +73,10 @@ export class ExpenseClaimService {
 
         const claim = existing.rows[0];
         if (claim.employee_id !== employeeId) {
-            throw new Error('You can only edit your own expense claims');
+            throw new BusinessError('You can only edit your own expense claims');
         }
         if (claim.status !== 'Pending') {
-            throw new Error('Only pending expense claims can be edited');
+            throw new BusinessError('Only pending expense claims can be edited');
         }
 
         const fields: string[] = [];
@@ -134,7 +135,7 @@ export class ExpenseClaimService {
 
         const claim = existing.rows[0];
         if (claim.employee_id !== employeeId) {
-            throw new Error('You can only cancel your own expense claims');
+            throw new BusinessError('You can only cancel your own expense claims');
         }
 
         if (claim.status === 'Pending') {
@@ -149,14 +150,14 @@ export class ExpenseClaimService {
             );
             return this.getExpenseClaimById(id);
         } else {
-            throw new Error('Only pending or approved expense claims can be cancelled');
+            throw new BusinessError('Only pending or approved expense claims can be cancelled');
         }
     }
 
     async deleteExpenseClaim(id: string): Promise<void> {
         const result = await query('DELETE FROM expense_claims WHERE id = $1', [id]);
         if (result.rowCount === 0) {
-            throw new Error('Expense claim not found');
+            throw new BusinessError('Expense claim not found');
         }
     }
 

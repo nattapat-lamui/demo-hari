@@ -3,6 +3,7 @@ import { authenticateToken, requireAdmin, requireOwnerOrAdmin } from '../middlew
 import AttendanceService from '../services/AttendanceService';
 import { apiLimiter } from '../middlewares/security';
 import { emitAttendanceUpdated } from '../socket';
+import { safeErrorMessage } from '../utils/errorResponse';
 
 const router = Router();
 
@@ -28,8 +29,7 @@ router.post('/clock-in', apiLimiter, async (req: Request, res: Response) => {
     emitAttendanceUpdated(attendance);
     res.status(201).json(attendance);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to clock in';
-    res.status(400).json({ error: message });
+    res.status(400).json({ error: safeErrorMessage(error, 'Failed to clock in') });
   }
 });
 
@@ -52,8 +52,7 @@ router.post('/clock-out', apiLimiter, async (req: Request, res: Response) => {
     emitAttendanceUpdated(attendance);
     res.json(attendance);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to clock out';
-    res.status(400).json({ error: message });
+    res.status(400).json({ error: safeErrorMessage(error, 'Failed to clock out') });
   }
 });
 

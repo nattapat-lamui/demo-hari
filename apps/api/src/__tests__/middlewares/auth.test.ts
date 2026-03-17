@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { authenticateToken, requireRole, requireAdmin, requireOwnerOrAdmin } from '../../middlewares/auth';
+import { authenticateToken, requireRole, requireAdmin, requireOwnerOrAdmin, requireAdminOrFinance, requireAdminOrManager } from '../../middlewares/auth';
 
 // Mock jwt
 jest.mock('jsonwebtoken');
@@ -202,6 +202,110 @@ describe('Auth Middleware', () => {
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({ error: 'Access denied' })
       );
+    });
+  });
+
+  describe('requireAdminOrFinance', () => {
+    it('should call next for HR_ADMIN users', () => {
+      mockRequest.user = { userId: 'user-1', email: 'admin@example.com', role: 'HR_ADMIN', employeeId: 'emp-1' };
+
+      requireAdminOrFinance(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should call next for FINANCE users', () => {
+      mockRequest.user = { userId: 'user-2', email: 'finance@example.com', role: 'FINANCE', employeeId: 'emp-2' };
+
+      requireAdminOrFinance(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should return 403 for EMPLOYEE users', () => {
+      mockRequest.user = { userId: 'user-3', email: 'emp@example.com', role: 'EMPLOYEE', employeeId: 'emp-3' };
+
+      requireAdminOrFinance(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(403);
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should return 403 for MANAGER users', () => {
+      mockRequest.user = { userId: 'user-4', email: 'mgr@example.com', role: 'MANAGER', employeeId: 'emp-4' };
+
+      requireAdminOrFinance(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(403);
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('requireAdminOrManager', () => {
+    it('should call next for HR_ADMIN users', () => {
+      mockRequest.user = { userId: 'user-1', email: 'admin@example.com', role: 'HR_ADMIN', employeeId: 'emp-1' };
+
+      requireAdminOrManager(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should call next for MANAGER users', () => {
+      mockRequest.user = { userId: 'user-5', email: 'mgr@example.com', role: 'MANAGER', employeeId: 'emp-5' };
+
+      requireAdminOrManager(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should return 403 for EMPLOYEE users', () => {
+      mockRequest.user = { userId: 'user-3', email: 'emp@example.com', role: 'EMPLOYEE', employeeId: 'emp-3' };
+
+      requireAdminOrManager(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(403);
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should return 403 for FINANCE users', () => {
+      mockRequest.user = { userId: 'user-6', email: 'finance@example.com', role: 'FINANCE', employeeId: 'emp-6' };
+
+      requireAdminOrManager(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(403);
+      expect(mockNext).not.toHaveBeenCalled();
     });
   });
 });

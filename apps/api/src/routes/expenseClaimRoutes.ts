@@ -8,6 +8,7 @@ import ExpenseClaimService from '../services/ExpenseClaimService';
 import NotificationService from '../services/NotificationService';
 import { emitExpenseClaimCreated, emitExpenseClaimUpdated, emitExpenseClaimDeleted } from '../socket';
 import { query } from '../db';
+import { safeErrorMessage } from '../utils/errorResponse';
 
 const router = Router();
 
@@ -86,7 +87,7 @@ router.post('/', apiLimiter, receiptUpload.single('receipt'), invalidateCache('/
         res.status(201).json(claim);
     } catch (error: any) {
         console.error('Error creating expense claim:', error);
-        res.status(500).json({ error: error.message || 'Failed to create expense claim' });
+        res.status(500).json({ error: safeErrorMessage(error, 'Failed to create expense claim') });
     }
 });
 
@@ -120,7 +121,7 @@ router.put('/:id', apiLimiter, receiptUpload.single('receipt'), invalidateCache(
         res.json(claim);
     } catch (error: any) {
         console.error('Error editing expense claim:', error);
-        res.status(400).json({ error: error.message || 'Failed to edit expense claim' });
+        res.status(400).json({ error: safeErrorMessage(error, 'Failed to edit expense claim') });
     }
 });
 
@@ -159,7 +160,7 @@ router.patch('/:id', requireAdminOrFinance, apiLimiter, invalidateCache('/api/ex
         res.json(claim);
     } catch (error: any) {
         console.error('Error updating expense claim status:', error);
-        res.status(500).json({ error: error.message || 'Failed to update expense claim status' });
+        res.status(500).json({ error: safeErrorMessage(error, 'Failed to update expense claim status') });
     }
 });
 
@@ -178,7 +179,7 @@ router.post('/:id/cancel', apiLimiter, invalidateCache('/api/expense-claims'), a
         res.json(claim);
     } catch (error: any) {
         console.error('Error cancelling expense claim:', error);
-        res.status(400).json({ error: error.message || 'Failed to cancel expense claim' });
+        res.status(400).json({ error: safeErrorMessage(error, 'Failed to cancel expense claim') });
     }
 });
 
@@ -192,7 +193,7 @@ router.delete('/:id', requireAdminOrFinance, apiLimiter, invalidateCache('/api/e
         res.json({ success: true, message: 'Expense claim deleted' });
     } catch (error: any) {
         console.error('Error deleting expense claim:', error);
-        res.status(500).json({ error: error.message || 'Failed to delete expense claim' });
+        res.status(500).json({ error: safeErrorMessage(error, 'Failed to delete expense claim') });
     }
 });
 

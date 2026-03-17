@@ -1,4 +1,5 @@
 import { query } from '../db';
+import { BusinessError } from '../utils/errorResponse';
 
 // ---------------------------------------------------------------------------
 // Work Schedule Config (cached)
@@ -125,7 +126,7 @@ export class AttendanceService {
     );
 
     if (existing.rows.length > 0 && existing.rows[0].clock_in) {
-      throw new Error('Already clocked in for today');
+      throw new BusinessError('Already clocked in for today');
     }
 
     // Determine if late using configurable threshold
@@ -174,11 +175,11 @@ export class AttendanceService {
     );
 
     if (existing.rows.length === 0 || !existing.rows[0].clock_in) {
-      throw new Error('Must clock in before clocking out');
+      throw new BusinessError('Must clock in before clocking out');
     }
 
     if (existing.rows[0].clock_out) {
-      throw new Error('Already clocked out for today');
+      throw new BusinessError('Already clocked out for today');
     }
 
     const clockIn = new Date(existing.rows[0].clock_in);
@@ -530,7 +531,7 @@ export class AttendanceService {
       [recordId]
     );
     if (result.rowCount === 0) {
-      throw new Error('Attendance record not found');
+      throw new BusinessError('Attendance record not found');
     }
   }
 

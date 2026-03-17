@@ -1,7 +1,7 @@
 // Jest test setup file
 
 // Set test environment variables
-process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing';
+process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-minimum-32-chars';
 process.env.NODE_ENV = 'test';
 
 // Mock the database module

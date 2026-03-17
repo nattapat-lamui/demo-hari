@@ -5,6 +5,7 @@ import { generatePayslipPdf } from '../services/PayslipPdfService';
 import SystemConfigService from '../services/SystemConfigService';
 import { query } from '../db';
 import { apiLimiter } from '../middlewares/security';
+import { safeErrorMessage } from '../utils/errorResponse';
 
 const router = Router();
 
@@ -28,8 +29,7 @@ router.post('/batch', requireAdminOrFinance, apiLimiter, async (req: Request, re
     res.status(201).json(result);
   } catch (error: unknown) {
     console.error('Error batch creating payroll:', error);
-    const message = error instanceof Error ? error.message : 'Failed to batch create payroll';
-    res.status(400).json({ error: message });
+    res.status(400).json({ error: safeErrorMessage(error, 'Failed to batch create payroll') });
   }
 });
 
@@ -43,8 +43,7 @@ router.post('/', requireAdminOrFinance, apiLimiter, async (req: Request, res: Re
     res.status(201).json(payroll);
   } catch (error: unknown) {
     console.error('Error creating payroll:', error);
-    const message = error instanceof Error ? error.message : 'Failed to create payroll';
-    res.status(400).json({ error: message });
+    res.status(400).json({ error: safeErrorMessage(error, 'Failed to create payroll') });
   }
 });
 
@@ -237,8 +236,7 @@ router.post('/salary/:employeeId', requireAdmin, apiLimiter, async (req: Request
     res.status(201).json(salaryHistory);
   } catch (error: unknown) {
     console.error('Error updating salary:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update salary';
-    res.status(400).json({ error: message });
+    res.status(400).json({ error: safeErrorMessage(error, 'Failed to update salary') });
   }
 });
 
@@ -317,8 +315,7 @@ router.put('/:id', requireAdminOrFinance, apiLimiter, async (req: Request, res: 
     res.json(payroll);
   } catch (error: unknown) {
     console.error('Error updating payroll:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update payroll';
-    res.status(400).json({ error: message });
+    res.status(400).json({ error: safeErrorMessage(error, 'Failed to update payroll') });
   }
 });
 
@@ -367,8 +364,7 @@ router.patch('/:id/status', requireAdminOrFinance, apiLimiter, async (req: Reque
     res.json(payroll);
   } catch (error: unknown) {
     console.error('Error updating payroll status:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update payroll';
-    res.status(400).json({ error: message });
+    res.status(400).json({ error: safeErrorMessage(error, 'Failed to update payroll status') });
   }
 });
 
