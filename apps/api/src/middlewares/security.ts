@@ -9,7 +9,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 // Rate limiting configuration
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5000, // ใส่ 5000 ไปเลยครับ เพื่อความชัวร์
+  max: isDevelopment ? 5000 : 500,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -39,8 +39,10 @@ export const forgotPasswordLimiter = rateLimit({
 // API rate limiter
 export const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 2000, // ใส่ 2000 ไปเลย
+  max: isDevelopment ? 2000 : 100,
   message: 'Too many API requests, please slow down.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Helmet security headers configuration

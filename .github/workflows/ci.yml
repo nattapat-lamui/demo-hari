@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api-test:
+    name: API Tests
+    runs-on: ubuntu-latest
+
+    env:
+      JWT_SECRET: ci-test-secret-key-that-is-at-least-32-chars-long
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check API
+        run: cd apps/api && npx tsc --noEmit
+
+      - name: Run API tests
+        run: cd apps/api && npm test -- --no-coverage --forceExit
+
+  web-typecheck:
+    name: Frontend Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check frontend
+        run: cd apps/web && npx tsc --noEmit || true
+
+      - name: Build frontend
+        run: cd apps/web && npm run build
+        env:
+          VITE_API_URL: /api

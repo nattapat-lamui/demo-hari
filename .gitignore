@@ -47,3 +47,6 @@ debug-*.js
 .env.production
 .env.staging
 .env.*.local
+
+# Database backups
+backups/
