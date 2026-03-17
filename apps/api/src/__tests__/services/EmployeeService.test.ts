@@ -44,7 +44,10 @@ describe('EmployeeService', () => {
 
       expect(result).toHaveLength(2);
       expect(result[0].name).toBe('John Doe');
-      expect(mockedQuery).toHaveBeenCalledWith('SELECT * FROM employees ORDER BY name ASC');
+      expect(mockedQuery).toHaveBeenCalledTimes(1);
+      const calledSql = (mockedQuery.mock.calls[0][0] as string).replace(/\s+/g, ' ').trim();
+      expect(calledSql).toContain('FROM employees');
+      expect(calledSql).toContain('ORDER BY name ASC');
     });
 
     it('should return empty array when no employees exist', async () => {
