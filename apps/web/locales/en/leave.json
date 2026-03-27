@@ -30,6 +30,7 @@
     "reasonPlaceholder": "Provide a reason for your leave request...",
     "charCount": "{{count}} / 500",
     "medicalCert": "Medical Certificate",
+    "medicalCertOptional": "Medical Certificate (Optional)",
     "certUploaded": "A certificate was previously uploaded. Upload a new one only if you want to replace it.",
     "handoverPerson": "Handover Person",
     "searchEmployee": "Search employee...",

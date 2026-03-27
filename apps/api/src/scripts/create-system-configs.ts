@@ -141,6 +141,13 @@ async function createSystemConfigsTable() {
                 data_type: 'number',
                 description: 'Overtime pay multiplier (e.g. 1.5 = 150% of hourly rate)'
             },
+            {
+                category: 'payroll',
+                key: 'default_intern_daily_rate',
+                value: '350',
+                data_type: 'number',
+                description: 'Default daily rate for interns (THB). Used when employee has no daily_rate set.'
+            },
             // System settings
             {
                 category: 'system',

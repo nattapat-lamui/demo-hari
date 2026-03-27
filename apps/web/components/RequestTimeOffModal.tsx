@@ -8,7 +8,7 @@ import { SearchableSelect } from './SearchableSelect';
 import type { SearchableSelectOption } from './SearchableSelect';
 import { useLeaveBalance, useEmployeeSearch, useLeaveTypeConfig } from '../hooks/queries';
 import { resolveAvatarUrl } from '../lib/api';
-import { buildLeaveOptions, requiresMedicalCert } from '../lib/leaveTypeConfig';
+import { buildLeaveOptions, requiresMedicalCert, showMedicalCertUpload } from '../lib/leaveTypeConfig';
 import type { LeaveBalance } from '../types';
 
 interface RequestTimeOffModalProps {
@@ -83,6 +83,7 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
   const quotaExceeded = !isUnlimited && dayCount > 0 && dayCount > remaining;
 
   const needsMedicalCert = requiresMedicalCert(form.type, dayCount);
+  const showMedicalUpload = showMedicalCertUpload(form.type);
   const showHandoverNotes = !!form.handoverEmployeeId;
 
   // Employee options for SearchableSelect
@@ -244,16 +245,16 @@ export const RequestTimeOffModal: React.FC<RequestTimeOffModalProps> = ({
           />
         </div>
 
-        {/* 5. Medical Certificate — conditional: Sick Leave >= 3 days */}
-        {needsMedicalCert && (
+        {/* 5. Medical Certificate — required for Maternity, optional for Sick Leave */}
+        {showMedicalUpload && (
           <FileUpload
-            label={t('leave:requestModal.medicalCert')}
+            label={needsMedicalCert ? t('leave:requestModal.medicalCert') : t('leave:requestModal.medicalCertOptional')}
             value={form.medicalCertificate}
             onChange={(file) => setForm((p) => ({ ...p, medicalCertificate: file }))}
             accept=".pdf,.jpg,.jpeg,.png"
             maxSizeMB={10}
-            required
-            error={!form.medicalCertificate && error.includes('medical') ? error : undefined}
+            required={needsMedicalCert}
+            error={needsMedicalCert && !form.medicalCertificate && error.includes('medical') ? error : undefined}
           />
         )}
 

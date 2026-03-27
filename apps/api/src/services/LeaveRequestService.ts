@@ -159,13 +159,6 @@ export class LeaveRequestService {
             }
         }
 
-        // Validate: Sick Leave >= 3 days requires medical certificate
-        if (type === LEAVE_TYPE_SICK && days >= 3 && !medicalCertificatePath) {
-            const err: any = new Error('A medical certificate is required for sick leave of 3 or more days.');
-            err.statusCode = 400;
-            throw err;
-        }
-
         // Validate: Maternity Leave always requires medical certificate
         if (type === LEAVE_TYPE_MATERNITY && !medicalCertificatePath) {
             const err: any = new Error('A medical certificate is required for maternity leave.');
@@ -280,15 +273,8 @@ export class LeaveRequestService {
                 }
             }
 
-            // Re-validate medical cert if Sick Leave >= 3 days
-            const medCertPath = editData.medicalCertificatePath || row.medical_certificate_path;
-            if (editData.type === LEAVE_TYPE_SICK && newDays >= 3 && !medCertPath) {
-                const err: any = new Error('A medical certificate is required for sick leave of 3 or more days.');
-                err.statusCode = 400;
-                throw err;
-            }
-
             // Re-validate medical cert for Maternity Leave (always required)
+            const medCertPath = editData.medicalCertificatePath || row.medical_certificate_path;
             if (editData.type === LEAVE_TYPE_MATERNITY && !medCertPath) {
                 const err: any = new Error('A medical certificate is required for maternity leave.');
                 err.statusCode = 400;

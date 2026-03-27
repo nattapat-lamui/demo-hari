@@ -260,9 +260,15 @@ export function getShortLabel(typeName: string): string {
   return translateLeaveTypeShort(typeName);
 }
 
-/** Check if a leave type requires medical certificate */
-export function requiresMedicalCert(typeName: string, dayCount: number): boolean {
+/** Check if a leave type requires medical certificate (mandatory) */
+export function requiresMedicalCert(typeName: string, _dayCount: number): boolean {
   if (typeName === 'Maternity Leave') return true;
-  if (typeName === 'Sick Leave' && dayCount >= 3) return true;
+  return false;
+}
+
+/** Check if medical certificate upload should be shown (optional for Sick Leave) */
+export function showMedicalCertUpload(typeName: string): boolean {
+  if (typeName === 'Maternity Leave') return true;
+  if (typeName === 'Sick Leave') return true;
   return false;
 }

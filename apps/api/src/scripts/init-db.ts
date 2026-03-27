@@ -97,6 +97,7 @@ CREATE TABLE employees (
     emergency_contact VARCHAR(255),
     onboarding_percentage INT DEFAULT 0,
     salary DECIMAL(12,2),
+    daily_rate DECIMAL(12,2),
     manager_id UUID,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

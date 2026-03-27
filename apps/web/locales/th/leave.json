@@ -30,6 +30,7 @@
     "reasonPlaceholder": "ระบุเหตุผลในการขอลา...",
     "charCount": "{{count}} / 500",
     "medicalCert": "ใบรับรองแพทย์",
+    "medicalCertOptional": "ใบรับรองแพทย์ (ไม่บังคับ)",
     "certUploaded": "มีใบรับรองที่อัปโหลดแล้ว อัปโหลดใหม่เฉพาะเมื่อต้องการเปลี่ยน",
     "handoverPerson": "ผู้รับมอบงาน",
     "searchEmployee": "ค้นหาพนักงาน...",

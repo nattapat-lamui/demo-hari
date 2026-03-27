@@ -206,21 +206,52 @@ export class PayrollService {
   }
 
   /**
-   * Calculate payroll for interns — no tax, SSF, or PVF
+   * Calculate payroll for interns — no tax, SSF, PVF, or OT (OT paid separately)
    */
   private calculateInternPayroll(
     baseSalary: number,
-    overtimeHours: number,
+    _overtimeHours: number,
     bonus: number,
     leaveDeduction: number,
     deductions: number,
-    config: PayrollConfig
+    _config: PayrollConfig
   ) {
-    const hourlyRate = baseSalary / config.standardHoursPerMonth;
-    const overtimePay = Math.round(overtimeHours * hourlyRate * config.otMultiplier * 100) / 100;
-    const grossPay = baseSalary + overtimePay + bonus;
+    const overtimePay = 0;
+    const grossPay = baseSalary + bonus;
     const netPay = Math.round((grossPay - leaveDeduction - deductions) * 100) / 100;
     return { overtimePay, monthlyTax: 0, netPay, ssfEmployee: 0, ssfEmployer: 0, pvfEmployee: 0, pvfEmployer: 0 };
+  }
+
+  /**
+   * Get intern daily rate — per-employee override or global default (350 THB)
+   */
+  private async getInternDailyRate(employeeDailyRate: number | null): Promise<number> {
+    if (employeeDailyRate && employeeDailyRate > 0) {
+      return employeeDailyRate;
+    }
+    const defaultRate = await SystemConfigService.getConfigValue('payroll', 'default_intern_daily_rate', 350);
+    return typeof defaultRate === 'number' && defaultRate > 0 ? defaultRate : 350;
+  }
+
+  /**
+   * Count attendance days (days with clock_in) for a pay period
+   */
+  private async getInternDaysWorked(
+    employeeId: string,
+    payPeriodStart: string,
+    payPeriodEnd: string,
+    client?: { query: (sql: string, params: any[]) => Promise<any> }
+  ): Promise<number> {
+    const db = client || { query };
+    const result = await db.query(
+      `SELECT COUNT(*)::int AS days_worked
+       FROM attendance_records
+       WHERE employee_id = $1
+         AND date >= $2 AND date <= $3
+         AND clock_in IS NOT NULL`,
+      [employeeId, payPeriodStart, payPeriodEnd]
+    );
+    return result.rows[0]?.days_worked ?? 0;
   }
 
   /**
@@ -238,11 +269,6 @@ export class PayrollService {
       deductions = 0,
     } = data;
 
-    // Validate baseSalary
-    if (!baseSalary || baseSalary <= 0) {
-      throw new BusinessError('Base salary must be greater than 0');
-    }
-
     // Validate date range
     if (payPeriodEnd <= payPeriodStart) {
       throw new BusinessError('Pay period end date must be after start date');
@@ -258,21 +284,36 @@ export class PayrollService {
       throw new BusinessError('A payroll record already exists for this employee and pay period');
     }
 
-    // Check if employee is an intern (no tax/SSF/PVF)
-    const empResult = await query('SELECT role FROM employees WHERE id = $1', [employeeId]);
+    // Check if employee is an intern
+    const empResult = await query('SELECT role, daily_rate FROM employees WHERE id = $1', [employeeId]);
     const isIntern = empResult.rows.length > 0 && empResult.rows[0].role?.toLowerCase().includes('intern');
+
+    // For interns: compute baseSalary from daily_rate × attendance days, no OT
+    let effectiveBaseSalary = baseSalary;
+    let effectiveOvertimeHours = overtimeHours;
+    if (isIntern) {
+      const dailyRate = await this.getInternDailyRate(empResult.rows[0].daily_rate ? parseFloat(empResult.rows[0].daily_rate) : null);
+      const daysWorked = await this.getInternDaysWorked(employeeId, payPeriodStart, payPeriodEnd);
+      effectiveBaseSalary = Math.round(dailyRate * daysWorked * 100) / 100;
+      effectiveOvertimeHours = 0;
+    }
+
+    // Validate baseSalary (skip for interns — they can have 0 if no attendance)
+    if (!isIntern && (!baseSalary || baseSalary <= 0)) {
+      throw new BusinessError('Base salary must be greater than 0');
+    }
 
     const config = await this.getPayrollConfig();
     const { overtimePay, monthlyTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = isIntern
-      ? this.calculateInternPayroll(baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config)
-      : this.calculatePayrollAmounts(baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config);
+      ? this.calculateInternPayroll(effectiveBaseSalary, effectiveOvertimeHours, bonus, leaveDeduction, deductions, config)
+      : this.calculatePayrollAmounts(effectiveBaseSalary, effectiveOvertimeHours, bonus, leaveDeduction, deductions, config);
 
     const result = await query(
       `INSERT INTO payroll_records
        (employee_id, pay_period_start, pay_period_end, base_salary, overtime_hours, overtime_pay, bonus, leave_deduction, deductions, tax_amount, ssf_employee, ssf_employer, pvf_employee, pvf_employer, net_pay)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
-      [employeeId, payPeriodStart, payPeriodEnd, baseSalary, overtimeHours, overtimePay, bonus, leaveDeduction, deductions, monthlyTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay]
+      [employeeId, payPeriodStart, payPeriodEnd, effectiveBaseSalary, effectiveOvertimeHours, overtimePay, bonus, leaveDeduction, deductions, monthlyTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay]
     );
 
     return this.mapRowToPayroll(result.rows[0]);
@@ -291,25 +332,36 @@ export class PayrollService {
       throw new BusinessError('Only Pending payroll records can be edited');
     }
 
-    const baseSalary = data.baseSalary ?? existing.baseSalary;
-    const overtimeHours = data.overtimeHours ?? existing.overtimeHours;
     const bonus = data.bonus ?? existing.bonus;
     const leaveDeduction = data.leaveDeduction ?? existing.leaveDeduction;
     const deductions = data.deductions ?? existing.deductions;
     const notes = data.notes !== undefined ? data.notes : existing.notes;
 
-    if (baseSalary <= 0) {
+    // Check if employee is an intern
+    const empResult = await query('SELECT role, daily_rate FROM employees WHERE id = $1', [existing.employeeId]);
+    const isIntern = empResult.rows.length > 0 && empResult.rows[0].role?.toLowerCase().includes('intern');
+
+    let effectiveBaseSalary = data.baseSalary ?? existing.baseSalary;
+    let effectiveOvertimeHours = data.overtimeHours ?? existing.overtimeHours;
+
+    if (isIntern) {
+      // Recompute from daily rate × attendance if admin didn't explicitly set baseSalary
+      if (data.baseSalary === undefined) {
+        const dailyRate = await this.getInternDailyRate(empResult.rows[0].daily_rate ? parseFloat(empResult.rows[0].daily_rate) : null);
+        const daysWorked = await this.getInternDaysWorked(existing.employeeId, existing.payPeriodStart, existing.payPeriodEnd);
+        effectiveBaseSalary = Math.round(dailyRate * daysWorked * 100) / 100;
+      }
+      effectiveOvertimeHours = 0;
+    }
+
+    if (!isIntern && effectiveBaseSalary <= 0) {
       throw new BusinessError('Base salary must be greater than 0');
     }
 
-    // Check if employee is an intern (no tax/SSF/PVF)
-    const empResult = await query('SELECT role FROM employees WHERE id = $1', [existing.employeeId]);
-    const isIntern = empResult.rows.length > 0 && empResult.rows[0].role?.toLowerCase().includes('intern');
-
     const config = await this.getPayrollConfig();
     const { overtimePay, monthlyTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = isIntern
-      ? this.calculateInternPayroll(baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config)
-      : this.calculatePayrollAmounts(baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config);
+      ? this.calculateInternPayroll(effectiveBaseSalary, effectiveOvertimeHours, bonus, leaveDeduction, deductions, config)
+      : this.calculatePayrollAmounts(effectiveBaseSalary, effectiveOvertimeHours, bonus, leaveDeduction, deductions, config);
 
     const result = await query(
       `UPDATE payroll_records
@@ -319,7 +371,7 @@ export class PayrollService {
            net_pay = $12, notes = $13, updated_at = CURRENT_TIMESTAMP
        WHERE id = $14
        RETURNING *`,
-      [baseSalary, overtimeHours, overtimePay, bonus, leaveDeduction, deductions, monthlyTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay, notes, id]
+      [effectiveBaseSalary, effectiveOvertimeHours, overtimePay, bonus, leaveDeduction, deductions, monthlyTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay, notes, id]
     );
 
     return this.mapRowToPayroll(result.rows[0]);
@@ -502,9 +554,9 @@ export class PayrollService {
     try {
       await client.query('BEGIN');
 
-      // Get all active employees with their salary and role
+      // Get all active employees with their salary, role, and daily_rate
       const employees = await client.query(
-        `SELECT e.id, e.name, e.role, COALESCE(e.salary, sh.base_salary, 0) AS salary
+        `SELECT e.id, e.name, e.role, e.daily_rate, COALESCE(e.salary, sh.base_salary, 0) AS salary
          FROM employees e
          LEFT JOIN LATERAL (
            SELECT base_salary FROM salary_history
@@ -513,6 +565,9 @@ export class PayrollService {
          ) sh ON true
          WHERE e.status = 'Active'`
       );
+
+      // Load default intern daily rate once
+      const defaultDailyRate = await SystemConfigService.getConfigValue('payroll', 'default_intern_daily_rate', 350) as number;
 
       // Single query to check all existing payroll records for this period
       const existingResult = await client.query(
@@ -531,12 +586,7 @@ export class PayrollService {
       const PARAMS_PER_ROW = 10;
 
       for (const emp of employees.rows) {
-        const salary = parseFloat(emp.salary);
-        if (!salary || salary <= 0) {
-          skipped++;
-          skippedEmployees.push(`${emp.name} (no salary)`);
-          continue;
-        }
+        const isIntern = emp.role && emp.role.toLowerCase().includes('intern');
 
         if (existingSet.has(emp.id)) {
           skipped++;
@@ -544,13 +594,32 @@ export class PayrollService {
           continue;
         }
 
-        // Interns: no tax/SSF/PVF
-        const isIntern = emp.role && emp.role.toLowerCase().includes('intern');
-        const { monthlyTax: batchTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = isIntern
-          ? this.calculateInternPayroll(salary, 0, 0, 0, 0, config)
-          : this.calculatePayrollAmounts(salary, 0, 0, 0, 0, config);
+        let effectiveSalary: number;
 
-        insertValues.push(emp.id, payPeriodStart, payPeriodEnd, salary, batchTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay);
+        if (isIntern) {
+          // Intern: daily_rate × attendance days
+          const dailyRate = (emp.daily_rate && parseFloat(emp.daily_rate) > 0) ? parseFloat(emp.daily_rate) : (typeof defaultDailyRate === 'number' ? defaultDailyRate : 350);
+          const daysWorked = await this.getInternDaysWorked(emp.id, payPeriodStart, payPeriodEnd, client);
+          effectiveSalary = Math.round(dailyRate * daysWorked * 100) / 100;
+          if (daysWorked === 0) {
+            skipped++;
+            skippedEmployees.push(`${emp.name} (intern, no attendance)`);
+            continue;
+          }
+        } else {
+          effectiveSalary = parseFloat(emp.salary);
+          if (!effectiveSalary || effectiveSalary <= 0) {
+            skipped++;
+            skippedEmployees.push(`${emp.name} (no salary)`);
+            continue;
+          }
+        }
+
+        const { monthlyTax: batchTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = isIntern
+          ? this.calculateInternPayroll(effectiveSalary, 0, 0, 0, 0, config)
+          : this.calculatePayrollAmounts(effectiveSalary, 0, 0, 0, 0, config);
+
+        insertValues.push(emp.id, payPeriodStart, payPeriodEnd, effectiveSalary, batchTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay);
         created++;
       }
 

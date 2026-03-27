@@ -46,17 +46,17 @@ describe('PayrollService', () => {
   });
 
   /**
-   * Helper: set up mocks for createPayroll flow:
+   * Helper: set up mocks for createPayroll flow (non-intern):
    *   query #1 → duplicate check (empty)
-   *   query #2 → SELECT role FROM employees (default: non-intern)
+   *   query #2 → SELECT role, daily_rate FROM employees
    *   query #3 → INSERT RETURNING *
    */
   const setupCreateMocks = (baseSalary: number, overtimeHours = 0, bonus = 0, leaveDeduction = 0, deductions = 0, role = 'Developer') => {
     mockedQuery
       // duplicate check
       .mockResolvedValueOnce({ rows: [], rowCount: 0 } as never)
-      // SELECT role FROM employees
-      .mockResolvedValueOnce({ rows: [{ role }], rowCount: 1 } as never)
+      // SELECT role, daily_rate FROM employees
+      .mockResolvedValueOnce({ rows: [{ role, daily_rate: null }], rowCount: 1 } as never)
       // INSERT RETURNING *
       .mockResolvedValueOnce({
         rows: [makePayrollRow({
@@ -66,6 +66,25 @@ describe('PayrollService', () => {
           leave_deduction: String(leaveDeduction),
           deductions: String(deductions),
         })],
+        rowCount: 1,
+      } as never);
+  };
+
+  /**
+   * Helper: set up mocks for createPayroll flow (intern):
+   *   query #1 → duplicate check (empty)
+   *   query #2 → SELECT role, daily_rate FROM employees
+   *   query #3 → COUNT attendance days
+   *   query #4 → INSERT RETURNING *
+   */
+  const setupInternCreateMocks = (dailyRate: number | null, daysWorked: number, role = 'Intern') => {
+    const effectiveSalary = (dailyRate || 350) * daysWorked;
+    mockedQuery
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 } as never)
+      .mockResolvedValueOnce({ rows: [{ role, daily_rate: dailyRate }], rowCount: 1 } as never)
+      .mockResolvedValueOnce({ rows: [{ days_worked: daysWorked }], rowCount: 1 } as never)
+      .mockResolvedValueOnce({
+        rows: [makePayrollRow({ base_salary: String(effectiveSalary) })],
         rowCount: 1,
       } as never);
   };
@@ -223,73 +242,79 @@ describe('PayrollService', () => {
     });
   });
 
-  describe('Intern payroll', () => {
-    it('should set tax, SSF, and PVF to 0 for Intern role', async () => {
-      setupCreateMocks(20000, 0, 0, 0, 0, 'Intern');
+  describe('Intern payroll (daily rate × attendance)', () => {
+    it('should compute baseSalary from default daily rate (350) × days worked', async () => {
+      // daily_rate = null → use default 350, 20 days worked → 7000
+      setupInternCreateMocks(null, 20);
 
       await service.createPayroll({
         employeeId: 'emp-1',
         payPeriodStart: '2026-03-01',
         payPeriodEnd: '2026-03-31',
-        baseSalary: 20000,
+        baseSalary: 0, // ignored for interns
       });
 
-      const insertCall = mockedQuery.mock.calls[2];
-      const insertParams = insertCall[1] as any[];
+      // INSERT is query #4 (index 3)
+      const insertParams = mockedQuery.mock.calls[3][1] as any[];
 
-      const taxAmount = insertParams[9];
-      const ssfEmployee = insertParams[10];
-      const ssfEmployer = insertParams[11];
-      const pvfEmployee = insertParams[12];
-      const pvfEmployer = insertParams[13];
-      const netPay = insertParams[14];
-
-      expect(taxAmount).toBe(0);
-      expect(ssfEmployee).toBe(0);
-      expect(ssfEmployer).toBe(0);
-      expect(pvfEmployee).toBe(0);
-      expect(pvfEmployer).toBe(0);
-      expect(netPay).toBe(20000); // base salary with no deductions
+      expect(insertParams[3]).toBe(7000);  // baseSalary = 350 × 20
+      expect(insertParams[4]).toBe(0);     // overtimeHours = 0
+      expect(insertParams[5]).toBe(0);     // overtimePay = 0
+      expect(insertParams[9]).toBe(0);     // tax = 0
+      expect(insertParams[10]).toBe(0);    // ssfEmployee = 0
+      expect(insertParams[14]).toBe(7000); // netPay = 7000
     });
 
-    it('should set tax, SSF, and PVF to 0 for Full-stack Developer Intern role', async () => {
-      setupCreateMocks(15000, 0, 0, 0, 0, 'Full-stack Developer Intern');
+    it('should use per-employee daily rate when set', async () => {
+      // daily_rate = 500, 22 days → 11000
+      setupInternCreateMocks(500, 22);
 
       await service.createPayroll({
         employeeId: 'emp-1',
         payPeriodStart: '2026-03-01',
         payPeriodEnd: '2026-03-31',
-        baseSalary: 15000,
+        baseSalary: 0,
       });
 
-      const insertCall = mockedQuery.mock.calls[2];
-      const insertParams = insertCall[1] as any[];
+      const insertParams = mockedQuery.mock.calls[3][1] as any[];
 
-      expect(insertParams[9]).toBe(0);   // tax
-      expect(insertParams[10]).toBe(0);  // ssfEmployee
-      expect(insertParams[14]).toBe(15000); // netPay = baseSalary
+      expect(insertParams[3]).toBe(11000); // baseSalary = 500 × 22
+      expect(insertParams[14]).toBe(11000); // netPay
     });
 
-    it('should still calculate overtime for interns', async () => {
-      const baseSalary = 16000;
-      const overtimeHours = 10;
-      setupCreateMocks(baseSalary, overtimeHours, 0, 0, 0, 'Intern');
+    it('should set OT to 0 for interns (OT paid separately)', async () => {
+      setupInternCreateMocks(350, 20);
 
       await service.createPayroll({
         employeeId: 'emp-1',
         payPeriodStart: '2026-03-01',
         payPeriodEnd: '2026-03-31',
-        baseSalary,
-        overtimeHours,
+        baseSalary: 0,
+        overtimeHours: 10, // should be ignored
       });
 
-      const insertCall = mockedQuery.mock.calls[2];
-      const insertParams = insertCall[1] as any[];
+      const insertParams = mockedQuery.mock.calls[3][1] as any[];
 
-      // hourlyRate = 16000/160 = 100, OT = 10 * 100 * 1.5 = 1500
-      expect(insertParams[5]).toBe(1500); // overtimePay
-      expect(insertParams[9]).toBe(0);    // tax = 0
-      expect(insertParams[14]).toBe(17500); // netPay = 16000 + 1500
+      expect(insertParams[4]).toBe(0); // overtimeHours forced to 0
+      expect(insertParams[5]).toBe(0); // overtimePay = 0
+    });
+
+    it('should work for Full-stack Developer Intern role', async () => {
+      setupInternCreateMocks(350, 15, 'Full-stack Developer Intern');
+
+      await service.createPayroll({
+        employeeId: 'emp-1',
+        payPeriodStart: '2026-03-01',
+        payPeriodEnd: '2026-03-31',
+        baseSalary: 0,
+      });
+
+      const insertParams = mockedQuery.mock.calls[3][1] as any[];
+
+      expect(insertParams[3]).toBe(5250);  // 350 × 15
+      expect(insertParams[9]).toBe(0);     // tax = 0
+      expect(insertParams[10]).toBe(0);    // SSF = 0
+      expect(insertParams[14]).toBe(5250); // netPay
     });
   });
 });
