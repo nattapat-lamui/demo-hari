@@ -34,6 +34,7 @@
     "deleted": "Announcement deleted successfully!",
     "saveFailed": "Failed to save announcement.",
     "deleteFailed": "Failed to delete announcement.",
+    "manage": "Manage",
     "noAnnouncements": "No announcements yet",
     "noAnnouncementsHint": "Announcements and policies will appear here."
   },

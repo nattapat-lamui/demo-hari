@@ -17,8 +17,8 @@ export class SurveyService {
       await client.query("BEGIN");
 
       const surveyResult = await client.query(
-        `INSERT INTO surveys (title, created_by) VALUES ($1, $2) RETURNING id`,
-        [data.title, createdBy]
+        `INSERT INTO surveys (title, created_by, allow_retake) VALUES ($1, $2, $3) RETURNING id`,
+        [data.title, createdBy, data.allowRetake ?? false]
       );
       const surveyId = surveyResult.rows[0].id;
 
@@ -55,6 +55,7 @@ export class SurveyService {
          s.id,
          s.title,
          s.status,
+         s.allow_retake,
          s.created_at,
          s.closed_at,
          COUNT(DISTINCT sq.id)::int AS question_count,
@@ -79,6 +80,7 @@ export class SurveyService {
       id: r.id,
       title: r.title,
       status: r.status,
+      allowRetake: r.allow_retake,
       createdAt: r.created_at,
       closedAt: r.closed_at,
       questionCount: r.question_count,
@@ -93,7 +95,7 @@ export class SurveyService {
   ): Promise<SurveyDetail | null> {
     const surveyResult = await query(
       `SELECT
-         s.id, s.title, s.status, s.created_at, s.closed_at,
+         s.id, s.title, s.status, s.allow_retake, s.created_at, s.closed_at,
          CASE WHEN $2::uuid IS NOT NULL
            THEN EXISTS(
              SELECT 1 FROM survey_completions sc
@@ -122,6 +124,7 @@ export class SurveyService {
       id: survey.id,
       title: survey.title,
       status: survey.status,
+      allowRetake: survey.allow_retake,
       createdAt: survey.created_at,
       closedAt: survey.closed_at,
       hasCompleted: survey.has_completed,
@@ -143,6 +146,42 @@ export class SurveyService {
     try {
       await client.query("BEGIN");
 
+      // Check if survey allows retake
+      const surveyRow = await client.query(
+        `SELECT allow_retake FROM surveys WHERE id = $1`,
+        [surveyId]
+      );
+      const allowRetake = surveyRow.rows[0]?.allow_retake === true;
+
+      // Check if already completed
+      const existing = await client.query(
+        `SELECT id FROM survey_completions WHERE survey_id = $1 AND employee_id = $2`,
+        [surveyId, employeeId]
+      );
+
+      if (existing.rows.length > 0) {
+        if (!allowRetake) {
+          await client.query("ROLLBACK");
+          throw Object.assign(new Error("You have already completed this survey"), { status: 409 });
+        }
+
+        // Delete old completion record and get its timestamp
+        const deletedCompletion = await client.query(
+          `DELETE FROM survey_completions WHERE survey_id = $1 AND employee_id = $2 RETURNING completed_at`,
+          [surveyId, employeeId]
+        );
+
+        // Delete old responses for this survey's questions using the exact completion timestamp
+        if (deletedCompletion.rows.length > 0) {
+          await client.query(
+            `DELETE FROM survey_responses
+             WHERE question_id IN (SELECT id FROM survey_questions WHERE survey_id = $1)
+               AND submitted_at = $2`,
+            [surveyId, deletedCompletion.rows[0].completed_at]
+          );
+        }
+      }
+
       // Insert anonymous responses
       if (data.responses.length > 0) {
         const values: any[] = [];
@@ -159,7 +198,7 @@ export class SurveyService {
         );
       }
 
-      // Record completion (unique constraint prevents double-submit)
+      // Record completion
       await client.query(
         `INSERT INTO survey_completions (survey_id, employee_id) VALUES ($1, $2)`,
         [surveyId, employeeId]
@@ -168,10 +207,7 @@ export class SurveyService {
       await client.query("COMMIT");
     } catch (err: any) {
       await client.query("ROLLBACK");
-      // Unique constraint violation = already completed
-      if (err.code === "23505") {
-        throw Object.assign(new Error("You have already completed this survey"), { status: 409 });
-      }
+      if (err.status === 409) throw err;
       throw err;
     } finally {
       client.release();

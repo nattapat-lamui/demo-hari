@@ -376,6 +376,10 @@ CREATE TABLE payroll_records (
     leave_deduction DECIMAL(12,2) DEFAULT 0, -- Deduction from unpaid leave
     deductions DECIMAL(12,2) DEFAULT 0, -- Other deductions
     tax_amount DECIMAL(12,2) DEFAULT 0,
+    ssf_employee DECIMAL(12,2) DEFAULT 0,
+    ssf_employer DECIMAL(12,2) DEFAULT 0,
+    pvf_employee DECIMAL(12,2) DEFAULT 0,
+    pvf_employer DECIMAL(12,2) DEFAULT 0,
     net_pay DECIMAL(12,2) NOT NULL,
     status VARCHAR(20) DEFAULT 'Pending', -- Pending, Processed, Paid, Cancelled
     payment_date DATE,
@@ -482,6 +486,7 @@ CREATE TABLE surveys (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(255) NOT NULL,
     status VARCHAR(20) DEFAULT 'active',
+    allow_retake BOOLEAN DEFAULT FALSE,
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     closed_at TIMESTAMP WITH TIME ZONE

@@ -29,6 +29,7 @@ export interface CreateSurveyQuestion {
 export interface CreateSurveyRequest {
   title: string;
   questions: CreateSurveyQuestion[];
+  allowRetake?: boolean;
 }
 
 export interface SubmitSurveyResponse {
@@ -51,6 +52,7 @@ export interface SurveyListItem {
   id: string;
   title: string;
   status: 'active' | 'closed';
+  allowRetake: boolean;
   createdAt: string;
   closedAt: string | null;
   questionCount: number;
@@ -62,6 +64,7 @@ export interface SurveyDetail {
   id: string;
   title: string;
   status: 'active' | 'closed';
+  allowRetake: boolean;
   createdAt: string;
   closedAt: string | null;
   questions: SurveyQuestion[];

@@ -606,6 +606,7 @@ export interface SurveyListItem {
   id: string;
   title: string;
   status: 'active' | 'closed';
+  allowRetake: boolean;
   createdAt: string;
   closedAt: string | null;
   questionCount: number;
@@ -617,6 +618,7 @@ export interface SurveyDetail {
   id: string;
   title: string;
   status: 'active' | 'closed';
+  allowRetake: boolean;
   createdAt: string;
   closedAt: string | null;
   questions: SurveyQuestion[];

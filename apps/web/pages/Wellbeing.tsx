@@ -441,6 +441,14 @@ export const Wellbeing: React.FC = () => {
           <section className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-text-light dark:text-text-dark text-xl font-bold tracking-tight">{t('announcements.title')}</h2>
+              {isAdminView && (
+                <button
+                  onClick={() => { setEditingAnnouncementId(null); setNewAnnouncement({ type: 'announcement' }); setIsModalOpen(true); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Plus size={14} /> {t('newAnnouncement')}
+                </button>
+              )}
             </div>
             <div className="space-y-4">
               {announcementsList.length === 0 && (

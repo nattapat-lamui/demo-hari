@@ -73,6 +73,9 @@
     "startDate": "วันที่เริ่มงาน",
     "performanceRating": "คะแนนประเมินผลงาน",
     "leaveBalance": "วันลาที่ใช้ไป",
+    "attendanceDays": "จำนวนวันเข้างาน",
+    "lateDays": "จำนวนวันมาสาย",
+    "totalHours": "ชั่วโมงทำงานรวม",
     "rangeLast30": "30 วันที่ผ่านมา",
     "rangeLast90": "90 วันที่ผ่านมา",
     "rangeThisYear": "ปีนี้"

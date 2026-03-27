@@ -204,10 +204,16 @@ router.post('/reports/generate', async (req: Request, res: Response) => {
       dateFilter = `${now.getFullYear()}-01-01`;
     }
 
-    // Build query columns
+    // Build query columns with parameterized date filter
     const selectCols: string[] = ['e.name AS employee_name'];
     const joins: string[] = [];
     const headers: string[] = ['Employee Name'];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Reserve $1 for dateFilter if present
+    const dateParamIndex = dateFilter ? paramIndex++ : 0;
+    if (dateFilter) params.push(dateFilter);
 
     if (dataPoints.includes('department')) {
       selectCols.push('e.department');
@@ -244,9 +250,36 @@ router.post('/reports/generate', async (req: Request, res: Response) => {
         ), 0)
         FROM leave_requests lr
         WHERE lr.employee_id = e.id AND lr.status = 'Approved'
-        ${dateFilter ? `AND lr.start_date >= '${dateFilter}'` : ''}
+        ${dateFilter ? `AND lr.start_date >= $${dateParamIndex}` : ''}
       ) AS leave_days_used`);
       headers.push('Leave Days Used');
+    }
+    if (dataPoints.includes('attendanceDays')) {
+      selectCols.push(`(
+        SELECT COUNT(*)
+        FROM attendance_records ar
+        WHERE ar.employee_id = e.id AND ar.clock_in IS NOT NULL
+        ${dateFilter ? `AND ar.date >= $${dateParamIndex}` : ''}
+      ) AS attendance_days`);
+      headers.push('Attendance Days');
+    }
+    if (dataPoints.includes('lateDays')) {
+      selectCols.push(`(
+        SELECT COUNT(*)
+        FROM attendance_records ar
+        WHERE ar.employee_id = e.id AND ar.status = 'Late'
+        ${dateFilter ? `AND ar.date >= $${dateParamIndex}` : ''}
+      ) AS late_days`);
+      headers.push('Late Days');
+    }
+    if (dataPoints.includes('totalHours')) {
+      selectCols.push(`(
+        SELECT COALESCE(SUM(ar.total_hours), 0)
+        FROM attendance_records ar
+        WHERE ar.employee_id = e.id AND ar.total_hours IS NOT NULL
+        ${dateFilter ? `AND ar.date >= $${dateParamIndex}` : ''}
+      ) AS total_hours`);
+      headers.push('Total Hours');
     }
 
     const sql = `
@@ -254,11 +287,11 @@ router.post('/reports/generate', async (req: Request, res: Response) => {
       FROM employees e
       ${joins.join('\n')}
       WHERE e.status = 'Active'
-      ${dateFilter && dataPoints.includes('startDate') ? `AND e.join_date >= '${dateFilter}'` : ''}
+      ${dateFilter && dataPoints.includes('startDate') ? `AND e.join_date >= $${dateParamIndex}` : ''}
       ORDER BY e.name
     `;
 
-    const result = await query(sql);
+    const result = await query(sql, params);
 
     // Build CSV
     const lines: string[] = [csvRow(headers)];
@@ -269,6 +302,9 @@ router.post('/reports/generate', async (req: Request, res: Response) => {
       if (dataPoints.includes('salary')) values.push(row.salary);
       if (dataPoints.includes('performanceRating')) values.push(row.performance_rating);
       if (dataPoints.includes('leaveBalance')) values.push(row.leave_days_used);
+      if (dataPoints.includes('attendanceDays')) values.push(row.attendance_days);
+      if (dataPoints.includes('lateDays')) values.push(row.late_days);
+      if (dataPoints.includes('totalHours')) values.push(row.total_hours);
       lines.push(csvRow(values));
     }
 

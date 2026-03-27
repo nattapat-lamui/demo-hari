@@ -73,6 +73,9 @@
     "startDate": "Start Date",
     "performanceRating": "Performance Rating",
     "leaveBalance": "Leave Days Used",
+    "attendanceDays": "Attendance Days",
+    "lateDays": "Late Days",
+    "totalHours": "Total Hours Worked",
     "rangeLast30": "Last 30 Days",
     "rangeLast90": "Last 90 Days",
     "rangeThisYear": "This Year"

@@ -53,7 +53,7 @@ export class SurveyController {
    */
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const { title, questions } = req.body;
+      const { title, questions, allowRetake } = req.body;
 
       if (!title || typeof title !== "string" || title.trim() === "") {
         res.status(400).json({ error: "Title is required" });
@@ -88,6 +88,7 @@ export class SurveyController {
       const result = await SurveyService.createSurvey(req.user!.userId, {
         title: title.trim(),
         questions: normalizedQuestions,
+        allowRetake: allowRetake === true,
       });
 
       res.status(201).json(result);

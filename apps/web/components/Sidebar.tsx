@@ -16,7 +16,7 @@ import {
   Calendar,
   DollarSign,
   MessageSquare,
-  Clock
+  Clock,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLeaveRequests } from '../hooks/queries';

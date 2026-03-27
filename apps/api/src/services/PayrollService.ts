@@ -206,6 +206,24 @@ export class PayrollService {
   }
 
   /**
+   * Calculate payroll for interns — no tax, SSF, or PVF
+   */
+  private calculateInternPayroll(
+    baseSalary: number,
+    overtimeHours: number,
+    bonus: number,
+    leaveDeduction: number,
+    deductions: number,
+    config: PayrollConfig
+  ) {
+    const hourlyRate = baseSalary / config.standardHoursPerMonth;
+    const overtimePay = Math.round(overtimeHours * hourlyRate * config.otMultiplier * 100) / 100;
+    const grossPay = baseSalary + overtimePay + bonus;
+    const netPay = Math.round((grossPay - leaveDeduction - deductions) * 100) / 100;
+    return { overtimePay, monthlyTax: 0, netPay, ssfEmployee: 0, ssfEmployer: 0, pvfEmployee: 0, pvfEmployer: 0 };
+  }
+
+  /**
    * Create payroll record for an employee
    */
   async createPayroll(data: CreatePayrollData): Promise<PayrollRecord> {
@@ -240,10 +258,14 @@ export class PayrollService {
       throw new BusinessError('A payroll record already exists for this employee and pay period');
     }
 
+    // Check if employee is an intern (no tax/SSF/PVF)
+    const empResult = await query('SELECT role FROM employees WHERE id = $1', [employeeId]);
+    const isIntern = empResult.rows.length > 0 && empResult.rows[0].role?.toLowerCase().includes('intern');
+
     const config = await this.getPayrollConfig();
-    const { overtimePay, monthlyTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = this.calculatePayrollAmounts(
-      baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config
-    );
+    const { overtimePay, monthlyTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = isIntern
+      ? this.calculateInternPayroll(baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config)
+      : this.calculatePayrollAmounts(baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config);
 
     const result = await query(
       `INSERT INTO payroll_records
@@ -280,10 +302,14 @@ export class PayrollService {
       throw new BusinessError('Base salary must be greater than 0');
     }
 
+    // Check if employee is an intern (no tax/SSF/PVF)
+    const empResult = await query('SELECT role FROM employees WHERE id = $1', [existing.employeeId]);
+    const isIntern = empResult.rows.length > 0 && empResult.rows[0].role?.toLowerCase().includes('intern');
+
     const config = await this.getPayrollConfig();
-    const { overtimePay, monthlyTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = this.calculatePayrollAmounts(
-      baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config
-    );
+    const { overtimePay, monthlyTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = isIntern
+      ? this.calculateInternPayroll(baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config)
+      : this.calculatePayrollAmounts(baseSalary, overtimeHours, bonus, leaveDeduction, deductions, config);
 
     const result = await query(
       `UPDATE payroll_records
@@ -476,9 +502,9 @@ export class PayrollService {
     try {
       await client.query('BEGIN');
 
-      // Get all active employees with their salary (from employees table or salary_history)
+      // Get all active employees with their salary and role
       const employees = await client.query(
-        `SELECT e.id, e.name, COALESCE(e.salary, sh.base_salary, 0) AS salary
+        `SELECT e.id, e.name, e.role, COALESCE(e.salary, sh.base_salary, 0) AS salary
          FROM employees e
          LEFT JOIN LATERAL (
            SELECT base_salary FROM salary_history
@@ -518,10 +544,11 @@ export class PayrollService {
           continue;
         }
 
-        // Calculate payroll (base salary only — OT/bonus are 0, admin edits later)
-        const { monthlyTax: batchTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = this.calculatePayrollAmounts(
-          salary, 0, 0, 0, 0, config
-        );
+        // Interns: no tax/SSF/PVF
+        const isIntern = emp.role && emp.role.toLowerCase().includes('intern');
+        const { monthlyTax: batchTax, netPay, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer } = isIntern
+          ? this.calculateInternPayroll(salary, 0, 0, 0, 0, config)
+          : this.calculatePayrollAmounts(salary, 0, 0, 0, 0, config);
 
         insertValues.push(emp.id, payPeriodStart, payPeriodEnd, salary, batchTax, ssfEmployee, ssfEmployer, pvfEmployee, pvfEmployer, netPay);
         created++;

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, X, Check, Trash2, Lock, Unlock,
+  Plus, X, Check, Trash2, Lock, Unlock, RefreshCw,
   MessageSquare, CheckCircle2, BarChart3, ClipboardList, ArrowRight, FileText, Users,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -107,6 +107,7 @@ const CreateSurveyModal: React.FC<{
   const { t } = useTranslation(['help', 'common']);
   const createMutation = useCreateSurvey();
   const [title, setTitle] = useState('');
+  const [allowRetake, setAllowRetake] = useState(false);
   const [questions, setQuestions] = useState<QuestionDraft[]>([
     { questionText: '', category: 'Workload' },
   ]);
@@ -145,8 +146,10 @@ const CreateSurveyModal: React.FC<{
           category: q.category,
           sortOrder: i,
         })),
+        allowRetake,
       });
       setTitle('');
+      setAllowRetake(false);
       setQuestions([{ questionText: '', category: 'Workload' }]);
       setTemplateApplied(false);
       onCreated();
@@ -181,6 +184,24 @@ const CreateSurveyModal: React.FC<{
               className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
             />
           </div>
+
+          {/* Allow Retake Toggle */}
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={allowRetake}
+                onChange={(e) => setAllowRetake(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5 bg-gray-300 dark:bg-gray-600 rounded-full peer-checked:bg-primary transition-colors" />
+              <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-text-light dark:text-text-dark">{t('surveys.allowRetake')}</span>
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{t('surveys.allowRetakeDesc')}</p>
+            </div>
+          </label>
 
           {/* Template Cards */}
           <div>
@@ -407,9 +428,18 @@ export const Surveys: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {survey.hasCompleted ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
-                          <CheckCircle2 size={12} /> {t('surveys.done')}
-                        </span>
+                        survey.allowRetake ? (
+                          <button
+                            onClick={() => navigate(`/surveys/${survey.id}`)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 text-xs font-medium rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                          >
+                            <RefreshCw size={12} /> {t('surveys.retake')}
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                            <CheckCircle2 size={12} /> {t('surveys.done')}
+                          </span>
+                        )
                       ) : (
                         <button
                           onClick={() => navigate(`/surveys/${survey.id}`)}

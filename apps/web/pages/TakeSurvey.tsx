@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Star, Send, Shield, CheckCircle2, Heart, Zap, BookOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, Send, Shield, CheckCircle2, Heart, Zap, BookOpen, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Toast } from '../components/Toast';
 import { useSurveyDetail, useSubmitSurveyResponse } from '../hooks/queries';
@@ -247,6 +247,7 @@ export const TakeSurvey: React.FC = () => {
 
   const [hoveredStar, setHoveredStar] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [retaking, setRetaking] = useState(false);
 
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false, message: '', type: 'success',
@@ -307,6 +308,7 @@ export const TakeSurvey: React.FC = () => {
       });
       // Clear draft on successful submission
       if (draftKey) localStorage.removeItem(draftKey);
+      setRetaking(false);
       setSubmitted(true);
     } catch (err: any) {
       setToast({ show: true, message: err.message || 'Failed to submit', type: 'error' });
@@ -335,7 +337,7 @@ export const TakeSurvey: React.FC = () => {
     );
   }
 
-  if (survey.hasCompleted && !submitted) {
+  if (survey.hasCompleted && !submitted && !retaking) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
@@ -343,9 +345,24 @@ export const TakeSurvey: React.FC = () => {
         </div>
         <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">{t('takeSurvey.alreadyCompleted')}</h2>
         <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{t('takeSurvey.alreadyCompletedDesc')}</p>
-        <button onClick={() => navigate('/surveys')} className="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors">
-          {t('takeSurvey.backToSurveys')}
-        </button>
+        <div className="flex gap-3">
+          {survey.allowRetake && (
+            <button
+              onClick={() => {
+                setRetaking(true);
+                setRatings({});
+                setCurrentIndex(0);
+                if (draftKey) localStorage.removeItem(draftKey);
+              }}
+              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600 transition-colors flex items-center gap-1.5"
+            >
+              <RefreshCw size={14} /> {t('takeSurvey.retakeSurvey')}
+            </button>
+          )}
+          <button onClick={() => navigate('/surveys')} className="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors">
+            {t('takeSurvey.backToSurveys')}
+          </button>
+        </div>
       </div>
     );
   }

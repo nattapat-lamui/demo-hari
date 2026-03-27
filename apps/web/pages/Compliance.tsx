@@ -25,6 +25,9 @@ const DATA_POINTS = [
   { key: 'startDate', labelKey: 'reportBuilder.startDate' },
   { key: 'performanceRating', labelKey: 'reportBuilder.performanceRating' },
   { key: 'leaveBalance', labelKey: 'reportBuilder.leaveBalance' },
+  { key: 'attendanceDays', labelKey: 'reportBuilder.attendanceDays' },
+  { key: 'lateDays', labelKey: 'reportBuilder.lateDays' },
+  { key: 'totalHours', labelKey: 'reportBuilder.totalHours' },
 ] as const;
 
 const DATE_RANGES = [

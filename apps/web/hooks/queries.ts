@@ -1037,7 +1037,7 @@ export const useSentimentOverview = () => {
 export const useCreateSurvey = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { title: string; questions: Array<{ questionText: string; category: string; sortOrder: number }> }) =>
+    mutationFn: (data: { title: string; questions: Array<{ questionText: string; category: string; sortOrder: number }>; allowRetake?: boolean }) =>
       api.post('/surveys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.surveys.all });

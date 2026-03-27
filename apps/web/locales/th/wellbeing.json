@@ -34,6 +34,7 @@
     "deleted": "ลบประกาศสำเร็จ!",
     "saveFailed": "ไม่สามารถบันทึกประกาศได้",
     "deleteFailed": "ไม่สามารถลบประกาศได้",
+    "manage": "จัดการ",
     "noAnnouncements": "ยังไม่มีประกาศ",
     "noAnnouncementsHint": "ประกาศและนโยบายจะแสดงที่นี่"
   },
