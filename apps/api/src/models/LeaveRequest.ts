@@ -17,6 +17,8 @@ export interface LeaveRequest {
     rejectionReason?: string;
     approverEmployeeId?: string;
     updatedAt?: string;
+    isHalfDay?: boolean;
+    halfDayPeriod?: 'morning' | 'afternoon';
 }
 
 export interface CreateLeaveRequestDTO {
@@ -29,6 +31,8 @@ export interface CreateLeaveRequestDTO {
     handoverEmployeeId?: string;
     handoverNotes?: string;
     medicalCertificatePath?: string;
+    isHalfDay?: boolean;
+    halfDayPeriod?: 'morning' | 'afternoon';
 }
 
 export interface UpdateLeaveRequestDTO {
@@ -45,4 +49,6 @@ export interface EditLeaveRequestDTO {
     handoverEmployeeId?: string;
     handoverNotes?: string;
     medicalCertificatePath?: string;
+    isHalfDay?: boolean;
+    halfDayPeriod?: 'morning' | 'afternoon';
 }

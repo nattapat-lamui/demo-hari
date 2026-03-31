@@ -49,7 +49,8 @@
     "medicalRequired": "Medical certificate required for maternity leave",
     "medicalRequiredSick": "Medical certificate required for sick leave of 3+ days",
     "updateSuccess": "Leave request updated successfully",
-    "submitSuccess": "Leave request submitted successfully"
+    "submitSuccess": "Leave request submitted successfully",
+    "overlapError": "This leave overlaps with an existing request."
   },
   "admin": {
     "title": "Leave Requests",
@@ -82,7 +83,14 @@
     "requestRejected": "Leave request rejected",
     "cancelApproved": "Leave cancellation approved",
     "cancelRejected": "Leave cancellation rejected",
-    "cancelFailed": "Failed to process cancellation"
+    "cancelFailed": "Failed to process cancellation",
+    "searchEmployee": "Search by name...",
+    "exportCSV": "Export CSV",
+    "selectAll": "Select All",
+    "selected": "{{count}} selected",
+    "bulkApprove": "Approve ({{count}})",
+    "bulkReject": "Reject ({{count}})",
+    "bulkSuccess": "{{count}} request(s) updated successfully"
   },
   "detail": {
     "title": "Leave Request Details",
@@ -182,6 +190,31 @@
     "cancel": "Cancel",
     "rejecting": "Rejecting...",
     "reject": "Reject Request"
+  },
+  "halfDay": {
+    "label": "Half Day",
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "singleDayOnly": "Half day is only available for single-day leave",
+    "periodRequired": "Please select morning or afternoon"
+  },
+  "holidays": {
+    "title": "Holiday Calendar",
+    "subtitle": "Manage public holidays and company holidays",
+    "addHoliday": "Add Holiday",
+    "editHoliday": "Edit Holiday",
+    "deleteHoliday": "Delete Holiday",
+    "name": "Holiday Name",
+    "date": "Date",
+    "recurring": "Recurring Annually",
+    "recurringYes": "Yearly",
+    "recurringNo": "One-time",
+    "deleteConfirm": "Are you sure you want to delete this holiday?",
+    "noHolidays": "No holidays configured",
+    "createSuccess": "Holiday created successfully",
+    "updateSuccess": "Holiday updated successfully",
+    "deleteSuccess": "Holiday deleted successfully",
+    "businessDays": "business days"
   },
   "allLeaveTypes": "All Leave Types",
   "types": {

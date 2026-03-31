@@ -49,7 +49,8 @@
     "medicalRequired": "ต้องมีใบรับรองแพทย์สำหรับการลาคลอด",
     "medicalRequiredSick": "ต้องมีใบรับรองแพทย์สำหรับการลาป่วย 3 วันขึ้นไป",
     "updateSuccess": "อัปเดตคำขอลาสำเร็จ",
-    "submitSuccess": "ส่งคำขอลาสำเร็จ"
+    "submitSuccess": "ส่งคำขอลาสำเร็จ",
+    "overlapError": "คำขอลานี้ทับซ้อนกับคำขอที่มีอยู่แล้ว"
   },
   "admin": {
     "title": "คำขอลา",
@@ -82,7 +83,14 @@
     "requestRejected": "ปฏิเสธคำขอลาแล้ว",
     "cancelApproved": "อนุมัติการยกเลิกลาแล้ว",
     "cancelRejected": "ปฏิเสธการยกเลิกลาแล้ว",
-    "cancelFailed": "ไม่สามารถดำเนินการยกเลิกได้"
+    "cancelFailed": "ไม่สามารถดำเนินการยกเลิกได้",
+    "searchEmployee": "ค้นหาชื่อ...",
+    "exportCSV": "ส่งออก CSV",
+    "selectAll": "เลือกทั้งหมด",
+    "selected": "เลือก {{count}} รายการ",
+    "bulkApprove": "อนุมัติ ({{count}})",
+    "bulkReject": "ปฏิเสธ ({{count}})",
+    "bulkSuccess": "อัปเดต {{count}} คำขอสำเร็จ"
   },
   "detail": {
     "title": "รายละเอียดคำขอลา",
@@ -182,6 +190,31 @@
     "cancel": "ยกเลิก",
     "rejecting": "กำลังปฏิเสธ...",
     "reject": "ปฏิเสธคำขอ"
+  },
+  "halfDay": {
+    "label": "ครึ่งวัน",
+    "morning": "เช้า",
+    "afternoon": "บ่าย",
+    "singleDayOnly": "ลาครึ่งวันใช้ได้เฉพาะการลา 1 วัน",
+    "periodRequired": "กรุณาเลือกเช้าหรือบ่าย"
+  },
+  "holidays": {
+    "title": "ปฏิทินวันหยุด",
+    "subtitle": "จัดการวันหยุดนักขัตฤกษ์และวันหยุดบริษัท",
+    "addHoliday": "เพิ่มวันหยุด",
+    "editHoliday": "แก้ไขวันหยุด",
+    "deleteHoliday": "ลบวันหยุด",
+    "name": "ชื่อวันหยุด",
+    "date": "วันที่",
+    "recurring": "เกิดซ้ำทุกปี",
+    "recurringYes": "ทุกปี",
+    "recurringNo": "ครั้งเดียว",
+    "deleteConfirm": "คุณแน่ใจหรือไม่ว่าต้องการลบวันหยุดนี้?",
+    "noHolidays": "ยังไม่ได้ตั้งค่าวันหยุด",
+    "createSuccess": "เพิ่มวันหยุดสำเร็จ",
+    "updateSuccess": "อัปเดตวันหยุดสำเร็จ",
+    "deleteSuccess": "ลบวันหยุดสำเร็จ",
+    "businessDays": "วันทำการ"
   },
   "allLeaveTypes": "ประเภทการลาทั้งหมด",
   "types": {

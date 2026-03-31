@@ -17,7 +17,8 @@
     "settings": "Settings",
     "helpSupport": "Help & Support",
     "signOut": "Sign Out",
-    "menu": "Menu"
+    "menu": "Menu",
+    "holidays": "Holidays"
   },
   "header": {
     "searchPlaceholder": "Search employees, documents, policies...",

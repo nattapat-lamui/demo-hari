@@ -30,6 +30,8 @@ interface FormState {
   handoverEmployeeId: string;
   handoverNotes: string;
   medicalCertificate: File | null;
+  isHalfDay: boolean;
+  halfDayPeriod: 'morning' | 'afternoon' | '';
 }
 
 const initialForm: FormState = {
@@ -40,6 +42,8 @@ const initialForm: FormState = {
   handoverEmployeeId: '',
   handoverNotes: '',
   medicalCertificate: null,
+  isHalfDay: false,
+  halfDayPeriod: '',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -92,18 +96,39 @@ export function LeaveRequestForm() {
         handoverEmployeeId: existingRequest.handoverEmployeeId || '',
         handoverNotes: existingRequest.handoverNotes || '',
         medicalCertificate: null,
+        isHalfDay: existingRequest.isHalfDay || false,
+        halfDayPeriod: existingRequest.halfDayPeriod || '',
       });
     }
   }, [isEditMode, existingRequest]);
 
-  // Calculate duration
-  const dayCount = useMemo(() => {
-    if (!form.startDate || !form.endDate) return 0;
+  // Calculate business days (excluding weekends and holidays) via API
+  const [dayCount, setDayCount] = useState(0);
+  useEffect(() => {
+    if (!form.startDate || !form.endDate) { setDayCount(0); return; }
     const start = new Date(form.startDate);
     const end = new Date(form.endDate);
-    if (end < start) return 0;
-    return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  }, [form.startDate, form.endDate]);
+    if (end < start) { setDayCount(0); return; }
+    if (form.isHalfDay && form.startDate === form.endDate) { setDayCount(0.5); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { api } = await import('../lib/api');
+        const result = await api.get<{ days: number }>(`/holidays/calculate-days?start=${form.startDate}&end=${form.endDate}`);
+        if (!cancelled) setDayCount(result.days);
+      } catch {
+        if (!cancelled) setDayCount(Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [form.startDate, form.endDate, form.isHalfDay]);
+
+  // Auto-disable half-day when date range is multi-day
+  useEffect(() => {
+    if (form.isHalfDay && form.startDate && form.endDate && form.startDate !== form.endDate) {
+      setForm(prev => ({ ...prev, isHalfDay: false, halfDayPeriod: '' }));
+    }
+  }, [form.startDate, form.endDate, form.isHalfDay]);
 
   // Get current balance for selected type
   const currentBalance: LeaveBalance | undefined = useMemo(
@@ -177,6 +202,8 @@ export function LeaveRequestForm() {
     if (form.handoverEmployeeId) formData.append('handoverEmployeeId', form.handoverEmployeeId);
     if (form.handoverNotes) formData.append('handoverNotes', form.handoverNotes);
     if (form.medicalCertificate) formData.append('medicalCertificate', form.medicalCertificate);
+    formData.append('isHalfDay', String(form.isHalfDay));
+    if (form.isHalfDay && form.halfDayPeriod) formData.append('halfDayPeriod', form.halfDayPeriod);
 
     try {
       if (isEditMode) {
@@ -260,6 +287,49 @@ export function LeaveRequestForm() {
                   />
                 </div>
               </div>
+
+              {/* Half-day toggle — only when single-day */}
+              {form.startDate && form.endDate && form.startDate === form.endDate && (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.isHalfDay}
+                      onChange={(e) => setForm({ ...form, isHalfDay: e.target.checked, halfDayPeriod: e.target.checked ? 'morning' : '' })}
+                      className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
+                    />
+                    <span className="text-sm font-medium text-text-light dark:text-text-dark">
+                      {t('leave:halfDay.label')}
+                    </span>
+                  </label>
+                  {form.isHalfDay && (
+                    <div className="flex gap-4 ml-6">
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="halfDayPeriod"
+                          value="morning"
+                          checked={form.halfDayPeriod === 'morning'}
+                          onChange={() => setForm({ ...form, halfDayPeriod: 'morning' })}
+                          className="w-4 h-4 text-primary border-border-light dark:border-border-dark focus:ring-primary"
+                        />
+                        <span className="text-sm text-text-light dark:text-text-dark">{t('leave:halfDay.morning')}</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="halfDayPeriod"
+                          value="afternoon"
+                          checked={form.halfDayPeriod === 'afternoon'}
+                          onChange={() => setForm({ ...form, halfDayPeriod: 'afternoon' })}
+                          className="w-4 h-4 text-primary border-border-light dark:border-border-dark focus:ring-primary"
+                        />
+                        <span className="text-sm text-text-light dark:text-text-dark">{t('leave:halfDay.afternoon')}</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Total Duration + Quota */}
               {dayCount > 0 && (

@@ -140,4 +140,8 @@ export const queryKeys = {
     all: ['userStatuses'] as const,
     list: () => ['userStatuses', 'list'] as const,
   },
+  holidays: {
+    all: ['holidays'] as const,
+    list: () => [...queryKeys.holidays.all, 'list'] as const,
+  },
 } as const;

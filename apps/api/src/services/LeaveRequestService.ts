@@ -3,6 +3,7 @@ import { LeaveRequest, CreateLeaveRequestDTO, UpdateLeaveRequestDTO, EditLeaveRe
 import SystemConfigService from './SystemConfigService';
 import EmployeeLeaveQuotaService from './EmployeeLeaveQuotaService';
 import NotificationService from './NotificationService';
+import HolidayService from './HolidayService';
 import { withTransaction } from '../utils/transaction';
 import { PaginationParams, PaginatedResult, createPaginatedResult, buildPaginationClause, buildSortClause } from '../utils/pagination';
 
@@ -21,14 +22,32 @@ function toDateString(val: unknown): string {
 
 const BASE_SELECT = `
     SELECT lr.*, e.avatar, e.name as employee_name,
-           (lr.end_date::date - lr.start_date::date) + 1 as days,
+           COALESCE(lr.business_days, (lr.end_date::date - lr.start_date::date) + 1) as days,
            TO_CHAR(lr.start_date, 'Mon DD') || ' - ' || TO_CHAR(lr.end_date, 'Mon DD') as dates,
-           he.name as handover_employee_name
+           he.name as handover_employee_name,
+           lr.is_half_day, lr.half_day_period
     FROM leave_requests lr
     LEFT JOIN employees e ON lr.employee_id = e.id
     LEFT JOIN employees he ON lr.handover_employee_id = he.id`;
 
 export class LeaveRequestService {
+    static async calculateBusinessDays(startDate: string, endDate: string): Promise<number> {
+        const holidayDates = await HolidayService.getHolidayDatesSet(startDate, endDate);
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        let count = 0;
+        const current = new Date(start);
+        while (current <= end) {
+            const dayOfWeek = current.getDay();
+            const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+            if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayDates.has(dateStr)) {
+                count++;
+            }
+            current.setDate(current.getDate() + 1);
+        }
+        return count;
+    }
+
     static stripSensitiveLeaveFields(request: LeaveRequest): LeaveRequest {
         return {
             ...request,
@@ -128,25 +147,39 @@ export class LeaveRequestService {
     }
 
     async createLeaveRequest(requestData: CreateLeaveRequestDTO): Promise<LeaveRequest> {
-        const { employeeId, type, startDate, endDate, reason, handoverEmployeeId, handoverNotes, medicalCertificatePath } = requestData;
+        const { employeeId, type, startDate, endDate, reason, handoverEmployeeId, handoverNotes, medicalCertificatePath, isHalfDay, halfDayPeriod } = requestData;
 
-        // Calculate days
+        // Validate half-day constraints
+        if (isHalfDay) {
+            if (startDate !== endDate) {
+                const err: any = new Error('Half-day leave is only available for single-day requests.');
+                err.statusCode = 400;
+                throw err;
+            }
+            if (!halfDayPeriod || !['morning', 'afternoon'].includes(halfDayPeriod)) {
+                const err: any = new Error('Please select morning or afternoon for half-day leave.');
+                err.statusCode = 400;
+                throw err;
+            }
+        }
+
+        // Calculate business days (excluding weekends and holidays)
         const start = new Date(startDate);
         const end = new Date(endDate);
-        const diffTime = Math.abs(end.getTime() - start.getTime());
-        const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        let days = await LeaveRequestService.calculateBusinessDays(startDate, endDate);
+        if (isHalfDay) days = 0.5;
 
         // Validate leave quota using effective quotas (per-employee override > global default)
         const effectiveQuotas = await EmployeeLeaveQuotaService.getEffectiveQuotas(employeeId);
         const quota = effectiveQuotas.find(q => q.type === type);
         if (quota && quota.total !== -1) {
             const usedResult = await query(
-                `SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
+                `SELECT COALESCE(SUM(COALESCE(business_days, (end_date::date - start_date::date) + 1)), 0) as used_days
                  FROM leave_requests
                  WHERE employee_id = $1 AND leave_type = $2 AND status IN ('Approved', 'Pending')`,
                 [employeeId, type]
             );
-            const usedDays = parseInt(usedResult.rows[0]?.used_days || '0', 10);
+            const usedDays = parseFloat(usedResult.rows[0]?.used_days || '0');
             const remaining = quota.total - usedDays;
             if (days > remaining) {
                 const err: any = new Error(
@@ -158,6 +191,9 @@ export class LeaveRequestService {
                 throw err;
             }
         }
+
+        // Validate: no overlapping leave requests
+        await this.checkOverlap(employeeId, startDate, endDate, undefined, isHalfDay, halfDayPeriod);
 
         // Validate: Maternity Leave always requires medical certificate
         if (type === LEAVE_TYPE_MATERNITY && !medicalCertificatePath) {
@@ -171,10 +207,10 @@ export class LeaveRequestService {
         const dates = `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
 
         const result = await query(
-            `INSERT INTO leave_requests (employee_id, leave_type, start_date, end_date, reason, status, handover_employee_id, handover_notes, medical_certificate_path)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            `INSERT INTO leave_requests (employee_id, leave_type, start_date, end_date, reason, status, handover_employee_id, handover_notes, medical_certificate_path, business_days, is_half_day, half_day_period)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
              RETURNING *`,
-            [employeeId, type, startDate, endDate, reason || '', 'Pending', handoverEmployeeId || null, handoverNotes || null, medicalCertificatePath || null]
+            [employeeId, type, startDate, endDate, reason || '', 'Pending', handoverEmployeeId || null, handoverNotes || null, medicalCertificatePath || null, days, isHalfDay || false, halfDayPeriod || null]
         );
 
         // Snapshot to history
@@ -245,22 +281,35 @@ export class LeaveRequestService {
                 throw err;
             }
 
-            // Calculate new days
-            const newStart = new Date(editData.startDate);
-            const newEnd = new Date(editData.endDate);
-            const newDays = Math.ceil(Math.abs(newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            // Validate half-day constraints
+            if (editData.isHalfDay) {
+                if (editData.startDate !== editData.endDate) {
+                    const err: any = new Error('Half-day leave is only available for single-day requests.');
+                    err.statusCode = 400;
+                    throw err;
+                }
+                if (!editData.halfDayPeriod || !['morning', 'afternoon'].includes(editData.halfDayPeriod)) {
+                    const err: any = new Error('Please select morning or afternoon for half-day leave.');
+                    err.statusCode = 400;
+                    throw err;
+                }
+            }
+
+            // Calculate new business days (excluding weekends and holidays)
+            let newDays = await LeaveRequestService.calculateBusinessDays(editData.startDate, editData.endDate);
+            if (editData.isHalfDay) newDays = 0.5;
 
             // Re-validate quota using effective quotas (exclude current request from used-days count)
             const effectiveQuotas = await EmployeeLeaveQuotaService.getEffectiveQuotas(employeeId);
             const quota = effectiveQuotas.find(q => q.type === editData.type);
             if (quota && quota.total !== -1) {
                 const usedResult = await query(
-                    `SELECT COALESCE(SUM((end_date::date - start_date::date) + 1), 0) as used_days
+                    `SELECT COALESCE(SUM(COALESCE(business_days, (end_date::date - start_date::date) + 1)), 0) as used_days
                      FROM leave_requests
                      WHERE employee_id = $1 AND leave_type = $2 AND status IN ('Approved', 'Pending') AND id != $3`,
                     [employeeId, editData.type, id]
                 );
-                const usedDays = parseInt(usedResult.rows[0]?.used_days || '0', 10);
+                const usedDays = parseFloat(usedResult.rows[0]?.used_days || '0');
                 const remaining = quota.total - usedDays;
                 if (newDays > remaining) {
                     const err: any = new Error(
@@ -272,6 +321,9 @@ export class LeaveRequestService {
                     throw err;
                 }
             }
+
+            // Re-validate: no overlapping leave requests (exclude self)
+            await this.checkOverlap(employeeId, editData.startDate, editData.endDate, id, editData.isHalfDay, editData.halfDayPeriod);
 
             // Re-validate medical cert for Maternity Leave (always required)
             const medCertPath = editData.medicalCertificatePath || row.medical_certificate_path;
@@ -292,8 +344,8 @@ export class LeaveRequestService {
                 `UPDATE leave_requests
                  SET leave_type = $1, start_date = $2, end_date = $3, reason = $4,
                      handover_employee_id = $5, handover_notes = $6, medical_certificate_path = $7,
-                     status = $8, updated_at = NOW()
-                 WHERE id = $9
+                     status = $8, business_days = $9, is_half_day = $10, half_day_period = $11, updated_at = NOW()
+                 WHERE id = $12
                  RETURNING *`,
                 [
                     editData.type,
@@ -304,6 +356,9 @@ export class LeaveRequestService {
                     editData.handoverNotes || null,
                     editData.medicalCertificatePath || medCertPath || null,
                     newStatus,
+                    newDays,
+                    editData.isHalfDay || false,
+                    editData.halfDayPeriod || null,
                     id,
                 ]
             );
@@ -528,6 +583,39 @@ export class LeaveRequestService {
         return { action: 'reverted', leaveRequest: leaveRequest || undefined };
     }
 
+    private async checkOverlap(employeeId: string, startDate: string, endDate: string, excludeId?: string, isHalfDay?: boolean, halfDayPeriod?: string): Promise<void> {
+        const params: any[] = [employeeId, startDate, endDate];
+        let excludeClause = '';
+        if (excludeId) {
+            params.push(excludeId);
+            excludeClause = `AND id != $${params.length}`;
+        }
+        const result = await query(
+            `SELECT id, leave_type, start_date, end_date, is_half_day, half_day_period FROM leave_requests
+             WHERE employee_id = $1
+             AND status IN ('Pending', 'Approved')
+             AND start_date <= $3::date AND end_date >= $2::date
+             ${excludeClause}`,
+            params
+        );
+        for (const row of result.rows) {
+            // Half-day on same single day with different period → not a conflict
+            if (isHalfDay && row.is_half_day && startDate === endDate
+                && toDateString(row.start_date) === toDateString(row.end_date)
+                && startDate === toDateString(row.start_date)
+                && halfDayPeriod !== row.half_day_period) {
+                continue;
+            }
+            const fmtStart = toDateString(row.start_date);
+            const fmtEnd = toDateString(row.end_date);
+            const err: any = new Error(
+                `This leave overlaps with an existing ${row.leave_type} request (${fmtStart} - ${fmtEnd}).`
+            );
+            err.statusCode = 409;
+            throw err;
+        }
+    }
+
     async deleteLeaveRequest(id: string): Promise<void> {
         const result = await query('DELETE FROM leave_requests WHERE id = $1', [id]);
         if (result.rowCount === 0) {
@@ -538,7 +626,7 @@ export class LeaveRequestService {
     async getLeaveBalances(employeeId: string): Promise<any[]> {
         const result = await query(
             `SELECT leave_type,
-                    SUM((end_date::date - start_date::date) + 1) as used_days
+                    SUM(COALESCE(business_days, (end_date::date - start_date::date) + 1)) as used_days
              FROM leave_requests
              WHERE employee_id = $1 AND status = 'Approved'
              GROUP BY leave_type`,
@@ -546,7 +634,7 @@ export class LeaveRequestService {
         );
 
         const usedDays = result.rows.reduce((acc: any, row: any) => {
-            acc[row.leave_type] = parseInt(row.used_days);
+            acc[row.leave_type] = parseFloat(row.used_days);
             return acc;
         }, {});
 
@@ -567,10 +655,10 @@ export class LeaveRequestService {
                 `INSERT INTO leave_request_history
                     (leave_request_id, employee_id, leave_type, start_date, end_date, reason, status,
                      approver_id, rejection_reason, handover_employee_id, handover_notes,
-                     medical_certificate_path, change_type, changed_by)
+                     medical_certificate_path, business_days, is_half_day, half_day_period, change_type, changed_by)
                  SELECT id, employee_id, leave_type, start_date, end_date, reason, status,
                         approver_id, rejection_reason, handover_employee_id, handover_notes,
-                        medical_certificate_path, $2, $3
+                        medical_certificate_path, business_days, is_half_day, half_day_period, $2, $3
                  FROM leave_requests WHERE id = $1`,
                 [leaveRequestId, changeType, changedBy]
             );
@@ -599,6 +687,8 @@ export class LeaveRequestService {
             rejectionReason: row.rejection_reason || undefined,
             approverEmployeeId: row.approver_id || undefined,
             updatedAt: row.updated_at || undefined,
+            isHalfDay: row.is_half_day || false,
+            halfDayPeriod: row.half_day_period || undefined,
         };
     }
 }

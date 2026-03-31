@@ -29,6 +29,7 @@ import type {
   SurveyDetail,
   SentimentOverview,
   EffectiveLeaveQuota,
+  PublicHoliday,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -1535,6 +1536,49 @@ export const useComplianceAuditLogs = (filters: { page?: number; limit?: number;
       return api.get<PaginatedResponse<PersistentAuditLog>>(
         qs ? `/compliance/audit-logs?${qs}` : '/compliance/audit-logs'
       );
+    },
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Holidays
+// ---------------------------------------------------------------------------
+
+export const useHolidays = () => {
+  return useQuery({
+    queryKey: queryKeys.holidays.list(),
+    queryFn: () => api.get<PublicHoliday[]>('/holidays'),
+  });
+};
+
+export const useCreateHoliday = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { date: string; name: string; isRecurring?: boolean }) =>
+      api.post<PublicHoliday>('/holidays', data),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.holidays.all });
+    },
+  });
+};
+
+export const useUpdateHoliday = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; date?: string; name?: string; isRecurring?: boolean }) =>
+      api.put<PublicHoliday>(`/holidays/${id}`, data),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.holidays.all });
+    },
+  });
+};
+
+export const useDeleteHoliday = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/holidays/${id}`),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.holidays.all });
     },
   });
 };

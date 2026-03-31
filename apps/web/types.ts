@@ -150,6 +150,8 @@ export interface LeaveRequest {
   rejectionReason?: string;
   approverEmployeeId?: string;
   updatedAt?: string;
+  isHalfDay?: boolean;
+  halfDayPeriod?: 'morning' | 'afternoon';
 }
 
 export interface LeaveBalance {
@@ -708,4 +710,13 @@ export interface LeaveQuotaConfig {
   type: string;
   total: number;
   color?: string; // palette key: "blue", "amber", etc.
+}
+
+export interface PublicHoliday {
+  id: string;
+  date: string;
+  name: string;
+  isRecurring: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

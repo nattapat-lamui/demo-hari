@@ -131,7 +131,7 @@ export const validateLeaveRequest = [
     .trim()
     .notEmpty()
     .withMessage('Leave type is required')
-    .isIn(['Vacation', 'Sick Leave', 'Personal Day', 'Maternity Leave', 'Compensatory Leave', 'Military Leave'])
+    .isIn(['Vacation', 'Sick Leave', 'Personal Day', 'Maternity Leave', 'Compensatory Leave', 'Military Leave', 'Leave Without Pay'])
     .withMessage('Invalid leave type')
     .escape(),
   body('startDate')
@@ -165,6 +165,14 @@ export const validateLeaveRequest = [
     .trim()
     .isLength({ max: 2000 })
     .withMessage('Handover notes must not exceed 2000 characters'),
+  body('isHalfDay')
+    .optional()
+    .isBoolean()
+    .withMessage('isHalfDay must be boolean'),
+  body('halfDayPeriod')
+    .optional()
+    .isIn(['morning', 'afternoon'])
+    .withMessage('halfDayPeriod must be morning or afternoon'),
 ];
 
 // File upload validation

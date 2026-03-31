@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, Search, Download } from 'lucide-react';
 import {
   useLeaveRequests,
   useUpdateLeaveStatus,
@@ -54,6 +54,10 @@ export const AdminLeaveRequests: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('date_desc');
   const [detailRequest, setDetailRequest] = useState<LeaveRequest | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRejectOpen, setBulkRejectOpen] = useState(false);
+  const [bulkRejectReason, setBulkRejectReason] = useState('');
 
   const { data: leaveRequests = [], isPending: isLoadingRequests } = useLeaveRequests();
   const { data: employees = [], isPending: isLoadingEmployees } = useAllEmployees();
@@ -128,6 +132,11 @@ export const AdminLeaveRequests: React.FC = () => {
         const emp = employeeMap.get(request.employeeId);
         if (emp?.department !== departmentFilter) return false;
       }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const name = (request.employeeName || employeeMap.get(request.employeeId)?.name || '').toLowerCase();
+        if (!name.includes(q)) return false;
+      }
       return true;
     });
 
@@ -141,7 +150,7 @@ export const AdminLeaveRequests: React.FC = () => {
           return (b.startDate ?? '').localeCompare(a.startDate ?? '');
       }
     });
-  }, [leaveRequests, employeeMap, statusFilter, typeFilter, departmentFilter, sortBy]);
+  }, [leaveRequests, employeeMap, statusFilter, typeFilter, departmentFilter, sortBy, searchQuery]);
 
   const totalPages = Math.ceil(filteredRequests.length / ITEMS_PER_PAGE);
   const paginatedRequests = useMemo(() => {
@@ -152,7 +161,7 @@ export const AdminLeaveRequests: React.FC = () => {
   // Reset page on filter change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, typeFilter, departmentFilter, sortBy]);
+  }, [statusFilter, typeFilter, departmentFilter, sortBy, searchQuery]);
 
   const handleApprove = async (id: string) => {
     try {
@@ -193,6 +202,89 @@ export const AdminLeaveRequests: React.FC = () => {
     }
   };
 
+  // Bulk approve
+  const handleBulkApprove = async () => {
+    let succeeded = 0;
+    for (const id of selectedIds) {
+      try {
+        await updateLeaveStatusMutation.mutateAsync({ id, status: 'Approved' });
+        succeeded++;
+      } catch { /* skip failed */ }
+    }
+    showToast(t('leave:admin.bulkSuccess', { count: succeeded }), 'success');
+    setSelectedIds(new Set());
+  };
+
+  // Bulk reject
+  const handleBulkReject = async () => {
+    let succeeded = 0;
+    for (const id of selectedIds) {
+      try {
+        await updateLeaveStatusMutation.mutateAsync({ id, status: 'Rejected', rejectionReason: bulkRejectReason });
+        succeeded++;
+      } catch { /* skip failed */ }
+    }
+    showToast(t('leave:admin.bulkSuccess', { count: succeeded }), 'success');
+    setSelectedIds(new Set());
+    setBulkRejectOpen(false);
+    setBulkRejectReason('');
+  };
+
+  // Toggle select
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Select all pending on page
+  const pendingOnPage = paginatedRequests.filter(r => r.status === 'Pending');
+  const allPageSelected = pendingOnPage.length > 0 && pendingOnPage.every(r => selectedIds.has(r.id));
+  const toggleSelectAll = () => {
+    if (allPageSelected) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        pendingOnPage.forEach(r => next.delete(r.id));
+        return next;
+      });
+    } else {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        pendingOnPage.forEach(r => next.add(r.id));
+        return next;
+      });
+    }
+  };
+
+  // CSV Export
+  const exportCSV = () => {
+    const headers = ['Employee', 'Department', 'Leave Type', 'Start Date', 'End Date', 'Days', 'Status', 'Reason'];
+    const rows = filteredRequests.map(r => {
+      const emp = employeeMap.get(r.employeeId);
+      return [
+        emp?.name || r.employeeName,
+        emp?.department || '',
+        r.type,
+        r.startDate,
+        r.endDate,
+        r.days,
+        r.status,
+        r.reason || '',
+      ];
+    });
+    const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leave-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const deptKeyMap: Record<string, string> = {
     'Human Resources': 'common:departments.humanResources',
     'Engineering': 'common:departments.engineering',
@@ -226,13 +318,35 @@ export const AdminLeaveRequests: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
-          {t('leave:admin.title')}
-        </h1>
-        <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
-          {t('leave:admin.subtitle')}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
+            {t('leave:admin.title')}
+          </h1>
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+            {t('leave:admin.subtitle')}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted-light dark:text-text-muted-dark" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('leave:admin.searchEmployee')}
+              className="pl-9 pr-3 py-2 text-sm border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:outline-none w-48"
+            />
+          </div>
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-text-light dark:text-text-dark transition-colors"
+            title={t('leave:admin.exportCSV')}
+          >
+            <Download size={16} />
+            {t('leave:admin.exportCSV')}
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -344,6 +458,15 @@ export const AdminLeaveRequests: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-border-light dark:border-border-dark">
               <tr>
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
+                    title={t('leave:admin.selectAll')}
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
                   {t('leave:admin.employee')}
                 </th>
@@ -365,7 +488,7 @@ export const AdminLeaveRequests: React.FC = () => {
               {paginatedRequests.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-6 py-12 text-center text-text-muted-light dark:text-text-muted-dark"
                   >
                     {t('leave:admin.noRequests')}
@@ -382,6 +505,16 @@ export const AdminLeaveRequests: React.FC = () => {
                       onClick={() => setDetailRequest(request)}
                       className="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
                     >
+                      <td className="px-3 py-4" onClick={(e) => e.stopPropagation()}>
+                        {request.status === 'Pending' && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(request.id)}
+                            onChange={() => toggleSelect(request.id)}
+                            className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
+                          />
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <Avatar
@@ -412,6 +545,11 @@ export const AdminLeaveRequests: React.FC = () => {
                       <td className="px-6 py-4">
                         <p className="text-sm text-text-light dark:text-text-dark">
                           {request.dates}
+                          {request.isHalfDay && request.halfDayPeriod && (
+                            <span className="ml-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                              ({t(`leave:halfDay.${request.halfDayPeriod}`)})
+                            </span>
+                          )}
                         </p>
                         <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
                           {days} {days === 1 ? t('common:time.day') : t('common:time.days')}
@@ -616,6 +754,67 @@ export const AdminLeaveRequests: React.FC = () => {
             setDetailRequest(null);
           }}
         />
+      )}
+
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg">
+          <span className="text-sm font-medium text-text-light dark:text-text-dark">
+            {t('leave:admin.selected', { count: selectedIds.size })}
+          </span>
+          <button
+            onClick={handleBulkApprove}
+            disabled={updateLeaveStatusMutation.isPending}
+            className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {t('leave:admin.bulkApprove', { count: selectedIds.size })}
+          </button>
+          <button
+            onClick={() => setBulkRejectOpen(true)}
+            disabled={updateLeaveStatusMutation.isPending}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {t('leave:admin.bulkReject', { count: selectedIds.size })}
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="px-3 py-2 text-sm text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark transition-colors"
+          >
+            {t('common:cancel')}
+          </button>
+        </div>
+      )}
+
+      {/* Bulk Reject Modal */}
+      {bulkRejectOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+            <h2 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark mb-4">
+              {t('leave:admin.bulkReject', { count: selectedIds.size })}
+            </h2>
+            <textarea
+              value={bulkRejectReason}
+              onChange={(e) => setBulkRejectReason(e.target.value)}
+              placeholder={t('leave:rejectDialog.placeholder')}
+              className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark focus:ring-2 focus:ring-primary focus:outline-none min-h-[80px]"
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => { setBulkRejectOpen(false); setBulkRejectReason(''); }}
+                className="px-4 py-2 text-sm text-text-muted-light dark:text-text-muted-dark hover:text-text-primary-light dark:hover:text-text-primary-dark transition-colors"
+              >
+                {t('common:cancel')}
+              </button>
+              <button
+                onClick={handleBulkReject}
+                disabled={updateLeaveStatusMutation.isPending}
+                className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {t('leave:rejectDialog.reject')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -116,9 +116,24 @@ CREATE TABLE leave_requests (
     handover_employee_id UUID REFERENCES employees(id),
     handover_notes TEXT,
     medical_certificate_path TEXT,
+    business_days DECIMAL(5,1),
+    is_half_day BOOLEAN DEFAULT FALSE,
+    half_day_period VARCHAR(10),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Holidays Calendar
+CREATE TABLE holidays (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    date DATE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    is_recurring BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX idx_holidays_date ON holidays(date);
+CREATE INDEX idx_holidays_is_recurring ON holidays(is_recurring);
 
 -- Leave Request Audit History
 CREATE TABLE leave_request_history (
@@ -135,6 +150,9 @@ CREATE TABLE leave_request_history (
     handover_employee_id UUID,
     handover_notes TEXT,
     medical_certificate_path TEXT,
+    business_days DECIMAL(5,1),
+    is_half_day BOOLEAN DEFAULT FALSE,
+    half_day_period VARCHAR(10),
     change_type VARCHAR(20) NOT NULL,
     changed_by UUID NOT NULL,
     changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

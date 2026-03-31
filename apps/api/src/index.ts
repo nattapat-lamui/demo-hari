@@ -37,6 +37,7 @@ import adminAttendanceRoutes from "./routes/adminAttendanceRoutes";
 import surveyRoutes from "./routes/surveyRoutes";
 import complianceRoutes from "./routes/complianceRoutes";
 import expenseClaimRoutes from "./routes/expenseClaimRoutes";
+import holidayRoutes from "./routes/holidayRoutes";
 import { runMigration } from "./scripts/init-db";
 import { initAttendanceScheduler } from "./services/AttendanceScheduler";
 
@@ -162,6 +163,7 @@ app.use("/api/admin/attendance", adminAttendanceRoutes);
 app.use("/api/surveys", surveyRoutes);
 app.use("/api/compliance", complianceRoutes);
 app.use("/api/expense-claims", expenseClaimRoutes);
+app.use("/api/holidays", holidayRoutes);
 
 // Backward compatibility for leave balances endpoint
 // Old: GET /api/leave-balances/:employeeId
@@ -685,6 +687,22 @@ const runLightMigrations = async () => {
     await query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS banner_color VARCHAR(50)`);
   } catch (err) {
     console.error("Migration: failed to add banner_color to employees:", err);
+  }
+
+  // Holidays table + business_days column on leave_requests
+  try {
+    const { migrateHolidays } = await import("./scripts/migrate-holidays");
+    await migrateHolidays();
+  } catch (err) {
+    console.error("Migration: holidays migration failed:", err);
+  }
+
+  // Half-day leave support
+  try {
+    const { migrateHalfDayLeave } = await import("./scripts/migrate-half-day-leave");
+    await migrateHalfDayLeave();
+  } catch (err) {
+    console.error("Migration: half-day leave migration failed:", err);
   }
 };
 

@@ -17,7 +17,8 @@
     "settings": "ตั้งค่า",
     "helpSupport": "ช่วยเหลือและสนับสนุน",
     "signOut": "ออกจากระบบ",
-    "menu": "เมนู"
+    "menu": "เมนู",
+    "holidays": "วันหยุด"
   },
   "header": {
     "searchPlaceholder": "ค้นหาพนักงาน เอกสาร นโยบาย...",

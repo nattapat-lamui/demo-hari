@@ -38,6 +38,7 @@ export const Sidebar: React.FC = () => {
     // Admin Attendance — for HR_ADMIN and MANAGER
     { icon: <Clock size={20} />, label: t('nav.attendance'), path: '/admin-attendance', allowed: isAdminView && (isHrAdmin || isManager) },
     { icon: <Calendar size={20} />, label: t('nav.leaveRequests'), path: '/leave-requests', allowed: isAdminView && (isHrAdmin || isManager) },
+    { icon: <Calendar size={20} />, label: t('nav.holidays'), path: '/holidays', allowed: isAdminView && isHrAdmin },
 
     // Employee Focused Tools
     { icon: <Clock size={20} />, label: t('nav.attendance'), path: '/attendance', allowed: !isAdminView },
