@@ -459,13 +459,21 @@ export const AdminLeaveRequests: React.FC = () => {
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-border-light dark:border-border-dark">
               <tr>
                 <th className="px-3 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    checked={allPageSelected}
-                    onChange={toggleSelectAll}
-                    className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
+                  <button
+                    onClick={toggleSelectAll}
+                    className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all duration-150 ${
+                      allPageSelected
+                        ? 'bg-primary border-primary text-white'
+                        : 'border-gray-300 dark:border-gray-600 hover:border-primary'
+                    }`}
                     title={t('leave:admin.selectAll')}
-                  />
+                  >
+                    {allPageSelected && (
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">
                   {t('leave:admin.employee')}
@@ -507,12 +515,20 @@ export const AdminLeaveRequests: React.FC = () => {
                     >
                       <td className="px-3 py-4" onClick={(e) => e.stopPropagation()}>
                         {request.status === 'Pending' && (
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(request.id)}
-                            onChange={() => toggleSelect(request.id)}
-                            className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
-                          />
+                          <button
+                            onClick={() => toggleSelect(request.id)}
+                            className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all duration-150 ${
+                              selectedIds.has(request.id)
+                                ? 'bg-primary border-primary text-white'
+                                : 'border-gray-300 dark:border-gray-600 hover:border-primary'
+                            }`}
+                          >
+                            {selectedIds.has(request.id) && (
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
