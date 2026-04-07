@@ -60,6 +60,11 @@ export class LeaveRequestController {
         try {
             const requestData = req.body;
 
+            // FormData sends booleans as strings — convert "false"/"true" to actual booleans
+            if (typeof requestData.isHalfDay === 'string') {
+                requestData.isHalfDay = requestData.isHalfDay === 'true';
+            }
+
             if (!requestData.employeeId || !requestData.type || !requestData.startDate || !requestData.endDate) {
                 res.status(400).json({ error: 'Missing required fields' });
                 return;
@@ -102,6 +107,11 @@ export class LeaveRequestController {
             }
 
             const editData = req.body;
+
+            // FormData sends booleans as strings — convert "false"/"true" to actual booleans
+            if (typeof editData.isHalfDay === 'string') {
+                editData.isHalfDay = editData.isHalfDay === 'true';
+            }
 
             if (!editData.type || !editData.startDate || !editData.endDate) {
                 res.status(400).json({ error: 'Missing required fields' });
