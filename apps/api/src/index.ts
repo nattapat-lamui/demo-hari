@@ -387,6 +387,28 @@ const runLightMigrations = async () => {
     await query(`CREATE INDEX IF NOT EXISTS idx_onboarding_docs_employee ON onboarding_documents(employee_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_onboarding_docs_status ON onboarding_documents(status)`);
 
+    // Ensure contacts table exists and has seed data for key contacts
+    await query(`
+      CREATE TABLE IF NOT EXISTS contacts (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name VARCHAR(100),
+        role VARCHAR(100),
+        relation VARCHAR(100),
+        email VARCHAR(255),
+        avatar TEXT
+      )
+    `);
+    const contactCount = await query('SELECT COUNT(*) AS cnt FROM contacts');
+    if (parseInt(contactCount.rows[0].cnt, 10) === 0) {
+      await query(`
+        INSERT INTO contacts (name, role, relation, email, avatar) VALUES
+          ('System Admin', 'HR Administrator', 'HR Department', 'admin@aiya.ai', 'https://ui-avatars.com/api/?name=System+Admin&background=6366f1&color=fff'),
+          ('Alex Thompson', 'IT Support Lead', 'Technical Support', 'alex.t@company.com', 'https://ui-avatars.com/api/?name=Alex+Thompson&background=10b981&color=fff'),
+          ('Maria Garcia', 'Office Manager', 'Facilities', 'maria.g@company.com', 'https://ui-avatars.com/api/?name=Maria+Garcia&background=f59e0b&color=fff'),
+          ('James Wilson', 'Engineering Manager', 'Direct Manager', 'james.w@company.com', 'https://ui-avatars.com/api/?name=James+Wilson&background=ef4444&color=fff')
+      `);
+    }
+
     // Fix: change onboarding_status default from 'Completed' to 'Not Started'
     await query(`ALTER TABLE employees ALTER COLUMN onboarding_status SET DEFAULT 'Not Started'`);
 

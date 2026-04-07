@@ -43,6 +43,7 @@ import {
   useClockIn,
   useClockOut,
   useUpcomingEvents,
+  useExpenseClaims,
 } from '../hooks/queries';
 import { queryKeys } from '../lib/queryKeys';
 import { translateLeaveType } from '../lib/leaveTypeConfig';
@@ -55,11 +56,39 @@ export const EmployeeDashboard: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const myRequests = requests.filter(r => r.employeeName === user?.name);
+  const myLeaveRequests = requests.filter(r => r.employeeName === user?.name);
   const myLeaves = useMemo(() => requests.filter(r => r.employeeId === user?.employeeId), [requests, user?.employeeId]);
   const teamLeaves = useMemo(() => requests.filter(r => r.employeeId !== user?.employeeId), [requests, user?.employeeId]);
 
   // ----- REACT QUERY HOOKS -----
+  const { data: expenseClaims = [] } = useExpenseClaims();
+  const myExpenses = useMemo(() =>
+    expenseClaims.filter(e => e.employeeId === user?.employeeId),
+    [expenseClaims, user?.employeeId]
+  );
+
+  // Merge leave requests + expense claims into unified "my requests"
+  const myRequests = useMemo(() => {
+    const leaveItems = myLeaveRequests.map(r => ({
+      id: r.id,
+      kind: 'leave' as const,
+      label: translateLeaveType(r.type),
+      subtitle: r.dates,
+      status: r.status,
+      createdAt: r.updatedAt || r.startDate || '',
+    }));
+    const expenseItems = myExpenses.map(e => ({
+      id: e.id,
+      kind: 'expense' as const,
+      label: e.title,
+      subtitle: `฿${e.amount.toLocaleString()} · ${e.category}`,
+      status: e.status,
+      createdAt: e.createdAt || e.expenseDate || '',
+    }));
+    return [...leaveItems, ...expenseItems]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [myLeaveRequests, myExpenses]);
+
   const { data: allEmployees = [] } = useAllEmployees();
   const { data: announcementsData = [] } = useAnnouncements();
   const { data: attendanceStatus } = useAttendanceToday(true);
@@ -410,25 +439,34 @@ export const EmployeeDashboard: React.FC = () => {
           </div>
           <div className="p-4 space-y-3">
             {myRequests.length > 0 ? (
-              myRequests.slice(0, 4).map(req => (
-                <div key={req.id} className="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${req.status === 'Approved' ? 'bg-green-100 text-green-600' : req.status === 'Rejected' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'}`}>
-                      <Plane size={18} />
+              myRequests.slice(0, 4).map(req => {
+                const statusColor = req.status === 'Approved' || req.status === 'Reimbursed'
+                  ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                  : req.status === 'Rejected' || req.status === 'Cancelled'
+                    ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                    : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400';
+                const badgeColor = req.status === 'Approved' || req.status === 'Reimbursed'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                  : req.status === 'Rejected' || req.status === 'Cancelled'
+                    ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                    : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400';
+                return (
+                  <div key={req.id} className="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${statusColor}`}>
+                        {req.kind === 'expense' ? <DollarSign size={18} /> : <Plane size={18} />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-text-light dark:text-text-dark">{req.label}</p>
+                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{req.subtitle}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-text-light dark:text-text-dark">{translateLeaveType(req.type)}</p>
-                      <p className="text-xs text-text-muted-light dark:text-text-muted-dark">{req.dates}</p>
-                    </div>
+                    <span className={`px-2 py-1 text-xs font-medium rounded ${badgeColor}`}>
+                      {req.status}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded ${req.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                    req.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
-                    {req.status}
-                  </span>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center py-4 text-text-muted-light">{t('dashboard:employee.noRequestsYet')}</div>
             )}

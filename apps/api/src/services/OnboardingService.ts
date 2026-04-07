@@ -508,7 +508,26 @@ export class OnboardingService {
       [filePath, fileType, fileSize, id]
     );
     if (result.rows.length === 0) return null;
-    return mapDocumentRow(result.rows[0]);
+
+    const doc = result.rows[0];
+
+    // Sync to documents table so it appears on the Documents page
+    try {
+      await query(
+        `INSERT INTO documents (name, type, category, size, owner_name, employee_id, file_path, uploaded_at, status)
+         SELECT $1, $2, 'Onboarding', $3,
+                (SELECT name FROM employees WHERE id = $4),
+                $4, $5, NOW(), 'Active'
+         WHERE NOT EXISTS (
+           SELECT 1 FROM documents WHERE file_path = $5 AND employee_id = $4
+         )`,
+        [doc.name, fileType, fileSize, doc.employee_id, filePath]
+      );
+    } catch (err) {
+      console.error('Failed to sync onboarding document to documents table:', err);
+    }
+
+    return mapDocumentRow(doc);
   }
 
   async reviewDocument(
