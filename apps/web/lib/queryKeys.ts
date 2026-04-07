@@ -79,7 +79,10 @@ export const queryKeys = {
   },
   training: {
     all: ['training'] as const,
-    byEmployee: (id: string) => [...queryKeys.training.all, id] as const,
+    modules: () => [...queryKeys.training.all, 'modules'] as const,
+    module: (id: string) => [...queryKeys.training.all, 'module', id] as const,
+    byEmployee: (id: string) => [...queryKeys.training.all, 'employee', id] as const,
+    analytics: () => [...queryKeys.training.all, 'analytics'] as const,
   },
   employeeDocuments: {
     all: ['employeeDocuments'] as const,
@@ -129,6 +132,8 @@ export const queryKeys = {
     all: ['compliance'] as const,
     checks: () => [...queryKeys.compliance.all, 'checks'] as const,
     auditLogs: (filters: Record<string, unknown>) => [...queryKeys.compliance.all, 'auditLogs', filters] as const,
+    items: (filters?: Record<string, unknown>) => [...queryKeys.compliance.all, 'items', filters] as const,
+    item: (id: string) => [...queryKeys.compliance.all, 'item', id] as const,
   },
   expenseClaims: {
     all: ['expenseClaims'] as const,

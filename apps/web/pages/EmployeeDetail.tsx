@@ -13,6 +13,12 @@ import {
     useEmployeeDocuments,
     useEmployeeManager,
     useEmployeeDirectReports,
+    useUpdateJobHistory,
+    useDeleteJobHistory,
+    useAssignTraining,
+    useDeleteTraining,
+    useUpdateTrainingStatus,
+    useTrainingModules,
 } from '../hooks/queries';
 import { Toast } from '../components/Toast';
 import { Users } from 'lucide-react';
@@ -29,6 +35,7 @@ import {
     LeaveQuotaTab,
 } from '../components/employee-detail';
 import type { EmployeePermissions, EmployeeTab } from '../components/employee-detail';
+import { AssignTrainingModal } from '../components/training/AssignTrainingModal';
 
 export const EmployeeDetail: React.FC = () => {
     const { t } = useTranslation(['employees', 'common']);
@@ -313,11 +320,73 @@ export const EmployeeDetail: React.FC = () => {
         setTempHistoryItem(null);
     };
 
-    const saveHistory = () => {
+    const updateHistoryMutation = useUpdateJobHistory();
+    const deleteHistoryMutation = useDeleteJobHistory();
+    const assignTrainingMutation = useAssignTraining();
+    const deleteTrainingMutation = useDeleteTraining();
+    const updateTrainingStatusMutation = useUpdateTrainingStatus();
+
+    const saveHistory = async () => {
         if (tempHistoryItem) {
-            setHistoryList(historyList.map(item => item.id === tempHistoryItem.id ? tempHistoryItem : item));
-            setEditingHistoryId(null);
-            setTempHistoryItem(null);
+            try {
+                await updateHistoryMutation.mutateAsync({
+                    id: tempHistoryItem.id,
+                    data: {
+                        role: tempHistoryItem.role,
+                        department: tempHistoryItem.department,
+                        startDate: tempHistoryItem.startDate,
+                        endDate: tempHistoryItem.endDate,
+                        description: tempHistoryItem.description,
+                    },
+                });
+                setEditingHistoryId(null);
+                setTempHistoryItem(null);
+                showToast('Job history updated', 'success');
+            } catch {
+                showToast('Failed to update job history', 'error');
+            }
+        }
+    };
+
+    const handleDeleteHistory = async (historyId: string) => {
+        try {
+            await deleteHistoryMutation.mutateAsync(historyId);
+            showToast('Job history entry deleted', 'success');
+        } catch {
+            showToast('Failed to delete job history', 'error');
+        }
+    };
+
+    // Training handlers
+    const [isAssignTrainingOpen, setIsAssignTrainingOpen] = useState(false);
+    const { data: trainingModulesList } = useTrainingModules();
+
+    const handleAssignTraining = async (moduleId: string, dueDate?: string) => {
+        if (!id) return;
+        try {
+            await assignTrainingMutation.mutateAsync({ employeeId: id, moduleId, dueDate });
+            setIsAssignTrainingOpen(false);
+            showToast('Training assigned successfully', 'success');
+        } catch {
+            showToast('Failed to assign training', 'error');
+        }
+    };
+
+    const handleDeleteTraining = async (trainingId: string) => {
+        try {
+            await deleteTrainingMutation.mutateAsync(trainingId);
+            showToast('Training record deleted', 'success');
+        } catch {
+            showToast('Failed to delete training', 'error');
+        }
+    };
+
+    const handleUpdateTrainingStatus = async (trainingId: string, status: string) => {
+        try {
+            await updateTrainingStatusMutation.mutateAsync({ id: trainingId, status });
+            showToast(`Training marked as ${status}`, 'success');
+        } catch {
+            showToast('Failed to update training status', 'error');
         }
     };
 
@@ -722,6 +791,7 @@ export const EmployeeDetail: React.FC = () => {
                                     onCancelEditHistory={cancelEditHistory}
                                     onSaveHistory={saveHistory}
                                     onAddClick={handleAddHistoryClick}
+                                    onDeleteHistory={handleDeleteHistory}
                                 />
                             )}
                             {activeTab === 'documents' && canViewSensitiveTabs && (
@@ -736,6 +806,9 @@ export const EmployeeDetail: React.FC = () => {
                                     isAdmin={isAdmin}
                                     trainingRecords={trainingRecords}
                                     showToast={showToast}
+                                    onAssignTraining={() => setIsAssignTrainingOpen(true)}
+                                    onDeleteTraining={handleDeleteTraining}
+                                    onUpdateStatus={handleUpdateTrainingStatus}
                                 />
                             )}
                             {activeTab === 'performance' && (
@@ -794,6 +867,14 @@ export const EmployeeDetail: React.FC = () => {
                 isTerminateOpen={isTerminateOpen}
                 onCloseTerminate={() => setIsTerminateOpen(false)}
                 onConfirmTerminate={handleConfirmTerminate}
+            />
+
+            <AssignTrainingModal
+                isOpen={isAssignTrainingOpen}
+                onClose={() => setIsAssignTrainingOpen(false)}
+                modules={trainingModulesList || []}
+                onAssign={handleAssignTraining}
+                isLoading={assignTrainingMutation.isPending}
             />
 
             {toast.show && (

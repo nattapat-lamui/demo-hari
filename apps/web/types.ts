@@ -169,12 +169,6 @@ export interface EffectiveLeaveQuota {
   defaultTotal: number;
 }
 
-export interface ComplianceItem {
-  id: string;
-  title: string;
-  status: 'Complete' | 'In Progress' | 'Overdue';
-}
-
 export interface AuditLogItem {
   id: string;
   user: string;
@@ -210,11 +204,16 @@ export interface OnboardingTask {
 export interface TrainingModule {
   id: string;
   title: string;
+  description?: string;
   duration: string;
   type: 'Video' | 'Quiz' | 'Reading';
   status: 'Locked' | 'In Progress' | 'Completed';
   progress: number;
   thumbnail: string;
+  isActive?: boolean;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface OnboardingProgressSummary {
@@ -266,6 +265,9 @@ export interface JobHistoryItem {
   startDate: string;
   endDate: string; // 'Present' if current
   description: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
 }
 
 export interface EmployeeTrainingRecord {
@@ -276,6 +278,60 @@ export interface EmployeeTrainingRecord {
   status: 'Completed' | 'In Progress' | 'Not Started';
   completionDate?: string;
   score?: number;
+  dueDate?: string;
+  assignedBy?: string;
+  assignedAt?: string;
+  type?: string;
+  thumbnail?: string;
+  moduleProgress?: number;
+}
+
+export interface TrainingAnalytics {
+  totalModules: number;
+  activeModules: number;
+  totalAssignments: number;
+  completionRate: number;
+  overdueCount: number;
+  completionsByDepartment: Array<{ department: string; total: number; completed: number; rate: number }>;
+  completionsByModule: Array<{ moduleId: string; title: string; total: number; completed: number; rate: number }>;
+}
+
+export interface ComplianceItem {
+  id: string;
+  title: string;
+  description: string | null;
+  category: 'ISO' | 'PDPA' | 'Custom';
+  status: 'Draft' | 'Active' | 'In Progress' | 'Completed' | 'Overdue';
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  riskLevel: 'Low' | 'Medium' | 'High' | 'Critical';
+  assignedTo: string | null;
+  assignedToName?: string | null;
+  assignedDepartment: string | null;
+  dueDate: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ComplianceEvidence {
+  id: string;
+  complianceItemId: string;
+  filePath: string;
+  fileName: string;
+  fileSize: number | null;
+  uploadedBy: string | null;
+  createdAt: string;
+}
+
+export interface ComplianceStatusHistory {
+  id: string;
+  complianceItemId: string;
+  oldStatus: string | null;
+  newStatus: string;
+  changedBy: string | null;
+  changedByEmail?: string | null;
+  reason: string | null;
+  createdAt: string;
 }
 
 export interface OrgNode {

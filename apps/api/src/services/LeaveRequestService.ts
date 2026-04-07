@@ -243,9 +243,9 @@ export class LeaveRequestService {
     }
 
     async editLeaveRequest(id: string, employeeId: string, editData: EditLeaveRequestDTO): Promise<LeaveRequest> {
-        return withTransaction(async () => {
+        return withTransaction(async (txQuery) => {
             // Fetch existing request
-            const existing = await query(
+            const existing = await txQuery(
                 'SELECT * FROM leave_requests WHERE id = $1',
                 [id]
             );
@@ -303,7 +303,7 @@ export class LeaveRequestService {
             const effectiveQuotas = await EmployeeLeaveQuotaService.getEffectiveQuotas(employeeId);
             const quota = effectiveQuotas.find(q => q.type === editData.type);
             if (quota && quota.total !== -1) {
-                const usedResult = await query(
+                const usedResult = await txQuery(
                     `SELECT COALESCE(SUM(COALESCE(business_days, (end_date::date - start_date::date) + 1)), 0) as used_days
                      FROM leave_requests
                      WHERE employee_id = $1 AND leave_type = $2 AND status IN ('Approved', 'Pending') AND id != $3`,
@@ -340,7 +340,7 @@ export class LeaveRequestService {
             const newStatus = row.status === 'Approved' ? 'Pending' : row.status;
 
             // Update
-            await query(
+            await txQuery(
                 `UPDATE leave_requests
                  SET leave_type = $1, start_date = $2, end_date = $3, reason = $4,
                      handover_employee_id = $5, handover_notes = $6, medical_certificate_path = $7,
@@ -370,7 +370,7 @@ export class LeaveRequestService {
 
             // Notify admins
             try {
-                const employeeResult = await query('SELECT name FROM employees WHERE id = $1', [employeeId]);
+                const employeeResult = await txQuery('SELECT name FROM employees WHERE id = $1', [employeeId]);
                 const employeeName = employeeResult.rows[0]?.name || 'Unknown';
                 await NotificationService.notifyAdmins({
                     title: 'Leave Request Edited',

@@ -6,6 +6,12 @@ import SystemConfigService from '../../services/SystemConfigService';
 // Mock dependencies
 jest.mock('bcrypt');
 jest.mock('../../services/SystemConfigService');
+jest.mock('../../services/JobHistoryService', () => ({
+  __esModule: true,
+  default: {
+    autoCreateFromEmployeeUpdate: jest.fn().mockResolvedValue({ id: 'jh-mock' }),
+  },
+}));
 
 const mockedQuery = query as jest.MockedFunction<typeof query>;
 const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
@@ -194,8 +200,8 @@ describe('EmployeeService', () => {
       const updatedEmployee = { ...mockEmployee, role: null };
 
       mockedQuery
-        .mockResolvedValueOnce({ rows: [mockEmployee], rowCount: 1 } as never)
-        .mockResolvedValueOnce({ rows: [updatedEmployee], rowCount: 1 } as never);
+        .mockResolvedValueOnce({ rows: [mockEmployee], rowCount: 1 } as never) // getEmployeeById
+        .mockResolvedValueOnce({ rows: [updatedEmployee], rowCount: 1 } as never); // UPDATE employees
 
       const result = await employeeService.updateEmployee({
         id: 'emp-123',
@@ -203,7 +209,7 @@ describe('EmployeeService', () => {
       });
 
       expect(result.role).toBeNull();
-      // Should have called update query (not skipped)
+      // 2 queries: getEmployeeById + UPDATE (auto-tracking is mocked via JobHistoryService mock)
       expect(mockedQuery).toHaveBeenCalledTimes(2);
     });
 

@@ -177,23 +177,32 @@ CREATE TABLE tasks (
 CREATE TABLE training_modules (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(255) NOT NULL,
+    description TEXT,
     duration VARCHAR(50),
-    type VARCHAR(50), -- Video, Quiz, etc.
-    status VARCHAR(50), -- Locked, In Progress (Default state for new assignments?)
+    type VARCHAR(50), -- Video, Quiz, Reading
+    status VARCHAR(50), -- Locked, In Progress
     thumbnail TEXT,
-    progress INT DEFAULT 0
+    progress INT DEFAULT 0,
+    created_by UUID REFERENCES employees(id) ON DELETE SET NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 6. Employee Training Records (Progress)
 CREATE TABLE employee_training (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     employee_id UUID REFERENCES employees(id),
-    module_id UUID REFERENCES training_modules(id), -- Optional link if we want strictly relational
-    title VARCHAR(255), -- Denormalized title if module removed
+    module_id UUID REFERENCES training_modules(id),
+    title VARCHAR(255),
     duration VARCHAR(50),
     status VARCHAR(50) DEFAULT 'Not Started',
     completion_date DATE,
-    score INT
+    score INT,
+    due_date DATE,
+    assigned_by UUID REFERENCES employees(id) ON DELETE SET NULL,
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 7. Documents
@@ -220,7 +229,11 @@ CREATE TABLE job_history (
     department VARCHAR(100),
     start_date DATE,
     end_date DATE, -- NULL for Present
-    description TEXT
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT chk_job_history_dates CHECK (end_date IS NULL OR end_date >= start_date)
 );
 
 -- 9. Performance Reviews
@@ -308,9 +321,41 @@ CREATE TABLE stats_headcount (
 
 -- 15. Compliance Items
 CREATE TABLE compliance_items (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(255) NOT NULL,
-    status VARCHAR(50) NOT NULL
+    description TEXT,
+    category VARCHAR(50) NOT NULL DEFAULT 'Custom',
+    status VARCHAR(50) NOT NULL DEFAULT 'Draft',
+    priority VARCHAR(20) NOT NULL DEFAULT 'Medium',
+    risk_level VARCHAR(20) NOT NULL DEFAULT 'Low',
+    assigned_to UUID REFERENCES employees(id) ON DELETE SET NULL,
+    assigned_department VARCHAR(100),
+    due_date DATE,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 15b. Compliance Status History
+CREATE TABLE compliance_status_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    compliance_item_id UUID NOT NULL REFERENCES compliance_items(id) ON DELETE CASCADE,
+    old_status VARCHAR(50),
+    new_status VARCHAR(50) NOT NULL,
+    changed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 15c. Compliance Evidence
+CREATE TABLE compliance_evidence (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    compliance_item_id UUID NOT NULL REFERENCES compliance_items(id) ON DELETE CASCADE,
+    file_path TEXT NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_size BIGINT,
+    uploaded_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 16. Sentiment Stats
@@ -361,6 +406,19 @@ CREATE INDEX idx_tasks_completed ON tasks(completed);
 -- Employee training indexes
 CREATE INDEX idx_employee_training_employee_id ON employee_training(employee_id);
 CREATE INDEX idx_employee_training_status ON employee_training(status);
+CREATE INDEX idx_employee_training_due_date ON employee_training(due_date);
+CREATE INDEX idx_employee_training_module_id ON employee_training(module_id);
+CREATE INDEX idx_training_modules_is_active ON training_modules(is_active);
+CREATE UNIQUE INDEX idx_employee_training_unique_assignment
+  ON employee_training(employee_id, module_id) WHERE module_id IS NOT NULL;
+
+-- Compliance indexes
+CREATE INDEX idx_compliance_items_status ON compliance_items(status);
+CREATE INDEX idx_compliance_items_category ON compliance_items(category);
+CREATE INDEX idx_compliance_items_assigned_to ON compliance_items(assigned_to);
+CREATE INDEX idx_compliance_items_due_date ON compliance_items(due_date);
+CREATE INDEX idx_compliance_status_history_item ON compliance_status_history(compliance_item_id);
+CREATE INDEX idx_compliance_evidence_item ON compliance_evidence(compliance_item_id);
 
 -- ==========================================
 -- PAYROLL & ATTENDANCE TABLES

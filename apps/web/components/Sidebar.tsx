@@ -17,6 +17,7 @@ import {
   DollarSign,
   MessageSquare,
   Clock,
+  GraduationCap,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLeaveRequests } from '../hooks/queries';
@@ -51,6 +52,7 @@ export const Sidebar: React.FC = () => {
     { icon: <Users size={20} />, label: t('nav.employees'), path: '/employees', allowed: true },
     { icon: <GitGraph size={20} />, label: t('nav.orgChart'), path: '/org-chart', allowed: true },
     { icon: <ClipboardList size={20} />, label: t('nav.onboarding'), path: '/onboarding', allowed: true },
+    { icon: <GraduationCap size={20} />, label: t('nav.training', 'Training'), path: '/training', allowed: isAdminView && (isHrAdmin || isManager) },
 
     // Admin Specific — HR_ADMIN only
     { icon: <ShieldCheck size={20} />, label: t('nav.compliance'), path: '/compliance', allowed: isAdminView && isHrAdmin },

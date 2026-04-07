@@ -57,6 +57,7 @@ export interface HistoryTabProps {
     onCancelEditHistory: () => void;
     onSaveHistory: () => void;
     onAddClick: () => void;
+    onDeleteHistory?: (id: string) => void;
 }
 
 export interface DocumentsTabProps {

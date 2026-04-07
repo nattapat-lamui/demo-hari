@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Edit2, Briefcase } from 'lucide-react';
+import { Plus, Edit2, Briefcase, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { HistoryTabProps } from './EmployeeDetailTypes';
 import { formatDate } from '../../lib/date';
@@ -14,6 +14,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
     onCancelEditHistory,
     onSaveHistory,
     onAddClick,
+    onDeleteHistory,
 }) => {
     const { t } = useTranslation(['employees', 'common']);
     const { isAdmin, isOwnProfile } = permissions;
@@ -124,13 +125,24 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                         <div className="flex items-center gap-2 mb-1">
                                             <h4 className="text-base font-bold text-text-light dark:text-text-dark">{job.role}</h4>
                                             {canEdit && (
-                                                <button
-                                                    onClick={() => onStartEditHistory(job)}
-                                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-text-muted-light hover:text-primary"
-                                                    title="Edit"
-                                                >
-                                                    <Edit2 size={14} />
-                                                </button>
+                                                <>
+                                                    <button
+                                                        onClick={() => onStartEditHistory(job)}
+                                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-text-muted-light hover:text-primary"
+                                                        title="Edit"
+                                                    >
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                    {onDeleteHistory && (
+                                                        <button
+                                                            onClick={() => onDeleteHistory(job.id)}
+                                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-text-muted-light hover:text-red-500"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                         <p className="text-sm font-medium text-primary mb-2">{job.department}</p>

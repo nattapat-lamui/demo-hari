@@ -15,8 +15,18 @@ import {
 } from 'lucide-react';
 import { Toast } from '../components/Toast';
 import { Dropdown } from '../components/Dropdown';
-import { useComplianceChecks, useComplianceAuditLogs } from '../hooks/queries';
+import {
+  useComplianceChecks,
+  useComplianceAuditLogs,
+  useComplianceItems,
+  useCreateComplianceItem,
+  useUpdateComplianceItem,
+  useDeleteComplianceItem,
+  useUpdateComplianceStatus,
+} from '../hooks/queries';
+import { Modal } from '../components/Modal';
 import { BASE_URL, getAuthToken } from '../lib/api';
+import type { ComplianceItem } from '../types';
 
 // Data point options for report builder
 const DATA_POINTS = [
@@ -179,6 +189,108 @@ export const Compliance: React.FC = () => {
   // Unique resources for filter dropdown
   const resourceOptions = ['All', 'Employee', 'Leave', 'Document', 'Attendance', 'Auth'];
 
+  // Compliance Items
+  const [itemStatusFilter, setItemStatusFilter] = useState('');
+  const [itemCategoryFilter, setItemCategoryFilter] = useState('');
+  const [itemPage, setItemPage] = useState(1);
+  const { data: itemsData } = useComplianceItems({
+    status: itemStatusFilter || undefined,
+    category: itemCategoryFilter || undefined,
+    page: itemPage,
+    limit: 10,
+  });
+  const createItemMutation = useCreateComplianceItem();
+  const updateItemMutation = useUpdateComplianceItem();
+  const deleteItemMutation = useDeleteComplianceItem();
+  const updateStatusMutation = useUpdateComplianceStatus();
+
+  const [isItemFormOpen, setIsItemFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ComplianceItem | null>(null);
+  const [itemForm, setItemForm] = useState({
+    title: '', description: '', category: 'Custom', priority: 'Medium', riskLevel: 'Low',
+    dueDate: '',
+  });
+
+  const [statusChangeItem, setStatusChangeItem] = useState<ComplianceItem | null>(null);
+  const [newStatus, setNewStatus] = useState('');
+  const [statusReason, setStatusReason] = useState('');
+
+  const openItemCreate = () => {
+    setEditingItem(null);
+    setItemForm({ title: '', description: '', category: 'Custom', priority: 'Medium', riskLevel: 'Low', dueDate: '' });
+    setIsItemFormOpen(true);
+  };
+
+  const openItemEdit = (item: ComplianceItem) => {
+    setEditingItem(item);
+    setItemForm({
+      title: item.title,
+      description: item.description || '',
+      category: item.category,
+      priority: item.priority,
+      riskLevel: item.riskLevel,
+      dueDate: item.dueDate || '',
+    });
+    setIsItemFormOpen(true);
+  };
+
+  const handleSaveItem = async () => {
+    if (!itemForm.title) return;
+    try {
+      if (editingItem) {
+        await updateItemMutation.mutateAsync({ id: editingItem.id, data: itemForm as any });
+        showToast('Item updated', 'success');
+      } else {
+        await createItemMutation.mutateAsync(itemForm as any);
+        showToast('Item created', 'success');
+      }
+      setIsItemFormOpen(false);
+    } catch {
+      showToast('Failed to save item', 'error');
+    }
+  };
+
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const handleDeleteItem = async (id: string) => {
+    try {
+      await deleteItemMutation.mutateAsync(id);
+      setDeleteConfirmId(null);
+      showToast('Item deleted', 'success');
+    } catch {
+      showToast('Failed to delete item', 'error');
+    }
+  };
+
+  const handleStatusChange = async () => {
+    if (!statusChangeItem || !newStatus) return;
+    try {
+      await updateStatusMutation.mutateAsync({
+        id: statusChangeItem.id,
+        status: newStatus,
+        reason: statusReason || undefined,
+      });
+      setStatusChangeItem(null);
+      setNewStatus('');
+      setStatusReason('');
+      showToast('Status updated', 'success');
+    } catch {
+      showToast('Failed to update status', 'error');
+    }
+  };
+
+  const statusColors: Record<string, string> = {
+    Draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+    Active: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
+    'In Progress': 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400',
+    Completed: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400',
+    Overdue: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+  };
+
+  const priorityColors: Record<string, string> = {
+    Low: 'text-gray-500', Medium: 'text-yellow-600', High: 'text-orange-500', Critical: 'text-red-600',
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <header className="flex flex-wrap justify-between items-center gap-4 mb-8">
@@ -194,6 +306,211 @@ export const Compliance: React.FC = () => {
           {t('exportData')}
         </button>
       </header>
+
+      {/* Compliance Items Section */}
+      <div className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
+        <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex flex-wrap justify-between items-center gap-3">
+          <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Compliance Items</h2>
+          <div className="flex items-center gap-2">
+            <select
+              value={itemStatusFilter}
+              onChange={(e) => { setItemStatusFilter(e.target.value); setItemPage(1); }}
+              className="text-xs px-2 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-text-light dark:text-text-dark"
+            >
+              <option value="">All Status</option>
+              {['Draft', 'Active', 'In Progress', 'Completed', 'Overdue'].map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <select
+              value={itemCategoryFilter}
+              onChange={(e) => { setItemCategoryFilter(e.target.value); setItemPage(1); }}
+              className="text-xs px-2 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-text-light dark:text-text-dark"
+            >
+              <option value="">All Categories</option>
+              {['ISO', 'PDPA', 'Custom'].map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <button
+              onClick={openItemCreate}
+              className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded text-xs font-medium hover:bg-primary/90 transition-colors"
+            >
+              + Add Item
+            </button>
+          </div>
+        </div>
+
+        {!itemsData?.data?.length ? (
+          <div className="p-8 text-center text-text-muted-light dark:text-text-muted-dark text-sm">
+            No compliance items found
+          </div>
+        ) : (
+          <>
+            <div className="divide-y divide-border-light dark:divide-border-dark">
+              {itemsData.data.map((item) => (
+                <div key={item.id} className="px-6 py-3 flex items-center justify-between hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm text-text-light dark:text-text-dark truncate">{item.title}</p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusColors[item.status] || ''}`}>{item.status}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">
+                      <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{item.category}</span>
+                      <span className={priorityColors[item.priority] || ''}>{item.priority}</span>
+                      <span>Risk: {item.riskLevel}</span>
+                      {item.assignedToName && <span>→ {item.assignedToName}</span>}
+                      {item.dueDate && (
+                        <span className={new Date(item.dueDate) < new Date() && item.status !== 'Completed' ? 'text-red-500 font-medium' : ''}>
+                          Due: {new Date(item.dueDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 ml-2">
+                    <button
+                      onClick={() => { setStatusChangeItem(item); setNewStatus(''); setStatusReason(''); }}
+                      className="p-1 text-text-muted-light hover:text-primary rounded text-xs"
+                      title="Change Status"
+                    >
+                      <FileEdit size={14} />
+                    </button>
+                    <button onClick={() => openItemEdit(item)} className="p-1 text-text-muted-light hover:text-primary rounded" title="Edit">
+                      <FileEdit size={14} />
+                    </button>
+                    <button onClick={() => setDeleteConfirmId(item.id)} className="p-1 text-text-muted-light hover:text-red-500 rounded" title="Delete">
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {itemsData.totalPages > 1 && (
+              <div className="px-6 py-3 border-t border-border-light dark:border-border-dark flex justify-between items-center text-xs text-text-muted-light dark:text-text-muted-dark">
+                <span>{itemsData.total} items</span>
+                <div className="flex gap-1">
+                  <button onClick={() => setItemPage(p => Math.max(1, p - 1))} disabled={itemPage <= 1} className="px-2 py-1 border rounded disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="px-2 py-1">{itemPage}/{itemsData.totalPages}</span>
+                  <button onClick={() => setItemPage(p => Math.min(itemsData.totalPages, p + 1))} disabled={itemPage >= itemsData.totalPages} className="px-2 py-1 border rounded disabled:opacity-30"><ChevronRight size={14} /></button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Item Form Modal */}
+      <Modal isOpen={isItemFormOpen} onClose={() => setIsItemFormOpen(false)} title={editingItem ? 'Edit Compliance Item' : 'Add Compliance Item'}>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Title *</label>
+            <input
+              value={itemForm.title}
+              onChange={(e) => setItemForm(f => ({ ...f, title: e.target.value }))}
+              className="w-full px-3 py-2 text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Description</label>
+            <textarea
+              value={itemForm.description}
+              onChange={(e) => setItemForm(f => ({ ...f, description: e.target.value }))}
+              rows={2}
+              className="w-full px-3 py-2 text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-light dark:text-text-dark"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-text-light dark:text-text-dark mb-1">Category</label>
+              <select value={itemForm.category} onChange={(e) => setItemForm(f => ({ ...f, category: e.target.value }))} className="w-full px-2 py-2 text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark">
+                {['ISO', 'PDPA', 'Custom'].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-light dark:text-text-dark mb-1">Priority</label>
+              <select value={itemForm.priority} onChange={(e) => setItemForm(f => ({ ...f, priority: e.target.value }))} className="w-full px-2 py-2 text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark">
+                {['Low', 'Medium', 'High', 'Critical'].map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-light dark:text-text-dark mb-1">Risk Level</label>
+              <select value={itemForm.riskLevel} onChange={(e) => setItemForm(f => ({ ...f, riskLevel: e.target.value }))} className="w-full px-2 py-2 text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark">
+                {['Low', 'Medium', 'High', 'Critical'].map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Due Date</label>
+            <input
+              type="date"
+              value={itemForm.dueDate}
+              onChange={(e) => setItemForm(f => ({ ...f, dueDate: e.target.value }))}
+              className="w-full px-3 py-2 text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button onClick={() => setIsItemFormOpen(false)} className="px-4 py-2 text-sm text-text-muted-light hover:text-text-light">Cancel</button>
+            <button onClick={handleSaveItem} disabled={!itemForm.title} className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50">
+              {editingItem ? 'Update' : 'Create'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Status Change Modal */}
+      <Modal isOpen={!!statusChangeItem} onClose={() => setStatusChangeItem(null)} title="Change Status" maxWidth="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
+            Current: <span className={`font-medium ${statusColors[statusChangeItem?.status || ''] || ''} px-2 py-0.5 rounded`}>{statusChangeItem?.status}</span>
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">New Status</label>
+            <select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark"
+            >
+              <option value="">Select...</option>
+              {['Draft', 'Active', 'In Progress', 'Completed'].filter(s => s !== statusChangeItem?.status).map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Reason (Optional)</label>
+            <textarea
+              value={statusReason}
+              onChange={(e) => setStatusReason(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setStatusChangeItem(null)} className="px-4 py-2 text-sm text-text-muted-light">Cancel</button>
+            <button onClick={handleStatusChange} disabled={!newStatus} className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50">
+              Update Status
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal isOpen={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} title="Delete Compliance Item" maxWidth="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-text-light dark:text-text-dark">
+            Are you sure you want to delete this compliance item? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 text-sm text-text-muted-light hover:text-text-light">Cancel</button>
+            <button
+              onClick={() => deleteConfirmId && handleDeleteItem(deleteConfirmId)}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="flex flex-col gap-8">

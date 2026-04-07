@@ -1,23 +1,29 @@
 import { Router } from 'express';
 import TrainingController from '../controllers/TrainingController';
 import { apiLimiter } from '../middlewares/security';
-import { authenticateToken } from '../middlewares/auth';
+import { authenticateToken, requireAdmin, requireAdminOrManager } from '../middlewares/auth';
+import { cacheMiddleware, invalidateCache } from '../middlewares/cache';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticateToken);
 
-// GET /api/training/modules - Get all training modules
-router.get('/modules', TrainingController.getAllModules.bind(TrainingController));
+// Module CRUD
+router.get('/modules', cacheMiddleware(), TrainingController.getAllModules.bind(TrainingController));
+router.get('/modules/:id', cacheMiddleware(), TrainingController.getModuleById.bind(TrainingController));
+router.post('/modules', requireAdmin, apiLimiter, invalidateCache('/api/training'), TrainingController.createModule.bind(TrainingController));
+router.put('/modules/:id', requireAdmin, apiLimiter, invalidateCache('/api/training'), TrainingController.updateModule.bind(TrainingController));
+router.delete('/modules/:id', requireAdmin, apiLimiter, invalidateCache('/api/training'), TrainingController.deleteModule.bind(TrainingController));
 
-// GET /api/training/employee/:employeeId - Get training for specific employee
+// Employee training
 router.get('/employee/:employeeId', TrainingController.getEmployeeTraining.bind(TrainingController));
+router.post('/assign', requireAdminOrManager, apiLimiter, invalidateCache('/api/training'), TrainingController.assignTraining.bind(TrainingController));
+router.post('/bulk-assign', requireAdminOrManager, apiLimiter, invalidateCache('/api/training'), TrainingController.bulkAssignTraining.bind(TrainingController));
+router.patch('/:id', apiLimiter, invalidateCache('/api/training'), TrainingController.updateTraining.bind(TrainingController));
+router.delete('/:id', requireAdminOrManager, apiLimiter, invalidateCache('/api/training'), TrainingController.deleteTraining.bind(TrainingController));
 
-// POST /api/training/assign - Assign training to employee (Admin)
-router.post('/assign', apiLimiter, TrainingController.assignTraining.bind(TrainingController));
-
-// PATCH /api/training/:id - Update training status/progress
-router.patch('/:id', apiLimiter, TrainingController.updateTraining.bind(TrainingController));
+// Analytics
+router.get('/analytics', requireAdminOrManager, cacheMiddleware(60000), TrainingController.getAnalytics.bind(TrainingController));
 
 export default router;

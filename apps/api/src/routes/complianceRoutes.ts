@@ -1,11 +1,37 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken, requireAdmin } from '../middlewares/auth';
+import { apiLimiter } from '../middlewares/security';
 import { query } from '../db';
 import AuditLogService from '../services/AuditLogService';
+import ComplianceController from '../controllers/ComplianceController';
+import { receiptUpload } from '../middlewares/upload';
 
 const router = Router();
 
 router.use(authenticateToken, requireAdmin);
+
+// ---------------------------------------------------------------------------
+// Compliance Items CRUD (must be before /checks etc to avoid /:id conflict)
+// ---------------------------------------------------------------------------
+router.get('/items', ComplianceController.getItems.bind(ComplianceController));
+router.get('/items/:id', ComplianceController.getItemById.bind(ComplianceController));
+router.post('/items', apiLimiter, ComplianceController.createItem.bind(ComplianceController));
+router.put('/items/:id', apiLimiter, ComplianceController.updateItem.bind(ComplianceController));
+router.delete('/items/:id', apiLimiter, ComplianceController.deleteItem.bind(ComplianceController));
+
+// Status management
+router.patch('/items/:id/status', apiLimiter, ComplianceController.updateStatus.bind(ComplianceController));
+
+// Evidence/Attachments
+router.post('/items/:id/evidence', apiLimiter, receiptUpload.single('file'), ComplianceController.addEvidence.bind(ComplianceController));
+router.get('/items/:id/evidence', ComplianceController.getEvidence.bind(ComplianceController));
+router.delete('/evidence/:evidenceId', apiLimiter, ComplianceController.deleteEvidence.bind(ComplianceController));
+
+// Status history
+router.get('/items/:id/history', ComplianceController.getStatusHistory.bind(ComplianceController));
+
+// Overdue check
+router.post('/check-overdue', apiLimiter, ComplianceController.checkOverdue.bind(ComplianceController));
 
 // ---------------------------------------------------------------------------
 // Helper: escape CSV value

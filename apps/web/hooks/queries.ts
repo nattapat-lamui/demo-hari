@@ -30,6 +30,9 @@ import type {
   SentimentOverview,
   EffectiveLeaveQuota,
   PublicHoliday,
+  TrainingModule,
+  TrainingAnalytics,
+  ComplianceItem,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -412,6 +415,27 @@ export const useJobHistory = (id: string | undefined) => {
   });
 };
 
+export const useUpdateJobHistory = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<JobHistoryItem> }) =>
+      api.put<JobHistoryItem>(`/job-history/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.jobHistory.all });
+    },
+  });
+};
+
+export const useDeleteJobHistory = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/job-history/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.jobHistory.all });
+    },
+  });
+};
+
 export const usePerformanceReviews = (id: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.performanceReviews.byEmployee(id!),
@@ -425,6 +449,95 @@ export const useEmployeeTraining = (id: string | undefined) => {
     queryKey: queryKeys.training.byEmployee(id!),
     queryFn: () => api.get<EmployeeTrainingRecord[]>(`/employee-training/${id}`),
     enabled: !!id,
+  });
+};
+
+export const useTrainingModules = () => {
+  return useQuery({
+    queryKey: queryKeys.training.modules(),
+    queryFn: () => api.get<TrainingModule[]>('/training/modules'),
+  });
+};
+
+export const useTrainingAnalytics = () => {
+  return useQuery({
+    queryKey: queryKeys.training.analytics(),
+    queryFn: () => api.get<TrainingAnalytics>('/training/analytics'),
+  });
+};
+
+export const useCreateTrainingModule = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<TrainingModule>) =>
+      api.post<TrainingModule>('/training/modules', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.training.all });
+    },
+  });
+};
+
+export const useUpdateTrainingModule = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<TrainingModule> }) =>
+      api.put<TrainingModule>(`/training/modules/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.training.all });
+    },
+  });
+};
+
+export const useDeleteTrainingModule = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/training/modules/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.training.all });
+    },
+  });
+};
+
+export const useAssignTraining = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { employeeId: string; moduleId?: string; title?: string; duration?: string; dueDate?: string }) =>
+      api.post('/training/assign', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.training.all });
+    },
+  });
+};
+
+export const useBulkAssignTraining = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { employeeIds: string[]; moduleId: string; dueDate?: string }) =>
+      api.post('/training/bulk-assign', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.training.all });
+    },
+  });
+};
+
+export const useUpdateTrainingStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, score }: { id: string; status?: string; score?: number }) =>
+      api.patch(`/training/${id}`, { status, score }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.training.all });
+    },
+  });
+};
+
+export const useDeleteTraining = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/training/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.training.all });
+    },
   });
 };
 
@@ -1437,6 +1550,68 @@ export interface PersistentAuditLog {
   details: Record<string, unknown> | null;
   createdAt: string;
 }
+
+// ============================================================================
+// Compliance Items
+// ============================================================================
+
+export const useComplianceItems = (filters: { status?: string; category?: string; priority?: string; page?: number; limit?: number } = {}) => {
+  return useQuery({
+    queryKey: queryKeys.compliance.items(filters),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.status) params.set('status', filters.status);
+      if (filters.category) params.set('category', filters.category);
+      if (filters.priority) params.set('priority', filters.priority);
+      if (filters.page) params.set('page', String(filters.page));
+      if (filters.limit) params.set('limit', String(filters.limit));
+      return api.get<{ data: ComplianceItem[]; total: number; page: number; totalPages: number }>(`/compliance/items?${params}`);
+    },
+  });
+};
+
+export const useCreateComplianceItem = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<ComplianceItem>) =>
+      api.post<ComplianceItem>('/compliance/items', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.compliance.all });
+    },
+  });
+};
+
+export const useUpdateComplianceItem = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<ComplianceItem> }) =>
+      api.put<ComplianceItem>(`/compliance/items/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.compliance.all });
+    },
+  });
+};
+
+export const useDeleteComplianceItem = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/compliance/items/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.compliance.all });
+    },
+  });
+};
+
+export const useUpdateComplianceStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
+      api.patch<ComplianceItem>(`/compliance/items/${id}/status`, { status, reason }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.compliance.all });
+    },
+  });
+};
 
 // ============================================================================
 // Expense Claims

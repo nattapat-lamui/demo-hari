@@ -3,6 +3,7 @@ import { query } from '../db';
 import { Employee, CreateEmployeeDTO, UpdateEmployeeDTO } from '../models/Employee';
 import SystemConfigService from './SystemConfigService';
 import { PaginationParams, PaginatedResult, createPaginatedResult } from '../utils/pagination';
+import JobHistoryService from './JobHistoryService';
 
 export interface EmployeeFilters {
     department?: string;
@@ -272,11 +273,33 @@ export class EmployeeService {
             );
         }
 
+        // Detect role/department changes for auto-tracking
+        const roleChanged = data.role !== undefined && data.role !== existing.role;
+        const deptChanged = data.department !== undefined && data.department !== existing.department;
+
         values.push(id);
         const updateQuery = `UPDATE employees SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
 
         const result = await query(updateQuery, values);
-        return this.mapRowToEmployee(result.rows[0]);
+        const updated = this.mapRowToEmployee(result.rows[0]);
+
+        // Auto-create job history when role or department changes
+        if (roleChanged || deptChanged) {
+            try {
+                await JobHistoryService.autoCreateFromEmployeeUpdate(
+                    id,
+                    existing.role || '',
+                    existing.department || '',
+                    updated.role || existing.role || '',
+                    updated.department || existing.department || '',
+                );
+            } catch (err) {
+                console.error('Failed to auto-create job history:', err);
+                // Non-blocking: employee update still succeeds
+            }
+        }
+
+        return updated;
     }
 
     async deleteEmployee(id: string): Promise<void> {

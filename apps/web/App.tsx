@@ -57,6 +57,9 @@ const TimeOff = lazy(() =>
 const Expenses = lazy(() =>
   import("./pages/Expenses").then((m) => ({ default: m.Expenses })),
 );
+const Training = lazy(() =>
+  import("./pages/Training").then((m) => ({ default: m.Training })),
+);
 const Payroll = lazy(() =>
   import("./pages/Payroll").then((m) => ({ default: m.Payroll })),
 );
@@ -153,6 +156,7 @@ const App: React.FC = () => {
                     <Route path="org-chart" element={<PageErrorBoundary><OrgChart /></PageErrorBoundary>} />
                     <Route path="onboarding" element={<PageErrorBoundary><Onboarding /></PageErrorBoundary>} />
                     <Route path="compliance" element={<PageErrorBoundary><Compliance /></PageErrorBoundary>} />
+                    <Route path="training" element={<PageErrorBoundary><Training /></PageErrorBoundary>} />
                     <Route path="analytics" element={<PageErrorBoundary><Analytics /></PageErrorBoundary>} />
                     <Route path="documents" element={<PageErrorBoundary><Documents /></PageErrorBoundary>} />
                     <Route path="settings" element={<PageErrorBoundary><Settings /></PageErrorBoundary>} />
