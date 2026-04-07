@@ -290,42 +290,55 @@ export function LeaveRequestForm() {
 
               {/* Half-day toggle — only when single-day */}
               {form.startDate && form.endDate && form.startDate === form.endDate && (
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.isHalfDay}
-                      onChange={(e) => setForm({ ...form, isHalfDay: e.target.checked, halfDayPeriod: e.target.checked ? 'morning' : '' })}
-                      className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
-                    />
+                <div className="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 space-y-3">
+                  <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-text-light dark:text-text-dark">
                       {t('leave:halfDay.label')}
                     </span>
-                  </label>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={form.isHalfDay}
+                      onClick={() => setForm({ ...form, isHalfDay: !form.isHalfDay, halfDayPeriod: !form.isHalfDay ? 'morning' : '' })}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                        form.isHalfDay ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          form.isHalfDay ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
                   {form.isHalfDay && (
-                    <div className="flex gap-4 ml-6">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="halfDayPeriod"
-                          value="morning"
-                          checked={form.halfDayPeriod === 'morning'}
-                          onChange={() => setForm({ ...form, halfDayPeriod: 'morning' })}
-                          className="w-4 h-4 text-primary border-border-light dark:border-border-dark focus:ring-primary"
-                        />
-                        <span className="text-sm text-text-light dark:text-text-dark">{t('leave:halfDay.morning')}</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="halfDayPeriod"
-                          value="afternoon"
-                          checked={form.halfDayPeriod === 'afternoon'}
-                          onChange={() => setForm({ ...form, halfDayPeriod: 'afternoon' })}
-                          className="w-4 h-4 text-primary border-border-light dark:border-border-dark focus:ring-primary"
-                        />
-                        <span className="text-sm text-text-light dark:text-text-dark">{t('leave:halfDay.afternoon')}</span>
-                      </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, halfDayPeriod: 'morning' })}
+                        className={`flex flex-col items-center gap-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
+                          form.halfDayPeriod === 'morning'
+                            ? 'border-primary bg-primary/5 text-primary dark:bg-primary/10'
+                            : 'border-border-light dark:border-border-dark text-text-muted-light dark:text-text-muted-dark hover:border-gray-300 dark:hover:border-gray-500'
+                        }`}
+                      >
+                        <span className="text-lg">🌅</span>
+                        <span>{t('leave:halfDay.morning')}</span>
+                        <span className="text-[11px] font-normal text-text-muted-light dark:text-text-muted-dark">09:00 – 12:00</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, halfDayPeriod: 'afternoon' })}
+                        className={`flex flex-col items-center gap-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
+                          form.halfDayPeriod === 'afternoon'
+                            ? 'border-primary bg-primary/5 text-primary dark:bg-primary/10'
+                            : 'border-border-light dark:border-border-dark text-text-muted-light dark:text-text-muted-dark hover:border-gray-300 dark:hover:border-gray-500'
+                        }`}
+                      >
+                        <span className="text-lg">🌇</span>
+                        <span>{t('leave:halfDay.afternoon')}</span>
+                        <span className="text-[11px] font-normal text-text-muted-light dark:text-text-muted-dark">13:00 – 18:00</span>
+                      </button>
                     </div>
                   )}
                 </div>

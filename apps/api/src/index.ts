@@ -704,6 +704,32 @@ const runLightMigrations = async () => {
   } catch (err) {
     console.error("Migration: half-day leave migration failed:", err);
   }
+
+  // Expense claims table (was only in standalone migration script, not in init-db)
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS expense_claims (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        amount DECIMAL(12, 2) NOT NULL,
+        currency VARCHAR(3) DEFAULT 'THB',
+        expense_date DATE NOT NULL,
+        description TEXT,
+        receipt_path TEXT,
+        status VARCHAR(20) DEFAULT 'Pending',
+        rejection_reason TEXT,
+        approver_id UUID REFERENCES employees(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_expense_claims_employee_id ON expense_claims(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_expense_claims_status ON expense_claims(status)`);
+  } catch (err) {
+    console.error("Migration: expense_claims table creation failed:", err);
+  }
 };
 
 // Global error handlers (must be after all routes)
